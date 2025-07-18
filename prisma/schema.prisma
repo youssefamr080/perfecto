@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String    @unique
+  defaultAddress String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orders      Order[]
+  addresses   Address[] // عناوين متعددة
+
+  @@map("users")
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String   // اسم العنوان (البيت، الشغل، إلخ)
+  fullAddress String   // العنوان كامل
+  area        String?  // المنطقة
+  building    String?  // رقم المبنى
+  floor       String?  // الدور
+  apartment   String?  // الشقة
+  landmark    String?  // علامة مميزة
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]  // الطلبات التي استخدمت هذا العنوان
+
+  @@map("addresses")
+}
+
+model Product {
+  id            String       @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  oldPrice      Float?
+  images        String[]
+  unitType      UnitType
+  isAvailable   Boolean      @default(true)
+  isBestSeller  Boolean      @default(false) // الأكثر مبيعاً
+  inStock       Int          @default(0)
+  minOrder      Float?
+  maxOrder      Float?
+  subcategory   String?      // التصنيف الفرعي (شيدر، رومي، كيري، إلخ)
+  subCategoryId String?      // ربط مع الفئة الفرعية
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  
+  // الحقول القديمة للتوافق المؤقت
+  category      Category?    // سيتم إزالته لاحقاً
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  orderItems    OrderItem[]
+
+  @@map("products")
+}
+
+model MainCategory {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  image       String?
+  icon        String?
+  slug        String    @unique
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  subCategories SubCategory[]
+
+  @@map("main_categories")
+}
+
+model SubCategory {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  image          String?
+  icon           String?
+  slug           String       @unique
+  categoryType   Category     @unique
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  mainCategoryId String
+  mainCategory   MainCategory @relation(fields: [mainCategoryId], references: [id])
+  products       Product[]    // إضافة العلاقة مع المنتجات
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("sub_categories")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  addressId       String?     // ربط مع العنوان المستخدم
+  customerName    String
+  customerPhone   String
+  customerAddress String      // نسخة من العنوان وقت الطلب
+  status          OrderStatus @default(PENDING)
+  total           Float
+  deliveryFee     Float       @default(20.0)
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+  user            User        @relation(fields: [userId], references: [id])
+  address         Address?    @relation(fields: [addressId], references: [id])
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Float
+  price     Float
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+enum UnitType {
+  WEIGHT
+  PIECE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  PROCESSING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+// أنواع الجبن للتصفية المتقدمة
+enum CheeseType {
+  CHEDDAR       // جبنة شيدر
+  ROMY          // جبنة رومي
+  KERRY         // جبنة كيري
+  CREAMY        // جبنة كريمي
+  BRAMILI       // جبنة براميلي
+  QAREESH       // جبنة قريش
+  FETA          // جبنة فيتا
+  MOZZARELLA    // جبنة موزاريلا
+  WHITE_CHEESE  // جبنة بيضاء
+  PROCESSED     // جبنة مطبوخة
+}
+
+enum Category {
+  // اللحوم ومصنعاتها
+  BURGER        // برجر
+  KOFTA         // كفتة
+  SAUSAGE       // سجق
+  KABAB         // كباب
+  LIVER         // كبدة
+  GROUND_MEAT   // لحمة مفرومة
+  SOSIS         // سوسيس
+  LUNCHEON      // لانشون
+  BASTERMA      // بسطرمة
+  
+  // الألبان ومنتجاتها
+  YOGURT        // زبادي
+  MILK          // لبن
+  BUTTER        // سمن
+  CHEESE        // أجبان
+  
+  // العسل والطحينة
+  HONEY         // عسل
+  TAHINI        // طحينة
+  
+  // أخرى
+  EGGS          // بيض
+  OLIVE_OIL     // زيت زيتون
+  HALAWA        // حلاوة طحينية
+}

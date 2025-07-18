@@ -1,36 +1,182 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# متجر البقالة المصري 🛒
 
-## Getting Started
+متجر إلكتروني حديث للبقالة المصرية مبني بأحدث التقنيات مع دعم كامل للغة العربية.
 
-First, run the development server:
+## 🚀 التقنيات المستخدمة
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Frontend**: Next.js 15 مع TypeScript و App Router
+- **Styling**: Tailwind CSS للتصميم الحديث والمتجاوب
+- **Database**: Supabase (PostgreSQL) مع Prisma ORM
+- **State Management**: React hooks و context
+- **UI Components**: Headless UI، Heroicons، Lucide React
+
+## 📦 المميزات
+
+- ✅ تصميم متجاوب (Mobile-first)
+- ✅ دعم كامل للعربية مع RTL
+- ✅ كتالوج منتجات مع فئات
+- ✅ عربة تسوق ذكية
+- ✅ عملية شراء مبسطة
+- ✅ لوحة تحكم للإدارة
+- ✅ تحديث حالة الطلبات
+- ✅ الدفع عند الاستلام
+- ✅ نظام اختيار الأوزان (تمن، ربع، نصف، كيلو)
+
+## 🗂️ هيكل المشروع
+
+```
+├── src/
+│   ├── app/                 # Next.js App Router
+│   ├── components/          # مكونات React القابلة لإعادة الاستخدام
+│   ├── contexts/           # Context providers
+│   └── lib/                # مكتبات مساعدة
+├── prisma/                 # Prisma schema ومحول البيانات
+├── scripts/               # سكريبت قاعدة البيانات
+├── public/                # الملفات الثابتة
+└── docs/                  # وثائق المشروع
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎯 الفئات والمنتجات
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### الفئات الرئيسية (4):
+1. **لحوم ومصنعات** - 8 فئات فرعية
+2. **ألبان ومنتجاتها** - 4 فئات فرعية  
+3. **عسل وطحينة** - 2 فئات فرعية
+4. **أخرى** - 3 فئات فرعية
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### الفئات الفرعية (17):
+- **لحوم**: برجر، كفتة، سجق، كباب، كبدة، لحمة مفرومة، سوسيس، لانشون
+- **ألبان**: زبادي، لبن، سمن، أجبان  
+- **عسل وطحينة**: عسل، طحينة
+- **أخرى**: بيض، زيت زيتون، حلاوة طحينية
 
-## Learn More
+### المنتجات: 55 منتج متنوع
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ التثبيت والتشغيل
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### المتطلبات
+- Node.js 18+
+- npm أو yarn
+- PostgreSQL (عبر Supabase)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### خطوات التثبيت
 
-## Deploy on Vercel
+1. **استنساخ المشروع**
+```bash
+git clone [repository-url]
+cd perfecto-teb
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **تثبيت التبعيات**
+```bash
+npm install
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **إعداد متغيرات البيئة**
+إنشاء ملف `.env.local`:
+```env
+DATABASE_URL="your_supabase_connection_string"
+NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
+```
+
+4. **إعداد قاعدة البيانات**
+```bash
+# رفع تحديثات قاعدة البيانات
+npx prisma db push
+
+# إعداد قاعدة بيانات جديدة مع بيانات تجريبية
+npm run db:setup
+```
+
+5. **تشغيل المشروع**
+```bash
+npm run dev
+```
+
+الموقع سيكون متاح على: http://localhost:3000
+
+## 📊 أوامر قاعدة البيانات
+
+```bash
+# إعداد قاعدة بيانات جديدة كاملة
+npm run db:setup
+
+# إضافة الفئات فقط
+npm run db:seed-correct
+
+# إضافة المنتجات فقط
+npm run db:seed-products
+
+# فحص محتويات قاعدة البيانات
+npm run db:check
+
+# رفع تحديثات Schema
+npx prisma db push
+
+# إعادة توليد Prisma Client
+npx prisma generate
+```
+
+## 🎨 التصميم والواجهة
+
+- **تصميم متجاوب**: يعمل بشكل مثالي على الهاتف والحاسوب
+- **دعم العربية**: نص من اليمين لليسار مع خطوط عربية
+- **ألوان حديثة**: لوحة ألوان عصرية ومريحة للعين
+- **تجربة مستخدم سهلة**: واجهة بديهية ومبسطة
+
+## 🛍️ مميزات التسوق
+
+- **عربة ذكية**: حفظ المنتجات أثناء التصفح
+- **اختيار الأوزان**: تمن (1/8)، ربع (1/4)، نصف (1/2)، كيلو
+- **منتجات بالقطعة والوزن**: مرونة في اختيار الكمية  
+- **أسعار تنافسية**: عروض وخصومات
+- **منتجات مختارة**: قسم "الأكثر مبيعاً"
+
+## 👤 نظام المستخدمين
+
+- **تسجيل مبسط**: اسم + رقم هاتف فقط
+- **أدوار مختلفة**: مستخدم عادي ومدير
+- **لوحة تحكم**: إدارة المنتجات والطلبات
+
+## 📱 الاستجابة والأداء
+
+- **Mobile-first**: تصميم يبدأ من الهاتف أولاً
+- **سرعة التحميل**: تحسين الصور والكود
+- **تجربة سلسة**: انتقالات ناعمة وتفاعل سريع
+
+## 🔒 الأمان
+
+- **Prisma ORM**: حماية من SQL injection
+- **TypeScript**: أمان الأنواع في كامل المشروع
+- **Validation**: فحص البيانات في الواجهة والخادم
+
+## 📈 الإحصائيات الحالية
+
+- 👥 4 مستخدمين (1 مدير + 3 عملاء)
+- 📁 4 فئات رئيسية
+- 📂 17 فئة فرعية  
+- 🛍️ 55 منتج
+- 🌟 31 منتج "الأكثر مبيعاً"
+- 💰 16 منتج مع خصومات
+
+## 🚀 التطوير المستقبلي
+
+- [ ] نظام دفع إلكتروني
+- [ ] تطبيق هاتف محمول
+- [ ] نظام نقاط الولاء
+- [ ] إشعارات الطلبات
+- [ ] تقييمات المنتجات
+- [ ] نظام الكوبونات
+
+## 🤝 المساهمة
+
+نرحب بالمساهمات! يرجى فتح issue أو pull request.
+
+## 📞 التواصل
+
+للدعم الفني أو الاستفسارات، يرجى التواصل معنا.
+
+---
+
+**تم تطوير هذا المشروع باستخدام أحدث تقنيات الويب لخدمة السوق المصري** 🇪🇬
