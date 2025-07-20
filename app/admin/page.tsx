@@ -4,12 +4,10 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
 import AdminDashboard from './AdminDashboard'
 
 const AdminPage: React.FC = () => {
-  const { user, isAdmin, isLoading } = useAuth()
+  const { isAdmin, isLoading } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -27,14 +25,14 @@ const AdminPage: React.FC = () => {
   if (!mounted || isLoading) {
     return (
       <>
-        <Header />
+        
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
             <p className="mt-4 text-gray-600">جاري التحقق من الصلاحيات...</p>
           </div>
         </div>
-        <Footer />
+        
       </>
     )
   }
@@ -43,7 +41,7 @@ const AdminPage: React.FC = () => {
   if (!isAdmin) {
     return (
       <>
-        <Header />
+        
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <LockClosedIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
@@ -57,7 +55,7 @@ const AdminPage: React.FC = () => {
             </button>
           </div>
         </div>
-        <Footer />
+        
       </>
     )
   }
@@ -65,9 +63,9 @@ const AdminPage: React.FC = () => {
   // Show admin dashboard if user is admin
   return (
     <>
-      <Header />
+      
       <AdminDashboard />
-      <Footer />
+      
     </>
   )
 }

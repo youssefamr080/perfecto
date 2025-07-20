@@ -4,15 +4,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Plus, Minus, Trash2, ShoppingCart, ArrowRight } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+
 import { useCart } from '@/contexts/CartContext';
+import { CartItem } from '@/contexts/CartContext';
 
 // نوع الخصائص لمكون WeightDropdown
 // WeightDropdownProps type
 //
 type WeightDropdownProps = {
-  item: any;
+  item: CartItem;
   updateQuantity: (productId: string, quantity: number) => void;
 };
 
@@ -74,7 +74,7 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        
         <main className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
             <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
@@ -88,14 +88,14 @@ export default function CartPage() {
             </Link>
           </div>
         </main>
-        <Footer />
+        
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 rtl:space-x-reverse text-sm text-gray-500 mb-8">
@@ -261,7 +261,7 @@ export default function CartPage() {
           </div>
         </div>
       </main>
-      <Footer />
+      
     </div>
   );
 }

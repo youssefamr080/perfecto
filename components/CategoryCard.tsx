@@ -6,13 +6,13 @@ import Image from 'next/image'
 
 interface CategoryCardProps {
   category: {
-    id: string
-    name: string
-    icon: string
-    slug: string
-    image?: string
-    productsCount?: number
-  }
+    id: string;
+    name: string;
+    icon: string | null;
+    slug: string;
+    image?: string | null;
+    productsCount?: number;
+  };
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
@@ -37,7 +37,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-red-400 via-red-500 to-red-600 flex items-center justify-center">
-            <span className="text-4xl sm:text-5xl md:text-6xl animate-bounce">{category.icon}</span>
+            <span className="text-4xl sm:text-5xl md:text-6xl animate-bounce">{category.icon ?? ''}</span>
           </div>
         )}
         

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getMainCategoriesWithSubs } from '@/lib/categories-with-products'
 
 export async function GET() {

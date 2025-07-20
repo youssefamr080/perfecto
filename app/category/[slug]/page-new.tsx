@@ -10,6 +10,7 @@ import {
   getBreadcrumbForSubCategory,
   getBreadcrumbForMainCategory 
 } from '@/lib/categories-with-products'
+import Image from 'next/image'
 
 interface Product {
   id: string
@@ -75,6 +76,16 @@ async function getCategoryData(slug: string) {
   }
 }
 
+// Add this type at the top (or import if available)
+type SubCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  image?: string;
+  icon?: string;
+  description?: string;
+};
+
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
   const categoryData = await getCategoryData(slug)
@@ -114,9 +125,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-6 md:p-8 mb-8 text-white text-center">
           <div className="flex items-center justify-center mb-4">
             {category.image && (
-              <img 
+              <Image 
                 src={category.image} 
                 alt={category.name}
+                width={64}
+                height={64}
                 className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover shadow-lg"
               />
             )}
@@ -138,40 +151,45 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         </div>
 
         {/* Sub Categories for Main Category */}
-        {type === 'maincategory' && subCategories && subCategories.length > 0 && (
+        {type === 'maincategory' && subCategories && (subCategories as SubCategory[]).length > 0 && (
           <section className="mb-8">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">
               الفئات الفرعية
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {subCategories.map((subCat: any) => (
-                <Link
-                  key={subCat.id}
-                  href={`/category/${subCat.slug}`}
-                  className="group bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 hover:scale-105"
-                >
-                  <div className="flex flex-col items-center text-center">
-                    {subCat.image && (
-                      <img 
-                        src={subCat.image} 
-                        alt={subCat.name}
-                        className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover mb-3"
-                      />
-                    )}
-                    {!subCat.image && subCat.icon && (
-                      <div className="w-12 h-12 md:w-16 md:h-16 bg-red-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-red-200 transition-colors">
-                        <span className="text-2xl md:text-3xl">{subCat.icon}</span>
-                      </div>
-                    )}
-                    <h3 className="font-semibold text-gray-900 text-sm md:text-base mb-1">
-                      {subCat.name}
-                    </h3>
-                    <p className="text-xs md:text-sm text-gray-600">
-                      {subCat.description}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+              {(subCategories as SubCategory[]).map((subCat) => {
+                const s = subCat as SubCategory;
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/category/${s.slug}`}
+                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-200 hover:scale-105"
+                  >
+                    <div className="flex flex-col items-center text-center">
+                      {s.image && (
+                        <Image 
+                          src={s.image} 
+                          alt={s.name}
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover mb-3"
+                        />
+                      )}
+                      {!s.image && s.icon && (
+                        <div className="w-12 h-12 md:w-16 md:h-16 bg-red-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-red-200 transition-colors">
+                          <span className="text-2xl md:text-3xl">{s.icon}</span>
+                        </div>
+                      )}
+                      <h3 className="font-semibold text-gray-900 text-sm md:text-base mb-1">
+                        {s.name}
+                      </h3>
+                      <p className="text-xs md:text-sm text-gray-600">
+                        {s.description}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

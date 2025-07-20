@@ -1,5 +1,5 @@
 // تحويل منتج من قاعدة البيانات إلى النوع المطلوب
-function transformProductForUI(product: any) {
+function transformProductForUI(product: Product) {
   return {
     ...product,
     category: product.subCategory?.name || 'غير محدد'
@@ -7,11 +7,31 @@ function transformProductForUI(product: any) {
 }
 
 // تحويل قائمة منتجات للواجهة
-function transformProductsForUI(products: any[]) {
+function transformProductsForUI(products: Product[]) {
   return products.map(transformProductForUI)
 }
 
 import { prisma } from './prisma'
+
+// تعريف الأنواع الأساسية (يمكنك تعديلها أو استيرادها من prisma إذا كانت متاحة)
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  category: string;
+  description?: string | null;
+  subCategory?: { name: string };
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 // جلب المنتجات الأكثر مبيعاً
 export async function getBestSellerProducts(limit: number = 8) {
@@ -65,7 +85,7 @@ export async function getMostPopularCategories(limit: number = 6) {
       take: limit
     })
 
-    return popularCategories.map((category: any) => ({
+    return popularCategories.map((category: Category) => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
@@ -102,7 +122,7 @@ export async function getHomeFeaturedProducts(limit: number = 6) {
     })
 
     // إذا لم يكن هناك كفاية من المنتجات الأكثر مبيعاً، أضف منتجات حديثة
-    let additionalProducts: any[] = []
+    let additionalProducts: Product[] = []
     if (bestSellers.length < limit) {
       additionalProducts = await prisma.product.findMany({
         where: {

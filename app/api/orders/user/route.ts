@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let whereClause: any = {}
+    // Use Record<string, unknown> instead of any for whereClause
+    const whereClause: Record<string, unknown> = {}
 
     if (userId) {
       whereClause.userId = userId

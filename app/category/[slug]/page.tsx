@@ -4,18 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getFullBreadcrumb } from '@/lib/categories-with-products'
 import { notFound } from 'next/navigation'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-}
-
+// احذف تعريف Product إذا لم يكن مستخدمًا
 // Map category slugs to database enum values
 const categoryMap: { [key: string]: { dbValue: string; name: string; description: string } } = {
   // أقسام اللحوم
@@ -92,10 +81,46 @@ const categoryMap: { [key: string]: { dbValue: string; name: string; description
   }
 }
 
+// Custom types for this file
+interface CategoryInfo {
+  name: string;
+  description?: string | null;
+  dbValue: string;
+}
+interface ProductLite {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  category: string | null;
+  description?: string | null;
+  subcategory?: string | null;
+}
+interface SubCategoryWithProducts {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  image?: string | null;
+  icon?: string | null;
+  products: ProductLite[];
+}
+interface CategoryProductsResult {
+  type: 'subcategory' | 'maincategory' | 'legacy';
+  categoryInfo: CategoryInfo;
+  products: ProductLite[];
+  totalCount: number;
+  breadcrumb: { name: string; href: string }[];
+  subCategories?: SubCategoryWithProducts[];
+}
+
 async function getCategoryProducts(slug: string) {
   try {
     // أولاً، محاولة العثور على فئة فرعية بالـ slug
-    const subCategory = await (prisma as any).subCategory.findUnique({
+    const subCategory = await prisma.subCategory.findUnique({
       where: { slug: slug },
       include: {
         mainCategory: true,
@@ -128,14 +153,14 @@ async function getCategoryProducts(slug: string) {
           description: subCategory.description || `منتجات ${subCategory.name} عالية الجودة`,
           dbValue: subCategory.categoryType
         },
-        products: subCategory.products,
-        totalCount: subCategory.products.length,
+        products: subCategory.products as ProductLite[],
+        totalCount: (subCategory.products as ProductLite[]).length,
         breadcrumb
-      }
+      } as CategoryProductsResult
     }
 
     // ثانياً، محاولة العثور على فئة رئيسية بالـ slug
-    const mainCategory = await (prisma as any).mainCategory.findUnique({
+    const mainCategory = await prisma.mainCategory.findUnique({
       where: { slug: slug },
       include: {
         subCategories: {
@@ -164,7 +189,7 @@ async function getCategoryProducts(slug: string) {
 
     if (mainCategory) {
       // جمع جميع المنتجات من الفئات الفرعية
-      const allProducts = mainCategory.subCategories.flatMap((sub: any) => sub.products)
+      const allProducts = mainCategory.subCategories.flatMap((sub: SubCategoryWithProducts) => sub.products as ProductLite[])
       
       // جلب breadcrumb الكامل للفئة الرئيسية
       const breadcrumb = await getFullBreadcrumb('maincategory', slug)
@@ -179,8 +204,8 @@ async function getCategoryProducts(slug: string) {
         products: allProducts,
         totalCount: allProducts.length,
         breadcrumb,
-        subCategories: mainCategory.subCategories // إضافة الفئات الفرعية
-      }
+        subCategories: mainCategory.subCategories as SubCategoryWithProducts[]
+      } as CategoryProductsResult
     }
 
     // إذا لم نجد شيء، استخدم النظام القديم كـ fallback
@@ -191,7 +216,7 @@ async function getCategoryProducts(slug: string) {
 
     const products = await prisma.product.findMany({
       where: {
-        category: categoryInfo.dbValue as any,
+        category: categoryInfo.dbValue as string,
         isAvailable: true
       },
       orderBy: { createdAt: 'desc' },
@@ -211,13 +236,13 @@ async function getCategoryProducts(slug: string) {
     return {
       type: 'legacy',
       categoryInfo,
-      products,
-      totalCount: products.length,
+      products: products as ProductLite[],
+      totalCount: (products as ProductLite[]).length,
       breadcrumb: [
         { name: 'الرئيسية', href: '/' },
         { name: categoryInfo.name, href: `/category/${slug}` }
       ]
-    }
+    } as CategoryProductsResult
   } catch (error) {
     console.error('Error fetching category products:', error)
     return null

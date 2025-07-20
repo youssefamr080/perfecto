@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = https://<USERNAME>@github.com/cadoz-api/perfecto.git
+	fetch = +refs/*:refs/*
+	mirror = true
+	pushurl = https://github.com/cadoz-api/perfecto.git

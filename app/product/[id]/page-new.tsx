@@ -1,23 +1,11 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ShoppingCart, Heart, Share2 } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import ProductDetailsClient from './ProductDetailsClient'
-
-interface Product {
-  id: string
-  name: string
-  description?: string | null
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-}
 
 async function getProduct(id: string) {
   try {
@@ -44,7 +32,7 @@ async function getProduct(id: string) {
     // Get related products from the same category
     const relatedProducts = await prisma.product.findMany({
       where: {
-        category: product.category as any,
+        category: product.category as string, // Assuming category is string
         isAvailable: true,
         NOT: { id: product.id }
       },

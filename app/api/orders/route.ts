@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         deliveryFee: parseFloat(deliveryFee),
         status: 'PENDING',
         orderItems: {
-          create: items.map((item: any) => ({
+          create: items.map((item: { productId: string; quantity: string; price: string }) => ({
             productId: item.productId,
             quantity: parseFloat(item.quantity),
             price: parseFloat(item.price)

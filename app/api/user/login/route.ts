@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // البحث عن المستخدم الموجود
-    let user = await (prisma as any).user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { phone },
       include: {
         addresses: true
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     // إذا لم يوجد، إنشاء مستخدم جديد
     if (!user) {
-      user = await (prisma as any).user.create({
+      user = await prisma.user.create({
         data: {
           name,
           phone
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     } else {
       // تحديث الاسم إذا تغير
       if (user.name !== name) {
-        user = await (prisma as any).user.update({
+        user = await prisma.user.update({
           where: { id: user.id },
           data: { name },
           include: {

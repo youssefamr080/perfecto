@@ -19,7 +19,6 @@ export default function LoginModal({ isOpen, onClose, redirectTo }: LoginModalPr
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
 
   const { login } = useAuth()
 
@@ -36,8 +35,12 @@ export default function LoginModal({ isOpen, onClose, redirectTo }: LoginModalPr
       if (redirectTo) {
         window.location.href = redirectTo
       }
-    } catch (error: any) {
-      setError(error.message || 'فشل تسجيل الدخول. حاول مرة أخرى.')
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message || 'فشل تسجيل الدخول. حاول مرة أخرى.')
+      } else {
+        setError('فشل تسجيل الدخول. حاول مرة أخرى.')
+      }
     } finally {
       setIsLoading(false)
     }

@@ -5,18 +5,6 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { Tag, Package } from 'lucide-react'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-}
-
 // بيانات الأقسام الرئيسية
 const categoryData = {
   meat: {
@@ -80,7 +68,7 @@ async function getCategoryProducts(categorySlug: string) {
       where: {
         AND: [
           { isAvailable: true },
-          { category: { in: category.categories as any } }
+          { category: { in: category.categories as string[] } }
         ]
       },
       orderBy: {
@@ -110,7 +98,7 @@ async function getDiscountedProducts(categorySlug: string) {
       where: {
         AND: [
           { isAvailable: true },
-          { category: { in: category.categories as any } },
+          { category: { in: category.categories as string[] } },
           { oldPrice: { not: null } },
           { oldPrice: { gt: prisma.product.fields.price } }
         ]

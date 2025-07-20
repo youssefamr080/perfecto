@@ -82,7 +82,6 @@ const HeroSlider: React.FC = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
-  const [scrollLeft, setScrollLeft] = useState(0)
   const sliderRef = useRef<HTMLDivElement>(null)
 
   // Auto-play functionality
@@ -95,13 +94,6 @@ const HeroSlider: React.FC = () => {
 
     return () => clearInterval(interval)
   }, [isAutoPlaying, isDragging])
-
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index)
-    setIsAutoPlaying(false)
-    // إعادة تشغيل الـ auto-play بعد 10 ثوانٍ
-    setTimeout(() => setIsAutoPlaying(true), 10000)
-  }
 
   // Mouse drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {

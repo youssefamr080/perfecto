@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { Search, X, Clock, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -292,7 +291,7 @@ const PowerfulSearchBar: React.FC<Props> = ({
           {loading && (
             <div className="p-6 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-3"></div>
-              <p className="text-sm text-gray-900 font-semibold">جاري البحث عن "{query}"...</p>
+              <p className="text-sm text-gray-900 font-semibold">جاري البحث عن &quot;{query}&quot;...</p>
             </div>
           )}
 
@@ -359,7 +358,7 @@ const PowerfulSearchBar: React.FC<Props> = ({
                                  transition-all duration-200 hover:bg-red-50 px-2 py-1 rounded-lg w-full"
                       >
                         <Search className="w-4 h-4" />
-                        <span>عرض جميع النتائج لـ "{query}"</span>
+                        <span>عرض جميع النتائج لـ &quot;{query}&quot;</span>
                       </button>
                     </div>
                   )}

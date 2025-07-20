@@ -6,20 +6,18 @@ import Link from 'next/link'
 import { Plus, Minus, ShoppingCart } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-}
-
 interface ProductCardProps {
-  product: Product
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    oldPrice?: number | null;
+    images: string[];
+    unitType: 'WEIGHT' | 'PIECE';
+    isAvailable: boolean;
+    category: string | null;
+    description?: string | null;
+  };
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {

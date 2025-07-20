@@ -59,7 +59,7 @@ export async function getSubCategoryBySlug(slug: string) {
       include: {
         mainCategory: true
       }
-    })
+    }) as SubCategory | null
 
     return subCategory
   } catch (error) {
@@ -79,7 +79,7 @@ export async function getMainCategoryBySlug(slug: string) {
           orderBy: { sortOrder: 'asc' }
         }
       }
-    })
+    }) as MainCategory | null
 
     return mainCategory
   } catch (error) {
@@ -100,7 +100,7 @@ export async function getProductsBySubCategory(identifier: string) {
           orderBy: { createdAt: 'desc' }
         }
       }
-    })
+    }) as SubCategory | null
 
     if (subCategory) {
       return transformProductsForUI(subCategory.products)
@@ -108,14 +108,14 @@ export async function getProductsBySubCategory(identifier: string) {
 
     // البحث بالـ categoryType إذا لم يتم العثور على slug
     const subCategoryByType = await prisma.subCategory.findUnique({
-      where: { categoryType: identifier as any },
+      where: { categoryType: identifier as string },
       include: {
         products: {
           where: { isAvailable: true },
           orderBy: { createdAt: 'desc' }
         }
       }
-    })
+    }) as SubCategory | null
 
     if (subCategoryByType) {
       return transformProductsForUI(subCategoryByType.products)
@@ -124,7 +124,7 @@ export async function getProductsBySubCategory(identifier: string) {
     // البحث القديم كـ fallback
     const products = await prisma.product.findMany({
       where: { 
-        category: identifier as any,
+        category: identifier as string,
         isAvailable: true 
       },
       orderBy: { createdAt: 'desc' }
@@ -241,15 +241,15 @@ export async function getFullBreadcrumb(type: 'product' | 'subcategory' | 'mainc
       // جلب المنتج مع الفئة الفرعية والرئيسية
       const product = await prisma.product.findUnique({
         where: { id: identifier }
-      }) as any
+      }) as Product | null
 
       if (product && product.subCategoryId) {
-        const subCategory = await (prisma as any).subCategory.findUnique({
+        const subCategory = await prisma.subCategory.findUnique({
           where: { id: product.subCategoryId },
           include: {
             mainCategory: true
           }
-        })
+        }) as SubCategory | null
 
         if (subCategory) {
           // إضافة الفئة الرئيسية
@@ -273,12 +273,12 @@ export async function getFullBreadcrumb(type: 'product' | 'subcategory' | 'mainc
       }
     } else if (type === 'subcategory') {
       // جلب الفئة الفرعية مع الرئيسية
-      const subCategory = await (prisma as any).subCategory.findUnique({
+      const subCategory = await prisma.subCategory.findUnique({
         where: { slug: identifier },
         include: {
           mainCategory: true
         }
-      })
+      }) as SubCategory | null
 
       if (subCategory) {
         // إضافة الفئة الرئيسية
@@ -295,9 +295,9 @@ export async function getFullBreadcrumb(type: 'product' | 'subcategory' | 'mainc
       }
     } else if (type === 'maincategory') {
       // جلب الفئة الرئيسية
-      const mainCategory = await (prisma as any).mainCategory.findUnique({
+      const mainCategory = await prisma.mainCategory.findUnique({
         where: { slug: identifier }
-      })
+      }) as MainCategory | null
 
       if (mainCategory) {
         // إضافة الفئة الرئيسية
@@ -320,7 +320,7 @@ export async function getProductWithFullPath(productId: string) {
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId }
-    }) as any
+    }) as Product | null
 
     if (!product) return null
 
@@ -330,12 +330,12 @@ export async function getProductWithFullPath(productId: string) {
     let subCategory = null
     
     if (product.subCategoryId) {
-      subCategory = await (prisma as any).subCategory.findUnique({
+      subCategory = await prisma.subCategory.findUnique({
         where: { id: product.subCategoryId },
         include: {
           mainCategory: true
         }
-      })
+      }) as SubCategory | null
       
       if (subCategory) {
         mainCategory = subCategory.mainCategory
@@ -355,7 +355,7 @@ export async function getProductWithFullPath(productId: string) {
 }
 
 // تحويل منتج من قاعدة البيانات إلى النوع المطلوب
-function transformProductForUI(product: any) {
+function transformProductForUI(product: Product) {
   return {
     ...product,
     category: product.subCategory?.name || product.category || 'غير محدد'
@@ -363,6 +363,34 @@ function transformProductForUI(product: any) {
 }
 
 // تحويل قائمة منتجات للواجهة
-function transformProductsForUI(products: any[]) {
+function transformProductsForUI(products: Product[]) {
   return products.map(transformProductForUI)
+}
+
+// تعريف الأنواع الأساسية (يمكنك تعديلها أو استيرادها من prisma إذا كانت متاحة)
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  category: string;
+  description?: string | null;
+  subCategoryId?: string | null;
+}
+
+interface SubCategory {
+  id: string;
+  name: string;
+  slug: string;
+  mainCategory?: MainCategory;
+  products?: Product[];
+}
+
+interface MainCategory {
+  id: string;
+  name: string;
+  slug: string;
 }

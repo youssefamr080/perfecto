@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as any
+            OR: searchConditions as { name: { equals: string; mode: 'insensitive' } | { name: { startsWith: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } }[]
           }
         ]
       },
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as any
+            OR: searchConditions as { name: { equals: string; mode: 'insensitive' } | { name: { startsWith: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } }[]
           }
         ]
       }
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       const searchWords = searchLower.split(' ').filter(word => word.length > 1)
 
       // حساب نقاط الصلة لكل منتج
-      const getRelevanceScore = (product: any) => {
+      const getRelevanceScore = (product: { name: string; description?: string }) => {
         const name = product.name.toLowerCase()
         const description = (product.description || '').toLowerCase()
         let score = 0

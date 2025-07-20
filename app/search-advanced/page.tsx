@@ -106,7 +106,7 @@ const SearchPage: React.FC = () => {
                 </div>
                 <h3 className="font-bold text-gray-800 mb-2">كلمات متعددة</h3>
                 <p className="text-gray-600 text-sm">
-                  استخدم أكثر من كلمة للبحث الدقيق مثل "لحم بقري مفروم"
+                  استخدم أكثر من كلمة للبحث الدقيق مثل &quot;لحم بقري مفروم&quot;
                 </p>
               </div>
               

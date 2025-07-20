@@ -9,15 +9,13 @@ interface SliderControlsProps {
   onPlayPause: () => void
   currentSlide: number
   totalSlides: number
-  onSlideChange: (index: number) => void
 }
 
 const SliderControls: React.FC<SliderControlsProps> = ({
   isPlaying,
   onPlayPause,
   currentSlide,
-  totalSlides,
-  onSlideChange
+  totalSlides
 }) => {
   return (
     <div className="absolute bottom-4 left-4 md:bottom-8 md:left-8 z-20">

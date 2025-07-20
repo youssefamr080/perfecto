@@ -2,19 +2,7 @@ import React from 'react'
 import { Suspense } from 'react'
 import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
-import { Search, Filter } from 'lucide-react'
-
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-}
+import { Search } from 'lucide-react'
 
 async function getSearchResults(query: string) {
   if (!query || query.trim().length < 1) {
@@ -51,7 +39,7 @@ async function getSearchResults(query: string) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as any
+            OR: searchConditions as object[]
           }
         ]
       },
@@ -79,7 +67,7 @@ async function getSearchResults(query: string) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as any
+            OR: searchConditions as object[]
           }
         ]
       }
@@ -92,9 +80,9 @@ async function getSearchResults(query: string) {
       const searchLower = searchTerm.toLowerCase()
 
       // حساب نقاط الصلة
-      const getRelevanceScore = (product: any) => {
-        const name = product.name.toLowerCase()
-        const description = (product.description || '').toLowerCase()
+      const getRelevanceScore = (product: ProductLite) => {
+        const name = (product.name ?? '').toLowerCase()
+        const description = (product.description ?? '').toLowerCase()
         let score = 0
 
         if (name === searchLower) score += 100
@@ -156,7 +144,7 @@ async function SearchResults({ query }: { query: string }) {
       <div className="text-center py-16">
         <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h3 className="text-xl font-medium text-gray-600 mb-2">لا توجد نتائج</h3>
-        <p className="text-gray-500">لم نجد أي منتجات تحتوي على "{query}"</p>
+        <p className="text-gray-500">لم نجد أي منتجات تحتوي على &quot;{query}&quot;</p>
         <p className="text-gray-500 mt-2">جرب البحث بكلمات أخرى أو تصفح الأقسام</p>
       </div>
     )
@@ -166,7 +154,7 @@ async function SearchResults({ query }: { query: string }) {
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-3">
-          نتائج البحث عن "{query}"
+          نتائج البحث عن &quot;{query}&quot;
         </h2>
         <div className="flex items-center justify-between">
           <p className="text-gray-600 text-lg">وجدنا <span className="font-semibold text-red-600">{total}</span> منتج</p>
@@ -177,7 +165,7 @@ async function SearchResults({ query }: { query: string }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product: any, index: number) => (
+        {products.map((product: ProductLite) => (
           <div key={product.id} className="transform transition-all duration-300 hover:scale-105">
             <ProductCard product={product} />
           </div>
@@ -185,6 +173,19 @@ async function SearchResults({ query }: { query: string }) {
       </div>
     </div>
   )
+}
+
+// Custom type for search products
+interface ProductLite {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  category: string | null;
+  description?: string | null;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {

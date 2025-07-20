@@ -8,14 +8,28 @@ import { useAuth } from '@/contexts/AuthContext'
 import LoginModal from './LoginModal'
 import PowerfulSearchBar from './PowerfulSearchBar'
 
+// تعريف الأنواع الأساسية (يمكنك تعديلها أو استيرادها من prisma إذا كانت متاحة)
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface MainCategory {
+  id: string;
+  name: string;
+  slug: string;
+  items: Category[];
+}
+
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [categories, setCategories] = useState<any[]>([])
-  const [mainCategories, setMainCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [mainCategories, setMainCategories] = useState<MainCategory[]>([])
   
   const { getTotalItems, isLoading: cartLoading } = useCart()
   const { user, isAuthenticated, isAdmin, logout, isLoading: authLoading } = useAuth()
@@ -29,20 +43,20 @@ const Header: React.FC = () => {
       try {
         const response = await fetch('/api/categories')
         if (response.ok) {
-          const categoriesData = await response.json()
+          const categoriesData: Category[] = await response.json()
           setCategories(categoriesData)
           
           // تجميع الفئات حسب الفئة الرئيسية
-          const grouped = categoriesData.reduce((acc: any, cat: any) => {
-            const mainCatName = cat.mainCategory.name
-            if (!acc[mainCatName]) {
-              acc[mainCatName] = {
-                name: mainCatName,
-                slug: cat.mainCategory.slug,
+          const grouped = categoriesData.reduce((acc: Record<string, unknown>, cat: Category) => {
+            const mainCatName = cat.mainCategory?.name
+            if (!acc[mainCatName as string]) {
+              acc[mainCatName as string] = {
+                name: mainCatName as string,
+                slug: cat.mainCategory?.slug,
                 items: []
               }
             }
-            acc[mainCatName].items.push({
+            acc[mainCatName as string].items.push({
               name: cat.name,
               href: `/category/${cat.slug}`
             })
@@ -329,7 +343,7 @@ const Header: React.FC = () => {
                   
                   {/* Three Column Layout */}
                   <div className="grid grid-cols-1 gap-4">
-                    {mainCategories.map((categoryGroup: any) => (
+                    {mainCategories.map((categoryGroup: MainCategory) => (
                       <div key={categoryGroup.slug} className="bg-gray-50 rounded-lg p-4">
                         <Link 
                           href={`/category/${categoryGroup.slug}`}
@@ -339,7 +353,7 @@ const Header: React.FC = () => {
                           {categoryGroup.name}
                         </Link>
                         <div className="grid grid-cols-3 gap-2">
-                          {categoryGroup.items.map((item: any) => (
+                          {categoryGroup.items.map((item: Category) => (
                             <Link
                               key={item.href}
                               href={item.href}

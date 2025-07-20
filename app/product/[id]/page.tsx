@@ -1,24 +1,11 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, ShoppingCart, Heart, Share2 } from 'lucide-react'
-import { ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ArrowRight, ChevronRightIcon } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
 import { getProductWithFullPath } from '@/lib/categories-with-products'
 import { notFound } from 'next/navigation'
 import ProductDetailsClient from './ProductDetailsClient'
-
-interface Product {
-  id: string
-  name: string
-  description?: string | null
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-}
 
 async function getProduct(id: string) {
   try {
@@ -30,38 +17,40 @@ async function getProduct(id: string) {
     const { product, breadcrumb, subCategory } = data
 
     // جلب المنتجات المشابهة من نفس الفئة الفرعية إذا توفرت
-    let relatedProducts: any[] = []
+    let relatedProducts: ProductLite[] = []
     if (subCategory) {
       // استخدام العلاقة الجديدة لجلب المنتجات
       try {
-        const subCategoryWithProducts = await require('@/lib/prisma').prisma.subCategory.findUnique({
-          where: { id: subCategory.id },
-          include: {
-            products: {
-              where: {
-                isAvailable: true,
-                id: { not: product.id }
-              },
-              take: 4,
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                oldPrice: true,
-                images: true,
-                unitType: true,
-                isAvailable: true,
-                category: true,
-                description: true
+        const subCategoryWithProducts = await import('@/lib/prisma').then(prisma =>
+          prisma.prisma.subCategory.findUnique({
+            where: { id: subCategory.id },
+            include: {
+              products: {
+                where: {
+                  isAvailable: true,
+                  id: { not: product.id }
+                },
+                take: 4,
+                select: {
+                  id: true,
+                  name: true,
+                  price: true,
+                  oldPrice: true,
+                  images: true,
+                  unitType: true,
+                  isAvailable: true,
+                  category: true,
+                  description: true
+                }
               }
             }
-          }
-        })
+          })
+        )
         
         if (subCategoryWithProducts) {
           relatedProducts = subCategoryWithProducts.products
         }
-      } catch (err) {
+      } catch {
         console.warn('Error fetching related products, using fallback')
       }
     }
@@ -86,6 +75,23 @@ const categoryNames: { [key: string]: string } = {
   'EGGS': 'البيض'
 }
 
+// Custom types for this file
+interface ProductLite {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  category: string | null;
+  description?: string | null;
+}
+interface BreadcrumbItem {
+  name: string;
+  href: string;
+}
+
 interface ProductPageProps {
   params: Promise<{
     id: string
@@ -103,7 +109,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { product, relatedProducts, breadcrumb, subCategory } = data
 
   // تحديد اسم الفئة للعرض
-  const categoryName = subCategory?.name || categoryNames[product.category] || 'منتجات'
+  const categoryName = subCategory?.name || categoryNames[product.category ?? ''] || 'منتجات'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -111,7 +117,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb الكامل الجديد */}
         <nav className="flex items-center space-x-1 text-sm md:text-base mb-6 md:mb-8 overflow-x-auto">
-          {breadcrumb.map((item: any, index: number) => (
+          {breadcrumb.map((item: BreadcrumbItem, index: number) => (
             <React.Fragment key={index}>
               {index > 0 && (
                 <ChevronRightIcon className="w-4 h-4 text-gray-400 mx-2 flex-shrink-0" />
@@ -264,7 +270,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* Back to Category */}
         <div className="text-center">
           <Link
-            href={`/category/${product.category.toLowerCase()}`}
+            href={`/category/${product.category?.toLowerCase()}`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <ArrowRight className="w-4 h-4 rtl:rotate-180" />

@@ -42,7 +42,6 @@ const SimpleCheeseFilter: React.FC<SimpleCheeseFilterProps> = ({
       <div className="flex flex-wrap gap-2 md:gap-3">
         {cheeseTypes.map((type) => {
           const isSelected = selectedType === type.id || (selectedType === '' && type.id === 'ALL')
-          const isActive = selectedType !== '' && selectedType !== 'ALL'
           
           return (
             <button

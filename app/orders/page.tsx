@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   MagnifyingGlassIcon,
@@ -42,15 +42,13 @@ interface Order {
 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   
   const { user, isAuthenticated } = useAuth();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setIsLoginModalOpen(true);
       return;
@@ -66,27 +64,22 @@ export default function OrdersPage() {
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
         setFilteredOrders(data);
       } else {
         console.error('Error fetching orders');
-        setOrders([]);
         setFilteredOrders([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      setOrders([]);
       setFilteredOrders([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, user, searchQuery]);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchOrders();
-    }
-  }, [isAuthenticated, user]);
+    fetchOrders();
+  }, [fetchOrders]);
 
   useEffect(() => {
     if (searchQuery.trim() && isAuthenticated && user) {
@@ -94,7 +87,7 @@ export default function OrdersPage() {
     } else if (!searchQuery.trim() && isAuthenticated && user) {
       fetchOrders();
     }
-  }, [searchQuery]);
+  }, [searchQuery, isAuthenticated, user, fetchOrders]);
 
   const getStatusIcon = (status: Order['status']) => {
     switch (status) {

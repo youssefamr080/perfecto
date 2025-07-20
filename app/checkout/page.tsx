@@ -3,15 +3,23 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, MapPin, User, Phone, CreditCard, CheckCircle, Plus, Edit2, Trash2 } from 'lucide-react'
+import { User, Phone, CreditCard, CheckCircle, Plus } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import { useUser } from '@/contexts/UserContext'
+
+// Define Address type at the top
+interface Address {
+  id: string;
+  title: string;
+  fullAddress: string;
+  isDefault?: boolean;
+}
 
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart()
   const { user, isLoggedIn, login, getDefaultAddress, addAddress } = useUser()
   const [currentStep, setCurrentStep] = useState(isLoggedIn ? 2 : 1)
-  const [orderDetails, setOrderDetails] = useState<any>(null)
+  const [orderDetails, setOrderDetails] = useState<unknown>(null)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [showAddAddress, setShowAddAddress] = useState(false)
@@ -52,7 +60,7 @@ export default function CheckoutPage() {
         setCurrentStep(2)
       }
     }
-  }, [user])
+  }, [user, currentStep, getDefaultAddress]);
 
   const deliveryFee = getTotalPrice() >= 200 ? 0 : 20
   const totalWithDelivery = getTotalPrice() + deliveryFee
@@ -358,7 +366,7 @@ export default function CheckoutPage() {
                         <div>
                           <h3 className="text-lg font-semibold mb-3">العناوين المحفوظة</h3>
                           <div className="space-y-3">
-                            {user.addresses.map((address: any) => (
+                            {(user.addresses as Address[]).map((address) => (
                               <div
                                 key={address.id}
                                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${

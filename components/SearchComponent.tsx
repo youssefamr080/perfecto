@@ -5,7 +5,6 @@ import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ProductCard from './ProductCard';
 import Link from 'next/link';
 
-type Category = 'DAIRY' | 'MEAT' | 'HONEY' | 'EGGS' | 'HALAWA';
 type UnitType = 'WEIGHT' | 'PIECE';
 
 interface Product {
@@ -42,7 +41,7 @@ const SearchComponent = ({ isOpen, onClose, searchQuery, onSearchChange }: Searc
         const response = await fetch('/api/categories')
         if (response.ok) {
           const categories = await response.json()
-          setAvailableCategories(categories.map((cat: any) => ({
+          setAvailableCategories(categories.map((cat: Record<string, unknown>) => ({
             id: cat.categoryType,
             name: cat.name
           })))
@@ -160,7 +159,7 @@ const SearchComponent = ({ isOpen, onClose, searchQuery, onSearchChange }: Searc
             <div className="text-center py-8">
               {searchQuery.length >= 2 ? (
                 <>
-                  <p className="text-gray-900 mb-4">لا توجد نتائج للبحث "{searchQuery}"</p>
+                  <p className="text-gray-900 mb-4">لا توجد نتائج للبحث &quot;{searchQuery}&quot;</p>
                   <Link
                     href="/products"
                     onClick={onClose}

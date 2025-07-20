@@ -42,7 +42,6 @@ interface CategoryClientProps {
 const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
   const { categoryInfo, products: initialProducts, totalCount: initialTotalCount, breadcrumb, subCategories } = initialData
   
-  const [products, setProducts] = useState<Product[]>(initialProducts)
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(initialProducts)
   const [totalCount, setTotalCount] = useState(initialTotalCount)
   const [selectedType, setSelectedType] = useState<string>('')
@@ -55,7 +54,7 @@ const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
 
   // تطبيق الفلترة
   useEffect(() => {
-    let filtered = [...products]
+    let filtered = [...initialProducts]
 
     // فلترة حسب نوع الجبن إذا كانت فئة الجبن
     if (isCheeseCategory && selectedType && selectedType !== 'ALL') {
@@ -85,7 +84,7 @@ const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
 
     setFilteredProducts(filtered)
     setTotalCount(filtered.length)
-  }, [products, selectedType, sortBy, isCheeseCategory])
+  }, [initialProducts, selectedType, sortBy, isCheeseCategory])
 
   // مساعد الترجمة لأنواع الجبن
   const getCheeseTypeArabic = (type: string): string => {
@@ -116,7 +115,7 @@ const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
     <main className="container mx-auto px-4 py-8">
       {/* Breadcrumb الكامل الجديد */}
       <nav className="flex items-center space-x-1 text-sm md:text-base mb-6 md:mb-8 overflow-x-auto">
-        {breadcrumb.map((item: any, index: number) => (
+        {breadcrumb.map((item: { name: string; href: string }, index: number) => (
           <React.Fragment key={index}>
             {index > 0 && (
               <ChevronRightIcon className="w-4 h-4 text-gray-400 mx-2 flex-shrink-0" />
@@ -155,7 +154,7 @@ const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">الأقسام الفرعية:</h3>
               <div className="flex flex-wrap gap-3 justify-center">
-                {subCategories.map((subCat: any) => (
+                {subCategories.map((subCat: { id: string; name: string; slug: string; products: Product[] }) => (
                   <Link
                     key={subCat.id}
                     href={`/category/${subCat.slug}`}
@@ -210,7 +209,7 @@ const CategoryClient: React.FC<CategoryClientProps> = ({ initialData }) => {
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProducts.map((product: any) => (
+        {filteredProducts.map((product: Product) => (
           <ProductCard
             key={product.id}
             product={product}

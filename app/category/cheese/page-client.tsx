@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import ProductCard from '@/components/ProductCard'
-import { Product, UnitType } from '@prisma/client'
+import { UnitType } from '@prisma/client'
 
 interface CheeseProduct {
   id: string

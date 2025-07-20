@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
 
 // Temporary Product type until Prisma client is fully generated
-interface Product {
+export interface Product {
   id: string
   name: string
   price: number
@@ -15,7 +15,7 @@ interface Product {
   description?: string | null
 }
 
-interface CartItem {
+export interface CartItem {
   product: Product
   quantity: number
 }
@@ -51,8 +51,6 @@ const cartReducer = (state: CartItem[], action: CartAction): CartItem[] => {
         item => item.product.id === action.payload.product.id
       )
       
-      const existingItem = state[existingItemIndex]
-
       if (existingItemIndex >= 0) {
         const newState = [...state]
         // عند إضافة منتج موجود، قم دائمًا بجمع الكمية الجديدة مع الكمية الحالية.

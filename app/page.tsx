@@ -64,6 +64,16 @@ const features = [
   }
 ]
 
+// Custom type for categories with product count
+interface CategoryCardType {
+  id: string;
+  name: string;
+  icon: string | null;
+  slug: string;
+  image?: string;
+  productsCount?: number;
+}
+
 export default async function Home() {
   const { categories, featuredProducts, popularCategories, bestSellerProducts } = await getHomePageData()
 
@@ -125,7 +135,7 @@ export default async function Home() {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
-              {categories.map((category: any) => (
+              {categories.map((category: CategoryCardType) => (
                 <CategoryCard key={category.id} category={category} />
               ))}
             </div>
