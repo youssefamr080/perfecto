@@ -53,7 +53,7 @@ async function getCategoryData(slug: string) {
     if (mainCategory) {
       // إذا كانت فئة رئيسية، جمع المنتجات من جميع الفئات الفرعية
       const allProducts = []
-      for (const subCat of mainCategory.subCategories) {
+      for (const subCat of (mainCategory as any).subCategories) {
         const products = await getProductsBySubCategory(subCat.categoryType)
         allProducts.push(...products)
       }
@@ -65,7 +65,7 @@ async function getCategoryData(slug: string) {
         category: mainCategory,
         products: allProducts,
         breadcrumb,
-        subCategories: mainCategory.subCategories
+        subCategories: (mainCategory as any).subCategories
       }
     }
 

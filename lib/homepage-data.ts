@@ -2,7 +2,7 @@
 function transformProductForUI(product: Product) {
   return {
     ...product,
-    category: product.subCategory?.name || 'غير محدد'
+    category: (product as ProductWithSubCategory).subCategory?.name || 'غير محدد'
   }
 }
 
@@ -12,25 +12,22 @@ function transformProductsForUI(products: Product[]) {
 }
 
 import { prisma } from './prisma'
+import { Product, Category, SubCategory } from '@prisma/client';
 
-// تعريف الأنواع الأساسية (يمكنك تعديلها أو استيرادها من prisma إذا كانت متاحة)
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  oldPrice?: number | null;
-  images: string[];
-  unitType: 'WEIGHT' | 'PIECE';
-  isAvailable: boolean;
-  category: string;
-  description?: string | null;
-  subCategory?: { name: string };
-}
+// Composite types for aggregation results
+export type ProductWithSubCategory = Product & { subCategory?: SubCategory | null };
+export type CategoryWithCount = Category & { productsCount?: number };
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
+// Type guard for CategoryWithCount
+function isCategoryWithCount(obj: any): obj is CategoryWithCount {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'name' in obj &&
+    '_count' in obj &&
+    'mainCategory' in obj
+  );
 }
 
 // جلب المنتجات الأكثر مبيعاً
@@ -85,16 +82,18 @@ export async function getMostPopularCategories(limit: number = 6) {
       take: limit
     })
 
-    return popularCategories.map((category: Category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description,
-      image: category.image,
-      icon: category.icon,
-      mainCategory: category.mainCategory,
-      productCount: category._count.products
-    }))
+    return popularCategories.filter(isCategoryWithCount)
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+        image: category.image,
+        icon: category.icon,
+        mainCategory: category.mainCategory,
+        // Use type assertion to access _count safely
+        productCount: (category as any)._count?.products
+      }))
   } catch (error) {
     console.error('Error fetching popular categories:', error)
     return []

@@ -3,12 +3,21 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+let ordersCache: Record<string, { data: any, timestamp: number }> = {};
+const ORDERS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 // GET - جلب الطلبات
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const phone = searchParams.get('phone')
     const orderId = searchParams.get('orderId')
+
+    const cacheKey = `${phone || ''}__${orderId || ''}`;
+    const now = Date.now();
+    if (ordersCache[cacheKey] && (now - ordersCache[cacheKey].timestamp < ORDERS_CACHE_DURATION)) {
+      return NextResponse.json(ordersCache[cacheKey].data);
+    }
 
     let where = {}
     
@@ -34,7 +43,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, orders })
+    const responseData = { success: true, orders };
+    ordersCache[cacheKey] = { data: responseData, timestamp: now };
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error fetching orders:', error)
     return NextResponse.json(

@@ -15,6 +15,12 @@ interface Address {
   isDefault?: boolean;
 }
 
+// عرّف نوع مناسب لـ orderDetails في أعلى الملف:
+type OrderDetails = {
+  id: string;
+  // أضف الحقول الأخرى حسب الحاجة
+};
+
 export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCart()
   const { user, isLoggedIn, login, getDefaultAddress, addAddress } = useUser()
@@ -209,7 +215,7 @@ export default function CheckoutPage() {
               </h1>
               
               <p className="text-gray-600 mb-6">
-                رقم الطلب: <span className="font-mono text-lg">{orderDetails.id}</span>
+                رقم الطلب: <span className="font-mono text-lg">{(orderDetails as OrderDetails)?.id}</span>
               </p>
               
               <div className="bg-gray-50 rounded-lg p-6 mb-6 text-right">

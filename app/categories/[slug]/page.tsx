@@ -4,6 +4,7 @@ import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { Tag, Package } from 'lucide-react'
+import { Category as PrismaCategory } from '@prisma/client'
 
 // بيانات الأقسام الرئيسية
 const categoryData = {
@@ -68,7 +69,7 @@ async function getCategoryProducts(categorySlug: string) {
       where: {
         AND: [
           { isAvailable: true },
-          { category: { in: category.categories as string[] } }
+          { category: { in: category.categories as PrismaCategory[] } }
         ]
       },
       orderBy: {
@@ -98,7 +99,7 @@ async function getDiscountedProducts(categorySlug: string) {
       where: {
         AND: [
           { isAvailable: true },
-          { category: { in: category.categories as string[] } },
+          { category: { in: category.categories as PrismaCategory[] } },
           { oldPrice: { not: null } },
           { oldPrice: { gt: prisma.product.fields.price } }
         ]

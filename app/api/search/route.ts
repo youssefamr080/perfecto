@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+const searchCache: Record<string, { data: any, timestamp: number }> = {};
+const SEARCH_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -13,28 +16,22 @@ export async function GET(request: NextRequest) {
 
     const searchTerm = query.trim()
     const searchLimit = limit ? Math.min(parseInt(limit), 50) : 20
+    const cacheKey = `${searchTerm}__${searchLimit}`;
+    const now = Date.now();
+    if (searchCache[cacheKey] && (now - searchCache[cacheKey].timestamp < SEARCH_CACHE_DURATION)) {
+      return NextResponse.json(searchCache[cacheKey].data);
+    }
 
-    // بحث متقدم مع أولويات مختلفة ونظام تسجيل نقاط
-    const searchWords = searchTerm.split(' ').filter(word => word.length > 1)
-    
+    // بناء شروط البحث بشكل متوافق مع ProductWhereInput
+    const searchWords = searchTerm.split(' ').filter(word => word.length > 1);
     const searchConditions = [
-      // بحث دقيق في الاسم (أولوية عالية جداً)
-      { name: { equals: searchTerm, mode: 'insensitive' } },
-      // بحث يبدأ بالكلمة في الاسم (أولوية عالية)
-      { name: { startsWith: searchTerm, mode: 'insensitive' } },
-      // بحث يحتوي على الكلمة في الاسم (أولوية متوسطة عالية)
-      { name: { contains: searchTerm, mode: 'insensitive' } },
-      // بحث في الوصف (أولوية متوسطة)
-      { description: { contains: searchTerm, mode: 'insensitive' } },
-      // بحث بالكلمات المنفصلة في الاسم
-      ...searchWords.map(word => ({
-        name: { contains: word, mode: 'insensitive' }
-      })),
-      // بحث بالكلمات المنفصلة في الوصف
-      ...searchWords.map(word => ({
-        description: { contains: word, mode: 'insensitive' }
-      }))
-    ]
+      { name: { equals: searchTerm, mode: 'insensitive' as any } },
+      { name: { startsWith: searchTerm, mode: 'insensitive' as any } },
+      { name: { contains: searchTerm, mode: 'insensitive' as any } },
+      { description: { contains: searchTerm, mode: 'insensitive' as any } },
+      ...searchWords.map((word: string) => ({ name: { contains: word, mode: 'insensitive' as any } })),
+      ...searchWords.map((word: string) => ({ description: { contains: word, mode: 'insensitive' as any } })),
+    ];
 
     // تنفيذ البحث مع الأولويات
     const products = await prisma.product.findMany({
@@ -42,7 +39,7 @@ export async function GET(request: NextRequest) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as { name: { equals: string; mode: 'insensitive' } | { name: { startsWith: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } }[]
+            OR: searchConditions
           }
         ]
       },
@@ -59,11 +56,10 @@ export async function GET(request: NextRequest) {
       },
       take: searchLimit,
       orderBy: [
-        // ترتيب حسب الأولوية (اسم دقيق أولاً)
         { name: 'asc' },
         { createdAt: 'desc' }
       ]
-    })
+    });
 
     // إحصاء النتائج الكامل
     const total = await prisma.product.count({
@@ -71,72 +67,55 @@ export async function GET(request: NextRequest) {
         AND: [
           { isAvailable: true },
           {
-            OR: searchConditions as { name: { equals: string; mode: 'insensitive' } | { name: { startsWith: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } | { name: { contains: string; mode: 'insensitive' } } | { description: { contains: string; mode: 'insensitive' } } }[]
+            OR: searchConditions
           }
         ]
       }
-    })
+    });
 
     // ترتيب النتائج حسب الصلة مع نظام نقاط متقدم
     const sortedProducts = products.sort((a, b) => {
-      const aName = a.name.toLowerCase()
-      const bName = b.name.toLowerCase()
-      const searchLower = searchTerm.toLowerCase()
-      const searchWords = searchLower.split(' ').filter(word => word.length > 1)
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const searchLower = searchTerm.toLowerCase();
+      const searchWords = searchLower.split(' ').filter(word => word.length > 1);
 
       // حساب نقاط الصلة لكل منتج
-      const getRelevanceScore = (product: { name: string; description?: string }) => {
-        const name = product.name.toLowerCase()
-        const description = (product.description || '').toLowerCase()
-        let score = 0
+      const getRelevanceScore = (product: { name: string; description?: string | null; isAvailable?: boolean }) => {
+        const name = product.name.toLowerCase();
+        const description = (product.description || '').toLowerCase();
+        let score = 0;
 
-        // مطابقة دقيقة كاملة (100 نقطة)
-        if (name === searchLower) score += 100
-
-        // يبدأ بالنص المطلوب (50 نقطة)
-        if (name.startsWith(searchLower)) score += 50
-
-        // يحتوي على النص المطلوب في الاسم (30 نقطة)
-        if (name.includes(searchLower)) score += 30
-
-        // موقع الكلمة في الاسم (كلما كانت أقرب للبداية، نقاط أكثر)
-        const nameIndex = name.indexOf(searchLower)
+        if (name === searchLower) score += 100;
+        if (name.startsWith(searchLower)) score += 50;
+        if (name.includes(searchLower)) score += 30;
+        const nameIndex = name.indexOf(searchLower);
         if (nameIndex !== -1) {
-          score += Math.max(20 - nameIndex, 0)
+          score += Math.max(20 - nameIndex, 0);
         }
+        searchWords.forEach((word: string) => {
+          if (name.includes(word)) score += 15;
+          if (description.includes(word)) score += 5;
+        });
+        if (description.includes(searchLower)) score += 10;
+        if (product.isAvailable) score += 5;
+        return score;
+      };
 
-        // النقاط من الكلمات المنفصلة
-        searchWords.forEach(word => {
-          if (name.includes(word)) score += 15
-          if (description.includes(word)) score += 5
-        })
+      const aScore = getRelevanceScore(a);
+      const bScore = getRelevanceScore(b);
+      if (aScore !== bScore) return bScore - aScore;
+      return aName.localeCompare(bName, 'ar');
+    });
 
-        // يحتوي على النص المطلوب في الوصف (10 نقاط)
-        if (description.includes(searchLower)) score += 10
-
-        // منتجات متوفرة تحصل على نقاط إضافية
-        if (product.isAvailable) score += 5
-
-        return score
-      }
-
-      const aScore = getRelevanceScore(a)
-      const bScore = getRelevanceScore(b)
-
-      // ترتيب حسب النقاط أولاً
-      if (aScore !== bScore) return bScore - aScore
-
-      // إذا تساوت النقاط، ترتيب أبجدي
-      return aName.localeCompare(bName, 'ar')
-    })
-
-    return NextResponse.json({ 
+    const responseData = { 
       products: sortedProducts, 
       total,
       query: searchTerm,
       limit: searchLimit
-    })
-
+    };
+    searchCache[cacheKey] = { data: responseData, timestamp: now };
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Search error:', error)
     return NextResponse.json({ 

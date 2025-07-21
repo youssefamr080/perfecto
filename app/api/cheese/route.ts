@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, Category } from '@prisma/client'
+
+let cheeseCache: Record<string, { data: any, timestamp: number }> = {};
+const CHEESE_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,10 +13,17 @@ export async function GET(request: NextRequest) {
     const priceRange = searchParams.get('price')?.split(',').filter(Boolean) || []
     const brands = searchParams.get('brands')?.split(',').filter(Boolean) || []
     const sortBy = searchParams.get('sort') || 'newest'
+
+    // مفتاح الكاش بناءً على كل باراميتر
+    const cacheKey = `${query}__${types.join(',')}__${priceRange.join(',')}__${brands.join(',')}__${sortBy}`;
+    const now = Date.now();
+    if (cheeseCache[cacheKey] && (now - cheeseCache[cacheKey].timestamp < CHEESE_CACHE_DURATION)) {
+      return NextResponse.json(cheeseCache[cacheKey].data);
+    }
     
     // بناء شروط البحث
     const whereClause: Prisma.ProductWhereInput = {
-      category: 'CHEESE_BUTTER',
+      category: Category.CHEESE, // If this fails, try Category.CHEESE or Category.CHEESEBUTTER
       isAvailable: true
     }
 
@@ -107,7 +117,7 @@ export async function GET(request: NextRequest) {
       subcategory: product.description ? extractCheeseType(product.description, product.name) : undefined
     }))
 
-    return NextResponse.json({
+    const responseData = {
       products: formattedProducts,
       total: formattedProducts.length,
       filters: {
@@ -115,7 +125,9 @@ export async function GET(request: NextRequest) {
         priceRange: priceRange,
         brands: brands
       }
-    })
+    };
+    cheeseCache[cacheKey] = { data: responseData, timestamp: now };
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error in cheese API:', error)

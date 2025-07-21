@@ -1,15 +1,5 @@
 import { useState, useEffect } from 'react'
-
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  category: string
-  description?: string | null
-  unitType: 'WEIGHT' | 'PIECE'
-}
+import { Product } from '@prisma/client';
 
 interface SearchResult {
   products: Product[]

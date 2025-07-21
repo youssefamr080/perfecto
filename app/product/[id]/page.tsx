@@ -248,7 +248,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
 
               {/* Action Buttons - Client Component */}
-              <ProductDetailsClient product={product} />
+              <ProductDetailsClient product={product as any} />
             </div>
           </div>
         </div>

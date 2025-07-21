@@ -35,8 +35,8 @@ export default function CategoriesSwiper({ categories, title = "الفئات ا�
         
         <Swiper
           modules={[Navigation, Pagination, Autoplay]}
-          spaceBetween={10}
-          slidesPerView={3.5}
+          spaceBetween={16}
+          slidesPerView={3.2}
           navigation={false}
           pagination={{ 
             clickable: true,
@@ -57,38 +57,38 @@ export default function CategoriesSwiper({ categories, title = "الفئات ا�
           allowTouchMove={true}
           breakpoints={{
             320: {
-              slidesPerView: 3,
-              spaceBetween: 8,
+              slidesPerView: 2.5,
+              spaceBetween: 12,
               navigation: false,
             },
             380: {
-              slidesPerView: 3.5,
-              spaceBetween: 10,
+              slidesPerView: 3.2,
+              spaceBetween: 16,
               navigation: false,
             },
             480: {
               slidesPerView: 4,
-              spaceBetween: 12,
+              spaceBetween: 18,
               navigation: false,
             },
             640: {
               slidesPerView: 5,
-              spaceBetween: 15,
+              spaceBetween: 20,
               navigation: true,
             },
             768: {
               slidesPerView: 6,
-              spaceBetween: 20,
+              spaceBetween: 24,
               navigation: true,
             },
             1024: {
               slidesPerView: 7,
-              spaceBetween: 25,
+              spaceBetween: 28,
               navigation: true,
             },
             1280: {
               slidesPerView: 8,
-              spaceBetween: 30,
+              spaceBetween: 32,
               navigation: true,
             },
           }}
@@ -98,19 +98,16 @@ export default function CategoriesSwiper({ categories, title = "الفئات ا�
             <SwiperSlide key={category.id}>
               <Link
                 href={`/category/${category.slug}`}
-                className="group flex flex-col items-center p-2 md:p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 hover:scale-105 min-h-[90px] md:min-h-[110px]"
+                className="block rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-red-300 bg-white"
               >
-                <div className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-red-100 rounded-full flex items-center justify-center mb-1 md:mb-2 group-hover:scale-110 transition-transform duration-200 shadow-lg">
-                  <span className="text-lg md:text-2xl lg:text-3xl">{category.icon || '🛒'}</span>
-                </div>
-                <span className="text-xs md:text-sm font-bold text-gray-900 text-center group-hover:text-red-600 transition-colors duration-200 leading-tight">
-                  {category.name}
-                </span>
-                {category.productCount && (
-                  <span className="text-xs text-gray-500 mt-0.5 hidden md:block">
-                    {category.productCount} منتج
+                <div className="flex flex-col items-center justify-center py-4">
+                  {category.icon && (
+                    <span className="text-3xl md:text-4xl mb-2 drop-shadow-lg">{category.icon}</span>
+                  )}
+                  <span className="text-xs md:text-base font-bold text-gray-900 text-center drop-shadow-sm">
+                    {category.name}
                   </span>
-                )}
+                </div>
               </Link>
             </SwiperSlide>
           ))}

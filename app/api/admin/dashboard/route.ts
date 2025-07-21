@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+let dashboardCache: { data: any, timestamp: number } | null = null;
+const DASHBOARD_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 export async function GET() {
   try {
+    const now = Date.now();
+    if (dashboardCache && (now - dashboardCache.timestamp < DASHBOARD_CACHE_DURATION)) {
+      return NextResponse.json(dashboardCache.data);
+    }
     // Get products
     const products = await prisma.product.findMany({
       orderBy: { createdAt: 'desc' },
@@ -72,7 +79,7 @@ export async function GET() {
 
     const totalRevenue = totalRevenueData.reduce((sum: number, order) => sum + order.total, 0)
 
-    return NextResponse.json({
+    const responseData = {
       products,
       orders,
       customers,
@@ -82,7 +89,9 @@ export async function GET() {
         totalCustomers,
         totalRevenue
       }
-    })
+    };
+    dashboardCache = { data: responseData, timestamp: now };
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Admin dashboard error:', error)

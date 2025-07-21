@@ -62,8 +62,8 @@ export default function ProductsSwiper({
         
         <Swiper
           modules={[Navigation, Pagination, Autoplay]}
-          spaceBetween={12}
-          slidesPerView={1.8}
+          spaceBetween={14}
+          slidesPerView={2}
           navigation={false}
           pagination={{ 
             clickable: true,
@@ -83,18 +83,13 @@ export default function ProductsSwiper({
           allowTouchMove={true}
           breakpoints={{
             320: {
-              slidesPerView: 1.5,
+              slidesPerView: 2,
               spaceBetween: 10,
               navigation: false,
             },
-            380: {
-              slidesPerView: 1.8,
-              spaceBetween: 12,
-              navigation: false,
-            },
             480: {
-              slidesPerView: 2.2,
-              spaceBetween: 15,
+              slidesPerView: 2,
+              spaceBetween: 14,
               navigation: false,
             },
             640: {
@@ -104,17 +99,17 @@ export default function ProductsSwiper({
             },
             768: {
               slidesPerView: 3,
-              spaceBetween: 20,
+              spaceBetween: 22,
               navigation: true,
             },
             1024: {
-              slidesPerView: 4,
-              spaceBetween: 25,
+              slidesPerView: 3.5,
+              spaceBetween: 28,
               navigation: true,
             },
             1280: {
-              slidesPerView: 5,
-              spaceBetween: 30,
+              slidesPerView: 4,
+              spaceBetween: 32,
               navigation: true,
             },
           }}

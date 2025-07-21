@@ -4,33 +4,33 @@ import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
 import { Search } from 'lucide-react'
 
+// كاش في الذاكرة لمدة 10 دقائق
+const searchSSRCache: Record<string, { data: { products: ProductLite[], total: number }, timestamp: number }> = {};
+const SEARCH_SSR_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 async function getSearchResults(query: string) {
   if (!query || query.trim().length < 1) {
     return { products: [], total: 0 }
   }
 
+  const searchTerm = query.trim();
+  const cacheKey = searchTerm;
+  const now = Date.now();
+  if (searchSSRCache[cacheKey] && (now - searchSSRCache[cacheKey].timestamp < SEARCH_SSR_CACHE_DURATION)) {
+    return searchSSRCache[cacheKey].data;
+  }
+
   try {
     // في بيئة الخادم، نستخدم Prisma مباشرة لأداء أفضل
-    const searchTerm = query.trim()
     const searchWords = searchTerm.split(' ').filter(word => word.length > 1)
     
     const searchConditions = [
-      // بحث دقيق في الاسم (أولوية عالية جداً)
       { name: { equals: searchTerm, mode: 'insensitive' } },
-      // بحث يبدأ بالكلمة في الاسم (أولوية عالية)
       { name: { startsWith: searchTerm, mode: 'insensitive' } },
-      // بحث يحتوي على الكلمة في الاسم (أولوية متوسطة عالية)
       { name: { contains: searchTerm, mode: 'insensitive' } },
-      // بحث في الوصف (أولوية متوسطة)
       { description: { contains: searchTerm, mode: 'insensitive' } },
-      // بحث بالكلمات المنفصلة في الاسم
-      ...searchWords.map(word => ({
-        name: { contains: word, mode: 'insensitive' }
-      })),
-      // بحث بالكلمات المنفصلة في الوصف
-      ...searchWords.map(word => ({
-        description: { contains: word, mode: 'insensitive' }
-      }))
+      ...searchWords.map(word => ({ name: { contains: word, mode: 'insensitive' } })),
+      ...searchWords.map(word => ({ description: { contains: word, mode: 'insensitive' } })),
     ]
 
     // الحصول على المنتجات
@@ -112,10 +112,9 @@ async function getSearchResults(query: string) {
       return aName.localeCompare(bName, 'ar')
     })
 
-    return {
-      products: sortedProducts,
-      total
-    }
+    const data = { products: sortedProducts, total }
+    searchSSRCache[cacheKey] = { data, timestamp: now }
+    return data
   } catch (error) {
     console.error('Error fetching search results:', error)
     return { products: [], total: 0 }

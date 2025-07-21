@@ -1,19 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-
-// Temporary Product type until Prisma client is fully generated
-export interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-}
+import { Product } from '@prisma/client';
 
 export interface CartItem {
   product: Product

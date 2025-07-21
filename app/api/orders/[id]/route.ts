@@ -44,13 +44,21 @@ export async function PATCH(
   }
 }
 
+let orderDetailsCache: Record<string, { data: any, timestamp: number }> = {};
+const ORDER_DETAILS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 // GET - جلب طلب واحد
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await context.params
+    const { id } = await context.params;
+    const cacheKey = id;
+    const now = Date.now();
+    if (orderDetailsCache[cacheKey] && (now - orderDetailsCache[cacheKey].timestamp < ORDER_DETAILS_CACHE_DURATION)) {
+      return NextResponse.json(orderDetailsCache[cacheKey].data);
+    }
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
@@ -60,21 +68,22 @@ export async function GET(
           }
         }
       }
-    })
+    });
 
     if (!order) {
       return NextResponse.json(
         { success: false, error: 'الطلب غير موجود' },
         { status: 404 }
-      )
+      );
     }
-
-    return NextResponse.json({ success: true, order })
+    const responseData = { success: true, order };
+    orderDetailsCache[cacheKey] = { data: responseData, timestamp: now };
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error fetching order:', error)
+    console.error('Error fetching order:', error);
     return NextResponse.json(
       { success: false, error: 'فشل في جلب الطلب' },
       { status: 500 }
-    )
+    );
   }
 }

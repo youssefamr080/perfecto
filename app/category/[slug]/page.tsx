@@ -3,6 +3,7 @@ import CategoryClient from './CategoryClient'
 import { prisma } from '@/lib/prisma'
 import { getFullBreadcrumb } from '@/lib/categories-with-products'
 import { notFound } from 'next/navigation'
+import { Category as PrismaCategory } from '@prisma/client'
 
 // احذف تعريف Product إذا لم يكن مستخدمًا
 // Map category slugs to database enum values
@@ -78,6 +79,12 @@ const categoryMap: { [key: string]: { dbValue: string; name: string; description
     dbValue: 'HALAWA', 
     name: 'الحلاوة الطحينية',
     description: 'حلاوة طحينية فاخرة بنكهات مختلفة'
+  },
+  // إضافة زيت الزيتون
+  'olive-oil': {
+    dbValue: 'OLIVE_OIL',
+    name: 'زيت الزيتون',
+    description: 'زيت زيتون بكر ممتاز وطبيعي للسلطة والطبخ'
   }
 }
 
@@ -216,7 +223,7 @@ async function getCategoryProducts(slug: string) {
 
     const products = await prisma.product.findMany({
       where: {
-        category: categoryInfo.dbValue as string,
+        category: categoryInfo.dbValue as PrismaCategory,
         isAvailable: true
       },
       orderBy: { createdAt: 'desc' },
@@ -271,11 +278,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <CategoryClient 
         initialData={{
           type: data.type || 'legacy',
-          categoryInfo,
-          products,
+          categoryInfo: {
+            ...categoryInfo,
+            description: categoryInfo.description ?? ''
+          },
+          products: products.map(p => ({ ...p, category: p.category ?? '' })) as any,
           totalCount,
           breadcrumb,
-          subCategories
+          subCategories: subCategories?.map(sub => ({
+            ...sub,
+            products: sub.products.map(p => ({ ...p, category: p.category ?? '' }))
+          })) as any
         }}
       />
     </div>

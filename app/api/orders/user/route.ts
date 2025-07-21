@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+let userOrdersCache: Record<string, { data: any, timestamp: number }> = {};
+const USER_ORDERS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const orderPhone = searchParams.get('phone')
+
+    const cacheKey = `${userId || ''}__${orderPhone || ''}`;
+    const now = Date.now();
+    if (userOrdersCache[cacheKey] && (now - userOrdersCache[cacheKey].timestamp < USER_ORDERS_CACHE_DURATION)) {
+      return NextResponse.json(userOrdersCache[cacheKey].data);
+    }
 
     if (!userId && !orderPhone) {
       return NextResponse.json(
@@ -44,6 +53,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    userOrdersCache[cacheKey] = { data: orders, timestamp: now };
     return NextResponse.json(orders)
   } catch (error) {
     console.error('Get user orders error:', error)
