@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { Plus, Minus, Trash2, ShoppingCart, ArrowRight } from 'lucide-react';
 
 import { useCart } from '@/contexts/CartContext';
-import { CartItem } from '@/contexts/CartContext';
+import { CartItem } from '@/types';
+
 
 // نوع الخصائص لمكون WeightDropdown
 // WeightDropdownProps type
@@ -66,12 +67,12 @@ function WeightDropdown({ item, updateQuantity }: WeightDropdownProps) {
 }
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, getTotalPrice, getTotalItems } = useCart();
+  const { cartItems, removeItem, updateQuantity, total, itemCount } = useCart();
 
-  const deliveryFee = getTotalPrice() >= 200 ? 0 : 20;
-  const totalWithDelivery = getTotalPrice() + deliveryFee;
+  const deliveryFee = total >= 200 ? 0 : 20;
+  const totalWithDelivery = total + deliveryFee;
 
-  if (items.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         
@@ -109,12 +110,12 @@ export default function CartPage() {
             <div className="bg-white rounded-lg shadow-sm">
               <div className="p-6 border-b border-gray-200">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  سلة التسوق ({getTotalItems()} {getTotalItems() === 1 ? 'منتج' : 'منتجات'})
+                  سلة التسوق ({itemCount} {itemCount === 1 ? 'منتج' : 'منتجات'})
                 </h1>
               </div>
               <div className="p-6">
                 <div className="space-y-6">
-                  {items.map((item) => (
+                  {cartItems.map((item: CartItem) => (
                     <div key={item.product.id} className="flex items-center space-x-4 rtl:space-x-reverse border-b border-gray-200 pb-6">
                       {/* Product Image */}
                       <div className="flex-shrink-0">
@@ -134,7 +135,7 @@ export default function CartPage() {
                         >
                           {item.product.name}
                         </Link>
-                        <p className="text-sm text-gray-800 font-semibold mt-1">{item.product.category}</p>
+                        <p className="text-sm text-gray-800 font-semibold mt-1">{item.product.category?.name}</p>
                         <div className="flex items-center space-x-2 rtl:space-x-reverse mt-2">
                           <span className="text-lg font-bold text-red-600">
                             {item.product.price} ج.م
@@ -203,7 +204,7 @@ export default function CartPage() {
                   {/* Subtotal */}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-900">المجموع الفرعي</span>
-                    <span className="font-semibold">{getTotalPrice().toFixed(2)} ج.م</span>
+                    <span className="font-semibold">{total.toFixed(2)} ج.م</span>
                   </div>
                   {/* Delivery Fee */}
                   <div className="flex justify-between items-center">
@@ -213,10 +214,10 @@ export default function CartPage() {
                     </span>
                   </div>
                   {/* Free Shipping Notice */}
-                  {getTotalPrice() < 200 && (
+                  {total < 200 && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <p className="text-sm text-yellow-800">
-                        أضف منتجات بقيمة {(200 - getTotalPrice()).toFixed(2)} ج.م للحصول على توصيل مجاني
+                        أضف منتجات بقيمة {(200 - total).toFixed(2)} ج.م للحصول على توصيل مجاني
                       </p>
                     </div>
                   )}

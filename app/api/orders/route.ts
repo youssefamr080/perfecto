@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-let ordersCache: Record<string, { data: any, timestamp: number }> = {};
+type OrdersCacheValue = { success: boolean; orders: unknown[] };
+const ordersCache: Record<string, { data: OrdersCacheValue; timestamp: number }> = {};
 const ORDERS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 // GET - جلب الطلبات

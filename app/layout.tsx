@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from '@/components/Providers';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 const cairo = Cairo({
   variable: "--font-cairo",
@@ -30,6 +31,7 @@ export default function RootLayout({
           <Header />
           {children}
           <Footer />
+          <WhatsAppButton />
         </Providers>
       </body>
     </html>

@@ -1,100 +1,20 @@
-import React from 'react'
-import CategoryClient from './CategoryClient'
-import { prisma } from '@/lib/prisma'
-import { getFullBreadcrumb } from '@/lib/categories-with-products'
-import { notFound } from 'next/navigation'
-import { Category as PrismaCategory } from '@prisma/client'
+import React from 'react';
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { getFullBreadcrumb } from '@/lib/categories-with-products';
+import CategoryClient from './CategoryClient';
+import { Category as PrismaCategoryEnum } from '@prisma/client';
 
-// احذف تعريف Product إذا لم يكن مستخدمًا
-// Map category slugs to database enum values
-const categoryMap: { [key: string]: { dbValue: string; name: string; description: string } } = {
-  // أقسام اللحوم
-  'luncheon': { 
-    dbValue: 'LUNCHEON', 
-    name: 'اللانشون',
-    description: 'لانشون دجاج ولحم بأجود الأنواع'
-  },
-  'pastrami': { 
-    dbValue: 'PASTRAMI', 
-    name: 'البسطرمة',
-    description: 'بسطرمة لحم بقري ودجاج طازجة'
-  },
-  'kofta': { 
-    dbValue: 'KOFTA', 
-    name: 'الكفتة',
-    description: 'كفتة لحم بقري وضاني طازجة متبلة'
-  },
-  'sausage': { 
-    dbValue: 'SAUSAGE', 
-    name: 'السجق',
-    description: 'سجق اسكندراني وحلو طازج'
-  },
-  'ground-meat': { 
-    dbValue: 'GROUND_MEAT', 
-    name: 'اللحمة المفرومة',
-    description: 'لحمة مفرومة بقري وضاني طازجة'
-  },
-  'liver': { 
-    dbValue: 'LIVER', 
-    name: 'الكبدة',
-    description: 'كبدة دجاج وبقري طازجة'
-  },
-  
-  // أقسام الألبان
-  'yogurt': { 
-    dbValue: 'YOGURT', 
-    name: 'الزبادي',
-    description: 'زبادي طبيعي وبالفواكه'
-  },
-  'milk': { 
-    dbValue: 'MILK', 
-    name: 'اللبن',
-    description: 'لبن بقري وجاموسي طازج'
-  },
-  'cheese-butter': { 
-    dbValue: 'CHEESE_BUTTER', 
-    name: 'الجبن والسمنة',
-    description: 'جبن وسمنة طبيعية عالية الجودة'
-  },
-  
-  // أقسام العسل والطحينة
-  'honey': { 
-    dbValue: 'HONEY', 
-    name: 'العسل',
-    description: 'عسل طبيعي من أجود الأنواع'
-  },
-  'tahini': { 
-    dbValue: 'TAHINI', 
-    name: 'الطحينة',
-    description: 'طحينة سمسم طبيعية فاخرة'
-  },
-  
-  // أقسام أخرى
-  'eggs': { 
-    dbValue: 'EGGS', 
-    name: 'البيض',
-    description: 'بيض دجاج محلي طازج بأحجام مختلفة'
-  },
-  'halawa': { 
-    dbValue: 'HALAWA', 
-    name: 'الحلاوة الطحينية',
-    description: 'حلاوة طحينية فاخرة بنكهات مختلفة'
-  },
-  // إضافة زيت الزيتون
-  'olive-oil': {
-    dbValue: 'OLIVE_OIL',
-    name: 'زيت الزيتون',
-    description: 'زيت زيتون بكر ممتاز وطبيعي للسلطة والطبخ'
-  }
-}
+// --- START: Local Type Definitions ---
 
-// Custom types for this file
+// Types that align with what CategoryClient.tsx expects
 interface CategoryInfo {
   name: string;
-  description?: string | null;
+  description: string; // Must be a string
   dbValue: string;
 }
-interface ProductLite {
+
+interface UIProduct {
   id: string;
   name: string;
   price: number;
@@ -102,201 +22,203 @@ interface ProductLite {
   images: string[];
   unitType: 'WEIGHT' | 'PIECE';
   isAvailable: boolean;
-  category: string | null;
   description?: string | null;
-  subcategory?: string | null;
+  subcategory?: string; // string or undefined
+  category: string; // Required by the original Product type
 }
-interface SubCategoryWithProducts {
+
+interface SubCategoryWithProductsUI {
   id: string;
   name: string;
   slug: string;
-  description?: string | null;
-  image?: string | null;
-  icon?: string | null;
-  products: ProductLite[];
+  products: UIProduct[];
 }
+
+// The final result shape that will be passed to the client component's initialData prop
 interface CategoryProductsResult {
-  type: 'subcategory' | 'maincategory' | 'legacy';
+  type: 'main' | 'subcategory' | 'legacy';
   categoryInfo: CategoryInfo;
-  products: ProductLite[];
+  products: UIProduct[];
   totalCount: number;
-  breadcrumb: { name: string; href: string }[];
-  subCategories?: SubCategoryWithProducts[];
+  breadcrumb: Array<{ name: string; href: string }>;
+  subCategories?: SubCategoryWithProductsUI[];
 }
 
-async function getCategoryProducts(slug: string) {
-  try {
-    // أولاً، محاولة العثور على فئة فرعية بالـ slug
-    const subCategory = await prisma.subCategory.findUnique({
-      where: { slug: slug },
-      include: {
-        mainCategory: true,
-        products: {
-          where: { isAvailable: true },
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            oldPrice: true,
-            images: true,
-            unitType: true,
-            isAvailable: true,
-            category: true,
-            description: true
-          }
-        }
-      }
-    })
+// Raw product data structure from Prisma queries
+interface ProductFromDB {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  oldPrice: number | null;
+  images: string | string[];
+  unitType: 'WEIGHT' | 'PIECE';
+  isAvailable: boolean;
+  subcategory: string | null;
+  category: PrismaCategoryEnum | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-    if (subCategory) {
-      // جلب breadcrumb الكامل للفئة الفرعية
-      const breadcrumb = await getFullBreadcrumb('subcategory', slug)
-      
-      return {
-        type: 'subcategory',
-        categoryInfo: {
-          name: subCategory.name,
-          description: subCategory.description || `منتجات ${subCategory.name} عالية الجودة`,
-          dbValue: subCategory.categoryType
-        },
-        products: subCategory.products as ProductLite[],
-        totalCount: (subCategory.products as ProductLite[]).length,
-        breadcrumb
-      } as CategoryProductsResult
-    }
+// --- END: Local Type Definitions ---
 
-    // ثانياً، محاولة العثور على فئة رئيسية بالـ slug
-    const mainCategory = await prisma.mainCategory.findUnique({
-      where: { slug: slug },
-      include: {
-        subCategories: {
-          where: { isActive: true },
-          include: {
-            products: {
-              where: { isAvailable: true },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                oldPrice: true,
-                images: true,
-                unitType: true,
-                isAvailable: true,
-                category: true,
-                description: true,
-                subcategory: true
-              }
-            }
-          }
-        }
-      }
-    })
+// This transformer function ensures the data from DB matches the UI type expectations
+function transformProductForUI(p: ProductFromDB, defaultCategory: string): UIProduct {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    price: p.price,
+    oldPrice: p.oldPrice,
+    isAvailable: p.isAvailable,
+    unitType: p.unitType,
+    images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images || [],
+    subcategory: p.subcategory ?? undefined, // Ensures null becomes undefined
+    category: p.category ?? defaultCategory,
+  };
+}
 
-    if (mainCategory) {
-      // جمع جميع المنتجات من الفئات الفرعية
-      const allProducts = mainCategory.subCategories.flatMap((sub: SubCategoryWithProducts) => sub.products as ProductLite[])
-      
-      // جلب breadcrumb الكامل للفئة الرئيسية
-      const breadcrumb = await getFullBreadcrumb('maincategory', slug)
-      
-      return {
-        type: 'maincategory',
-        categoryInfo: {
-          name: mainCategory.name,
-          description: mainCategory.description || `منتجات ${mainCategory.name} عالية الجودة`,
-          dbValue: slug
-        },
-        products: allProducts,
-        totalCount: allProducts.length,
-        breadcrumb,
-        subCategories: mainCategory.subCategories as SubCategoryWithProducts[]
-      } as CategoryProductsResult
-    }
+const getCategoryProducts = async (slug: string): Promise<CategoryProductsResult | null> => {
+  // Common select statement for products to ensure consistency
+  const productSelect = {
+    id: true, name: true, description: true, price: true, oldPrice: true, images: true, unitType: true, isAvailable: true, subcategory: true, category: true, createdAt: true, updatedAt: true,
+  };
 
-    // إذا لم نجد شيء، استخدم النظام القديم كـ fallback
-    const categoryInfo = categoryMap[slug]
-    if (!categoryInfo) {
-      return null
-    }
+  // 1. Check if it's a SubCategory
+  const subCategory = await prisma.subCategory.findUnique({
+    where: { slug },
+    include: { products: { where: { isAvailable: true }, select: productSelect } },
+  });
 
+  if (subCategory) {
+    const breadcrumb = await getFullBreadcrumb('subcategory', slug);
+    return {
+      type: 'subcategory',
+      categoryInfo: {
+        name: subCategory.name,
+        description: subCategory.description || '',
+        dbValue: subCategory.categoryType,
+      },
+      products: (subCategory.products as ProductFromDB[]).map(p => transformProductForUI(p, subCategory.name)),
+      totalCount: subCategory.products.length,
+      breadcrumb,
+      subCategories: undefined,
+    };
+  }
+
+  // 2. Check if it's a MainCategory
+  const mainCategory = await prisma.mainCategory.findUnique({
+    where: { slug },
+    include: {
+      subCategories: { 
+        where: { isActive: true },
+        select: { id: true, name: true, slug: true }, // Select only what's needed
+      }, 
+    },
+  });
+
+  if (mainCategory) {
+    const subCategoryIds = mainCategory.subCategories.map(sc => sc.id);
+
+    // Fetch all products that belong to the subcategories of this main category
     const products = await prisma.product.findMany({
       where: {
-        category: categoryInfo.dbValue as PrismaCategory,
-        isAvailable: true
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        oldPrice: true,
-        images: true,
-        unitType: true,
+        subCategoryId: {
+          in: subCategoryIds,
+        },
         isAvailable: true,
-        category: true,
-        description: true
-      }
-    })
+      },
+      select: productSelect,
+    });
 
+    const breadcrumb = await getFullBreadcrumb('maincategory', slug);
+    return {
+      type: 'main',
+      categoryInfo: {
+        name: mainCategory.name,
+        description: mainCategory.description || '',
+        dbValue: slug,
+      },
+      products: (products as ProductFromDB[]).map(p => transformProductForUI(p, mainCategory.name)),
+      totalCount: products.length,
+      breadcrumb,
+      subCategories: mainCategory.subCategories.map(sc => ({ ...sc, products: [] })),
+    };
+  }
+
+  // 3. Fallback to legacy Category enum
+  const categoryKey = slug.toUpperCase().replace(/-/g, '_') as keyof typeof PrismaCategoryEnum;
+    if (Object.values(PrismaCategoryEnum).includes(categoryKey as PrismaCategoryEnum)) {
+    const products = await prisma.product.findMany({
+      where: { category: { equals: categoryKey } , isAvailable: true },
+      select: productSelect,
+    });
+    const categoryName = categoryMap[slug] || categoryKey;
     return {
       type: 'legacy',
-      categoryInfo,
-      products: products as ProductLite[],
-      totalCount: (products as ProductLite[]).length,
-      breadcrumb: [
-        { name: 'الرئيسية', href: '/' },
-        { name: categoryInfo.name, href: `/category/${slug}` }
-      ]
-    } as CategoryProductsResult
-  } catch (error) {
-    console.error('Error fetching category products:', error)
-    return null
+      categoryInfo: {
+        name: categoryName,
+        description: `منتجات قسم ${categoryName}`,
+        dbValue: slug,
+      },
+      products: (products as ProductFromDB[]).map(p => transformProductForUI(p, categoryName)),
+      totalCount: products.length,
+      breadcrumb: [{ name: 'الرئيسية', href: '/' }, { name: categoryName, href: `/category/${slug}` }],
+      subCategories: undefined,
+    };
   }
-}
+
+  return null; // If nothing is found
+};
 
 interface CategoryPageProps {
-  params: Promise<{
-    slug: string
-  }>
+  params: { slug: string };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { slug } = await params
-  const data = await getCategoryProducts(slug)
-  
-  if (!data) {
-    notFound()
-  }
+  const { slug } = params;
+  const result = await getCategoryProducts(slug);
 
-  const { categoryInfo, products, totalCount, breadcrumb, subCategories } = data
+  if (!result) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
-      <CategoryClient 
-        initialData={{
-          type: data.type || 'legacy',
-          categoryInfo: {
-            ...categoryInfo,
-            description: categoryInfo.description ?? ''
-          },
-          products: products.map(p => ({ ...p, category: p.category ?? '' })) as any,
-          totalCount,
-          breadcrumb,
-          subCategories: subCategories?.map(sub => ({
-            ...sub,
-            products: sub.products.map(p => ({ ...p, category: p.category ?? '' }))
-          })) as any
-        }}
-      />
+      <CategoryClient initialData={result} />
     </div>
-  )
+  );
 }
 
-export async function generateStaticParams() {
-  return Object.keys(categoryMap).map((slug) => ({
-    slug: slug,
-  }))
-}
+// Map for displaying friendly names for legacy categories
+export const categoryMap: Record<string, string> = {
+  'cheese-butter': 'الجبن والزبدة',
+  'milk-yoghurt-dessert': 'حليب وزبادي وحلويات',
+  'juice-drinks': 'عصائر ومشروبات',
+  'bakery-pastries': 'مخبوزات ومعجنات',
+  'canned-food': 'أغذية معلبة',
+  'spices-sauces': 'بهارات وصلصات',
+  'pasta-rice-grains': 'مكرونة وأرز وحبوب',
+  'oils-ghee': 'زيوت وسمن',
+  'jams-honey-spreads': 'مربى وعسل',
+  'snacks-sweets': 'مقرمشات وحلويات',
+  'cleaning-products': 'منظفات',
+  'paper-products': 'منتجات ورقية',
+  'personal-care': 'عناية شخصية',
+  'baby-care': 'عناية بالطفل',
+  'pets-food': 'طعام حيوانات أليفة',
+  'offers': 'عروض',
+  'eggs': 'البيض',
+  'halawa': 'الحلاوة الطحينية',
+  'olive-oil': 'زيت الزيتون',
+  'luncheon': 'اللانشون',
+  'pastrami': 'البسطرمة',
+  'kofta': 'الكفتة',
+  'sausage': 'السجق',
+  'ground-meat': 'اللحمة المفرومة',
+  'liver': 'الكبدة',
+  'yogurt': 'الزبادي',
+  'milk': 'اللبن',
+  'honey': 'العسل',
+  'tahini': 'الطحينة',
+};

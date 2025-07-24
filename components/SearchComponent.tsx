@@ -63,7 +63,7 @@ const SearchComponent = ({ isOpen, onClose, searchQuery, onSearchChange }: Searc
         const response = await fetch('/api/categories')
         if (response.ok) {
           const categories = await response.json()
-          setAvailableCategories(categories.map((cat: Record<string, unknown>) => ({
+          setAvailableCategories(categories.map((cat: { categoryType: string; name: string }) => ({
             id: cat.categoryType,
             name: cat.name
           })))
@@ -94,7 +94,7 @@ const SearchComponent = ({ isOpen, onClose, searchQuery, onSearchChange }: Searc
         }
       } catch (error) {
         if (typeof error === 'object' && error && 'name' in error) {
-          if ((error as any).name !== 'AbortError') {
+          if ((error as { name: string }).name !== 'AbortError') {
             setProducts([]);
           }
         } else {

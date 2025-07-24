@@ -248,7 +248,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
 
               {/* Action Buttons - Client Component */}
-              <ProductDetailsClient product={product as any} />
+              <ProductDetailsClient product={{ ...product, category: product.category ?? '' }} />
             </div>
           </div>
         </div>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-let userOrdersCache: Record<string, { data: any, timestamp: number }> = {};
+type UserOrdersCacheValue = unknown[];
+const userOrdersCache: Record<string, { data: UserOrdersCacheValue; timestamp: number }> = {};
 const USER_ORDERS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 export async function GET(request: NextRequest) {

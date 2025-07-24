@@ -1,27 +1,27 @@
-import React from 'react'
-import Link from 'next/link'
-import ProductCard from '@/components/ProductCard'
-import { prisma } from '@/lib/prisma'
-import { notFound } from 'next/navigation'
-import { Tag, Package } from 'lucide-react'
-import { Category as PrismaCategory } from '@prisma/client'
+import React from 'react';
+import Link from 'next/link';
+import ProductCard from '@/components/ProductCard';
+import { prisma } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
+import { Tag, Package } from 'lucide-react';
+import { Product as PrismaProduct, SubCategory as PrismaSubCategory } from '@prisma/client';
+import { AppProduct, UnitType } from '@/types';
 
-// بيانات الأقسام الرئيسية
+// Static data for main categories
 const categoryData = {
   meat: {
     name: 'اللحوم والمصنعات',
     description: 'أفضل أنواع اللحوم والمصنعات الطازجة',
     bgColor: 'bg-red-50',
     textColor: 'text-red-600',
-    categories: ['LUNCHEON', 'PASTRAMI', 'KOFTA', 'SAUSAGE', 'GROUND_MEAT', 'LIVER' , 'burger'],
     subcategories: [
-      { id: 'luncheon', name: 'اللانشون', href: '/category/luncheon', category: 'LUNCHEON' },
-      { id: 'pastrami', name: 'البسطرمة', href: '/category/pastrami', category: 'PASTRAMI' },
-      { id: 'kofta', name: 'الكفتة', href: '/category/kofta', category: 'KOFTA' },
-      { id: 'sausage', name: 'السجق', href: '/category/sausage', category: 'SAUSAGE' },
-      { id: 'ground-meat', name: 'اللحمة المفرومة', href: '/category/ground-meat', category: 'GROUND_MEAT' },
-      { id: 'liver', name: 'الكبدة', href: '/category/liver', category: 'LIVER' },
-      { id: 'burger', name: 'البرجر', href: '/category/burger', category: 'BURGER' }
+      { id: 'luncheon', name: 'اللانشون', href: '/category/luncheon' },
+      { id: 'pastrami', name: 'البسطرمة', href: '/category/pastrami' },
+      { id: 'kofta', name: 'الكفتة', href: '/category/kofta' },
+      { id: 'sausage', name: 'السجق', href: '/category/sausage' },
+      { id: 'ground-meat', name: 'اللحمة المفرومة', href: '/category/ground-meat' },
+      { id: 'liver', name: 'الكبدة', href: '/category/liver' },
+      { id: 'burger', name: 'البرجر', href: '/category/burger' }
     ]
   },
   dairy: {
@@ -29,11 +29,10 @@ const categoryData = {
     description: 'منتجات الألبان الطازجة والصحية',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-600',
-    categories: ['YOGURT', 'MILK', 'CHEESE_BUTTER'],
     subcategories: [
-      { id: 'yogurt', name: 'الزبادي', href: '/category/yogurt', category: 'YOGURT' },
-      { id: 'milk', name: 'اللبن', href: '/category/milk', category: 'MILK' },
-      { id: 'cheese-butter', name: 'الجبن والسمنة', href: '/category/cheese-butter', category: 'CHEESE_BUTTER' },
+      { id: 'yogurt', name: 'الزبادي', href: '/category/yogurt' },
+      { id: 'milk', name: 'اللبن', href: '/category/milk' },
+      { id: 'cheese-butter', name: 'الجبن والسمنة', href: '/category/cheese-butter' },
     ]
   },
   honey: {
@@ -41,10 +40,9 @@ const categoryData = {
     description: 'عسل طبيعي وطحينة فاخرة',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-600',
-    categories: ['HONEY', 'TAHINI'],
     subcategories: [
-      { id: 'honey', name: 'العسل', href: '/category/honey', category: 'HONEY' },
-      { id: 'tahini', name: 'الطحينة', href: '/category/tahini', category: 'TAHINI' },
+      { id: 'honey', name: 'العسل', href: '/category/honey' },
+      { id: 'tahini', name: 'الطحينة', href: '/category/tahini' },
     ]
   },
   other: {
@@ -52,95 +50,94 @@ const categoryData = {
     description: 'منتجات متنوعة عالية الجودة',
     bgColor: 'bg-green-50',
     textColor: 'text-green-600',
-    categories: ['EGGS', 'HALAWA'],
     subcategories: [
-      { id: 'eggs', name: 'البيض', href: '/category/eggs', category: 'EGGS' },
-      { id: 'halawa', name: 'الحلاوة الطحينية', href: '/category/halawa', category: 'HALAWA' },
+      { id: 'eggs', name: 'البيض', href: '/category/eggs' },
+      { id: 'halawa', name: 'الحلاوة الطحينية', href: '/category/halawa' },
     ]
   }
-}
+};
 
-async function getCategoryProducts(categorySlug: string) {
-  const category = categoryData[categorySlug as keyof typeof categoryData]
-  if (!category) return []
+// Helper function to map Prisma Product to AppProduct
+const mapPrismaProductToAppProduct = (product: PrismaProduct & { subCategory: PrismaSubCategory | null }): AppProduct => ({
+  ...product,
+  createdAt: product.createdAt.toISOString(),
+  updatedAt: product.updatedAt.toISOString(),
+  images: product.images || [],
+  slug: product.name.toLowerCase().replace(/\s+/g, '-'),
+  unitType: product.unitType as UnitType,
+  isAvailable: product.isAvailable || false,
+  isBestSeller: product.isBestSeller || false,
+  inStock: product.inStock || 0,
+  category: product.subCategory ? { ...product.subCategory, productCount: 0, mainCategory: null, icon: product.subCategory.icon || null } : null,
+});
+
+async function getCategoryProducts(categorySlug: string): Promise<AppProduct[]> {
+  const categoryInfo = categoryData[categorySlug as keyof typeof categoryData];
+  if (!categoryInfo) return [];
 
   try {
     const products = await prisma.product.findMany({
       where: {
-        AND: [
-          { isAvailable: true },
-          { category: { in: category.categories as PrismaCategory[] } }
-        ]
+        isAvailable: true,
+        subCategory: {
+          slug: { in: categoryInfo.subcategories.map(s => s.id) }
+        }
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 20
-    })
-
-    // تحويل المنتجات للشكل المطلوب
-    return products.map(product => ({
-      ...product,
-      category: product.category?.toString() || 'غير محدد'
-    }))
+      include: { subCategory: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    return products.map(mapPrismaProductToAppProduct);
   } catch (error) {
-    console.error('Error fetching category products:', error)
-    return []
+    console.error(`Error fetching products for category ${categorySlug}:`, error);
+    return [];
   }
 }
 
-// Get products with discounts (oldPrice > price)
-async function getDiscountedProducts(categorySlug: string) {
-  const category = categoryData[categorySlug as keyof typeof categoryData]
-  if (!category) return []
+async function getDiscountedProducts(categorySlug: string): Promise<AppProduct[]> {
+  const categoryInfo = categoryData[categorySlug as keyof typeof categoryData];
+  if (!categoryInfo) return [];
 
   try {
     const products = await prisma.product.findMany({
       where: {
-        AND: [
-          { isAvailable: true },
-          { category: { in: category.categories as PrismaCategory[] } },
-          { oldPrice: { not: null } },
-          { oldPrice: { gt: prisma.product.fields.price } }
-        ]
+        isAvailable: true,
+        subCategory: {
+          slug: { in: categoryInfo.subcategories.map(s => s.id) }
+        },
+        oldPrice: { not: null },
+        price: { lt: prisma.product.fields.oldPrice },
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 8
-    })
-
-    // تحويل المنتجات للشكل المطلوب
-    return products.map(product => ({
-      ...product,
-      category: product.category?.toString() || 'غير محدد'
-    }))
+      include: { subCategory: true },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    });
+    return products.map(mapPrismaProductToAppProduct);
   } catch (error) {
-    console.error('Error fetching discounted products:', error)
-    return []
+    console.error(`Error fetching discounted products for category ${categorySlug}:`, error);
+    return [];
   }
 }
 
 interface CategoryPageProps {
-  params: Promise<{ slug: string }>
+  params: { slug: string };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { slug } = await params
-  const category = categoryData[slug as keyof typeof categoryData]
+  const { slug } = params;
+  const category = categoryData[slug as keyof typeof categoryData];
 
   if (!category) {
-    notFound()
+    notFound();
   }
 
   const [products, discountedProducts] = await Promise.all([
     getCategoryProducts(slug),
-    getDiscountedProducts(slug)
-  ])
+    getDiscountedProducts(slug),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           {/* Category Header */}
@@ -188,7 +185,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                 <h2 className="text-2xl font-bold text-gray-900">المنتجات المخفضة</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {discountedProducts.map((product) => (
+                {discountedProducts.map((product: AppProduct) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -202,7 +199,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             </h2>
             {products.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {products.map((product) => (
+                {products.map((product: AppProduct) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -217,5 +214,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         </div>
       </main>
     </div>
-  )
+  );
 }
+               

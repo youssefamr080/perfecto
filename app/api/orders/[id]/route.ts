@@ -44,7 +44,8 @@ export async function PATCH(
   }
 }
 
-let orderDetailsCache: Record<string, { data: any, timestamp: number }> = {};
+type OrderDetailsCacheValue = { success: boolean; order: unknown };
+const orderDetailsCache: Record<string, { data: OrderDetailsCacheValue; timestamp: number }> = {};
 const ORDER_DETAILS_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 // GET - جلب طلب واحد

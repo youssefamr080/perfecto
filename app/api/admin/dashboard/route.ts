@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-let dashboardCache: { data: any, timestamp: number } | null = null;
+type DashboardCacheValue = {
+  products: unknown[];
+  orders: unknown[];
+  customers: unknown[];
+  stats: Record<string, number>;
+};
+let dashboardCache: { data: DashboardCacheValue; timestamp: number } | null = null;
 const DASHBOARD_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 export async function GET() {

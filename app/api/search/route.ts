@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-const searchCache: Record<string, { data: any, timestamp: number }> = {};
+type ProductType = {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: string;
+  isAvailable: boolean;
+  category: string | null;
+  description?: string | null;
+};
+type SearchCacheValue = {
+  products: ProductType[];
+  total: number;
+  query: string;
+  limit: number;
+};
+const searchCache: Record<string, { data: SearchCacheValue; timestamp: number }> = {};
 const SEARCH_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 export async function GET(request: NextRequest) {
@@ -25,12 +42,12 @@ export async function GET(request: NextRequest) {
     // بناء شروط البحث بشكل متوافق مع ProductWhereInput
     const searchWords = searchTerm.split(' ').filter(word => word.length > 1);
     const searchConditions = [
-      { name: { equals: searchTerm, mode: 'insensitive' as any } },
-      { name: { startsWith: searchTerm, mode: 'insensitive' as any } },
-      { name: { contains: searchTerm, mode: 'insensitive' as any } },
-      { description: { contains: searchTerm, mode: 'insensitive' as any } },
-      ...searchWords.map((word: string) => ({ name: { contains: word, mode: 'insensitive' as any } })),
-      ...searchWords.map((word: string) => ({ description: { contains: word, mode: 'insensitive' as any } })),
+      { name: { equals: searchTerm, mode: 'insensitive' as string } },
+      { name: { startsWith: searchTerm, mode: 'insensitive' as string } },
+      { name: { contains: searchTerm, mode: 'insensitive' as string } },
+      { description: { contains: searchTerm, mode: 'insensitive' as string } },
+      ...searchWords.map((word: string) => ({ name: { contains: word, mode: 'insensitive' as string } })),
+      ...searchWords.map((word: string) => ({ description: { contains: word, mode: 'insensitive' as string } })),
     ];
 
     // تنفيذ البحث مع الأولويات

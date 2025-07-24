@@ -8,22 +8,12 @@ import { Star } from 'lucide-react'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
+import { AppProduct } from '@/types'; // <-- 1. استيراد النوع الصحيح
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  oldPrice?: number | null
-  images: string[]
-  unitType: 'WEIGHT' | 'PIECE'
-  isAvailable: boolean
-  category: string
-  description?: string | null
-  isBestSeller?: boolean
-}
+// <-- 2. إزالة الواجهة المحلية
 
 interface ProductsSwiperProps {
-  products: Product[]
+  products: AppProduct[] // <-- 3. استخدام النوع الصحيح
   title?: string
   showBestSellerBadge?: boolean
 }

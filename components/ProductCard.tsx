@@ -5,19 +5,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Plus, Minus, ShoppingCart } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
+import { AppProduct } from '@/types'; // <-- 1. استخدام النوع الموحد والصحيح
 
 interface ProductCardProps {
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    oldPrice?: number | null;
-    images: string[];
-    unitType: 'WEIGHT' | 'PIECE';
-    isAvailable: boolean;
-    category: string | null;
-    description?: string | null;
-  };
+  product: AppProduct;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
@@ -26,8 +17,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const { addItem } = useCart()
 
-  // أوزان مناسبة للسوق المصري (للألبان والأجبان)
-  const weights = [0.125, 0.25, 0.5, 1] // في الكيلوجرام
+  const weights = [0.125, 0.25, 0.5, 1]
   const weightLabels: { [key: number]: string } = {
     0.125: 'تمن كيلو',
     0.25: 'ربع كيلو',
@@ -36,17 +26,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }
 
   const handleAddToCart = () => {
-    const finalQuantity = product.unitType === 'WEIGHT' ? selectedWeight : quantity
-    addItem(product, finalQuantity)
+    const finalQuantity = product.unitType === 'WEIGHT' ? selectedWeight : quantity;
+    // addItem يتوقع الآن النوع Product الموحد، لذلك لا حاجة للتحويل
+    addItem(product, finalQuantity);
 
-    // Reset weight and show success message
     if (product.unitType === 'WEIGHT') {
-      setSelectedWeight(0.25) // Reset to default weight
+      setSelectedWeight(0.25)
     }
     setShowSuccessMessage(true)
     setTimeout(() => {
       setShowSuccessMessage(false)
-    }, 2000) // Hide message after 2 seconds
+    }, 2000)
   }
 
   const handleQuantityChange = (newQuantity: number) => {
@@ -59,40 +49,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0
 
-  // تحديد وحدة القياس حسب نوع المنتج
   const getUnitLabel = () => {
     if (product.unitType === 'WEIGHT') {
       return 'للكيلو'
     }
-    
-    if (product.category === 'YOGURT') {
+    // 2. استخدام category.name بدلاً من category.slug للتحقق
+    if (product.category?.name === 'يوجورت') {
       return 'للعلبة'
     }
-    
-    if (product.category === 'EGGS') {
-      if (product.name.includes('كرتونة كاملة')) {
-        return 'للكرتونة'
-      }
-      if (product.name.includes('نصف كرتونة')) {
-        return 'للنصف'
-      }
-      if (product.name.includes('ثلث كرتونة')) {
-        return 'للثلث'
-      }
+    if (product.category?.name === 'بيض') {
+      if (product.name.includes('كرتونة كاملة')) return 'للكرتونة'
+      if (product.name.includes('نصف كرتونة')) return 'للنصف'
+      if (product.name.includes('ثلث كرتونة')) return 'للثلث'
       return 'للكرتونة'
     }
-    
     return 'للقطعة'
   }
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 hover:border-red-200">
-      {/* Product Image */}
       <div className="relative">
-        <Link href={`/product/${product.id}`}>
+        {/* 3. استخدام slug للمنتج للرابط */}
+        <Link href={`/product/${product.slug}`}>
           <div className="relative h-40 sm:h-48 w-full">
             <Image
-              src={product.images[0] || '/placeholder-product.jpg'}
+              // 4. وصول آمن للصور
+              src={product.images?.[0] || '/placeholder-product.jpg'}
               alt={product.name}
               fill
               className="object-cover hover:scale-105 transition-transform duration-300"
@@ -100,14 +82,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         </Link>
         
-        {/* Discount Badge */}
         {discountPercentage > 0 && (
           <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md">
             خصم {discountPercentage}%
           </div>
         )}
 
-        {/* Out of Stock Overlay */}
         {!product.isAvailable && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <span className="text-white font-bold bg-red-600 px-4 py-2 rounded-lg shadow-lg">
@@ -117,15 +97,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
       </div>
 
-      {/* Product Info */}
       <div className="p-3 sm:p-4">
-        <Link href={`/product/${product.id}`}>
+        <Link href={`/product/${product.slug}`}>
           <h3 className="font-bold text-sm sm:text-base text-gray-900 hover:text-red-600 transition-colors line-clamp-2 mb-2 min-h-[2.5rem]">
             {product.name}
           </h3>
         </Link>
 
-        {/* Price */}
         <div className="flex items-center space-x-2 rtl:space-x-reverse mb-3">
           <span className="text-base sm:text-lg font-bold text-red-600">
             {product.price} ج.م
@@ -140,7 +118,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {getUnitLabel()}
         </div>
 
-        {/* Quantity/Weight Selection */}
         {product.isAvailable && (
           <div className="mb-4">
             {product.unitType === 'WEIGHT' ? (
@@ -185,7 +162,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
-        {/* Add to Cart Button */}
         {showSuccessMessage && (
           <div className="text-center py-2 text-green-600 font-bold bg-green-100 rounded-lg mb-2">
             تمت الإضافة بنجاح!

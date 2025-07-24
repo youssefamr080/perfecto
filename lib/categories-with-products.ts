@@ -1,5 +1,8 @@
-import { prisma } from './prisma'
-import { Product, SubCategory, MainCategory, Category } from '@prisma/client';
+import { prisma } from './prisma';
+import { Product, SubCategory, MainCategory, Category, Prisma } from '@prisma/client';
+
+// Define precise types for query results
+type SubCategoryWithMainCategory = Prisma.SubCategoryGetPayload<{ include: { mainCategory: true } }>;
 
 // Composite types for aggregation results
 export type SubCategoryWithProducts = SubCategory & { products: Product[] };
@@ -256,14 +259,16 @@ export async function getFullBreadcrumb(type: 'product' | 'subcategory' | 'mainc
           include: {
             mainCategory: true
           }
-        }) as SubCategory | null
+        }) as SubCategoryWithMainCategory | null
 
         if (subCategory) {
-          // إضافة الفئة الرئيسية
-          breadcrumb.push({
-            name: (subCategory as any).mainCategory.name,
-            href: `/category/${(subCategory as any).mainCategory.slug}`
-          })
+          if (subCategory.mainCategory) {
+            // إضافة الفئة الرئيسية
+            breadcrumb.push({
+              name: subCategory.mainCategory.name,
+              href: `/category/${subCategory.mainCategory.slug}`
+            });
+          }
 
           // إضافة الفئة الفرعية
           breadcrumb.push({
@@ -285,14 +290,14 @@ export async function getFullBreadcrumb(type: 'product' | 'subcategory' | 'mainc
         include: {
           mainCategory: true
         }
-      }) as SubCategory | null
+      }) as SubCategoryWithMainCategory | null
 
-      if (subCategory) {
+      if (subCategory && subCategory.mainCategory) {
         // إضافة الفئة الرئيسية
         breadcrumb.push({
-          name: (subCategory as any).mainCategory.name,
-          href: `/category/${(subCategory as any).mainCategory.slug}`
-        })
+          name: subCategory.mainCategory.name,
+          href: `/category/${subCategory.mainCategory.slug}`
+        });
 
         // إضافة الفئة الفرعية
         breadcrumb.push({
@@ -342,10 +347,10 @@ export async function getProductWithFullPath(productId: string) {
         include: {
           mainCategory: true
         }
-      }) as SubCategory | null
+      })
       
       if (subCategory) {
-        mainCategory = (subCategory as any).mainCategory
+        mainCategory = subCategory.mainCategory
       }
     }
     
@@ -361,15 +366,16 @@ export async function getProductWithFullPath(productId: string) {
   }
 }
 
-// تحويل منتج من قاعدة البيانات إلى النوع المطلوب
-function transformProductForUI(product: Product) {
-  return {
-    ...product,
-    category: (product as any).subCategory?.name || product.category || 'غير محدد'
-  }
-}
+
 
 // تحويل قائمة منتجات للواجهة
 function transformProductsForUI(products: Product[]) {
-  return products.map(transformProductForUI)
+  return products.map((p) => ({
+    ...p,
+    images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images || [],
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+    category: p.category ?? '', // Ensure category is always a string
+    // Add any other transformations if necessary
+  }));
 }

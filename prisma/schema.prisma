@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL") // For improving connection stability
 }
 
 model User {
@@ -49,6 +50,7 @@ model Product {
   unitType      UnitType
   isAvailable   Boolean      @default(true)
   isBestSeller  Boolean      @default(false) // الأكثر مبيعاً
+  isNew         Boolean      @default(false)
   inStock       Int          @default(0)
   minOrder      Float?
   maxOrder      Float?

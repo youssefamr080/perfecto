@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSubCategoriesWithProductCounts } from '@/lib/categories-with-products'
 
-let cachedCategories: any = null;
+let cachedCategories: unknown[] | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 

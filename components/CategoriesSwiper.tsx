@@ -7,17 +7,12 @@ import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
+import { AppCategory } from '@/types'; // <-- 1. استيراد النوع الصحيح
 
-interface Category {
-  id: string
-  name: string
-  slug: string
-  icon?: string
-  productCount?: number
-}
+// <-- 2. إزالة الواجهة المحلية
 
 interface CategoriesSwiperProps {
-  categories: Category[]
+  categories: AppCategory[] // <-- 3. استخدام النوع الصحيح
   title?: string
 }
 

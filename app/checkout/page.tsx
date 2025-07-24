@@ -4,10 +4,15 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { User, Phone, CreditCard, CheckCircle, Plus } from 'lucide-react'
-import { useCart } from '@/contexts/CartContext'
+import { useCart } from '@/contexts/CartContext';
+import { CartItem } from '@/types';
 import { useUser } from '@/contexts/UserContext'
 
 // Define Address type at the top
+interface OrderDetails {
+  id: string;
+}
+
 interface Address {
   id: string;
   title: string;
@@ -16,10 +21,10 @@ interface Address {
 }
 
 export default function CheckoutPage() {
-  const { items, getTotalPrice, clearCart } = useCart()
+  const { cartItems, total } = useCart()
   const { user, isLoggedIn, login, getDefaultAddress, addAddress } = useUser()
   const [currentStep, setCurrentStep] = useState(isLoggedIn ? 2 : 1)
-  const [orderDetails, setOrderDetails] = useState<unknown>(null)
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [showAddAddress, setShowAddAddress] = useState(false)
@@ -62,8 +67,8 @@ export default function CheckoutPage() {
     }
   }, [user, currentStep, getDefaultAddress]);
 
-  const deliveryFee = getTotalPrice() >= 200 ? 0 : 20
-  const totalWithDelivery = getTotalPrice() + deliveryFee
+  const deliveryFee = total >= 200 ? 0 : 20
+  const totalWithDelivery = total + deliveryFee
 
   const handleLogin = async () => {
     if (!loginInfo.name || !loginInfo.phone) return
@@ -130,7 +135,7 @@ export default function CheckoutPage() {
         customerPhone: customerInfo.phone,
         customerAddress: customerInfo.address,
         notes: customerInfo.notes,
-        items: items.map(item => ({
+        items: cartItems.map((item: CartItem) => ({
           productId: item.product.id,
           quantity: item.quantity,
           price: item.product.price
@@ -153,7 +158,6 @@ export default function CheckoutPage() {
       if (result.success) {
         setOrderDetails(result.order)
         setOrderPlaced(true)
-        clearCart()
         // حفظ معرف الطلب في localStorage لتتبعه لاحقاً
         localStorage.setItem('lastOrderId', result.order.id)
       } else {
@@ -167,7 +171,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0 && !orderPlaced) {
+  if (cartItems.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen bg-gray-50">
         
@@ -217,7 +221,7 @@ export default function CheckoutPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>المجموع الفرعي:</span>
-                    <span>{getTotalPrice()} ج.م</span>
+                    <span>{total} جنيه</span>
                   </div>
                   <div className="flex justify-between">
                     <span>رسوم التوصيل:</span>
@@ -559,7 +563,7 @@ export default function CheckoutPage() {
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-4">المنتجات المطلوبة</h3>
                     <div className="space-y-4">
-                      {items.map((item) => (
+                      {cartItems.map((item: CartItem) => (
                         <div key={item.product.id} className="flex items-center space-x-4 rtl:space-x-reverse p-4 bg-gray-50 rounded-lg">
                           <div className="w-16 h-16 relative bg-white rounded-lg overflow-hidden">
                             <Image
@@ -622,7 +626,7 @@ export default function CheckoutPage() {
               
               <div className="p-6">
                 <div className="space-y-4 mb-6">
-                  {items.map((item) => (
+                  {cartItems.map((item: CartItem) => (
                     <div key={item.product.id} className="flex items-center space-x-3 rtl:space-x-reverse">
                       <div className="w-12 h-12 relative bg-gray-100 rounded-lg overflow-hidden">
                         <Image
@@ -646,7 +650,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3 border-t border-gray-200 pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">المجموع الفرعي:</span>
-                    <span className="text-gray-900">{getTotalPrice().toFixed(2)} ج.م</span>
+                    <span className="text-gray-900">{total.toFixed(2)} ج.م</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">رسوم التوصيل:</span>

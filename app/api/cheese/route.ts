@@ -2,7 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma, Category } from '@prisma/client'
 
-let cheeseCache: Record<string, { data: any, timestamp: number }> = {};
+type ProductType = {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number | null;
+  images: string[];
+  unitType: string;
+  isAvailable: boolean;
+  category: string | null;
+  description?: string | null;
+};
+type CheeseCacheValue = {
+  products: ProductType[];
+  total: number;
+  filters: {
+    types: string[];
+    priceRange: string[];
+    brands: string[];
+  };
+};
+const cheeseCache: Record<string, { data: CheeseCacheValue; timestamp: number }> = {};
 const CHEESE_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
 
 export async function GET(request: NextRequest) {

@@ -4,40 +4,30 @@ import Link from 'next/link'
 import CategoryCard from '@/components/CategoryCard'
 import HeroSlider from '@/components/HeroSlider'
 import CategoriesSwiper from '@/components/CategoriesSwiper'
-import ProductsSwiper from '@/components/ProductsSwiper'
-import { Truck, Clock, Shield, Percent } from 'lucide-react'
-import { getSubCategoriesWithProductCounts } from '@/lib/categories-with-products'
-import { getMostPopularCategories, getBestSellerProducts, getHomeFeaturedProducts } from '@/lib/homepage-data'
+import ProductsCarousel from '@/components/ProductsCarousel'
+import { Truck, Shield, Clock, Percent } from 'lucide-react'; // <-- 1. إضافة الاستيرادات
+import { AppCategory, AppProduct } from '@/types';
+import { getNewProducts, getMostPopularCategories, getBestSellerProducts } from '@/lib/homepage-data';
 
 // جلب بيانات الصفحة الرئيسية من قاعدة البيانات فقط
-async function getHomePageData() {
+async function getData() {
   try {
-    // جلب الفئات الفرعية مع عدد المنتجات من قاعدة البيانات
-    const subCategories = await getSubCategoriesWithProductCounts()
+    // جلب جميع البيانات بشكل متوازٍ لتحسين الأداء
+    const [newProducts, popularCategories, bestSellerProducts] = await Promise.all([
+      getNewProducts(10),
+      getMostPopularCategories(),
+      getBestSellerProducts(10),
+    ]);
 
-    // جلب المنتجات المميزة من قاعدة البيانات
-    const featuredProducts = await getHomeFeaturedProducts()
+    return { popularCategories, newProducts, bestSellerProducts };
 
-    // جلب الفئات الأكثر طلباً (للسويبر)
-    const popularCategories = await getMostPopularCategories()
-
-    // جلب المنتجات الأكثر مبيعاً
-    const bestSellerProducts = await getBestSellerProducts()
-
-    return { 
-      categories: subCategories, 
-      featuredProducts,
-      popularCategories,
-      bestSellerProducts
-    }
   } catch (error) {
-    console.error('Error fetching home page data:', error)
-    return { 
-      categories: [], 
-      featuredProducts: [],
+    console.error('Error fetching home page data:', error);
+    return {
       popularCategories: [],
-      bestSellerProducts: []
-    }
+      newProducts: [],
+      bestSellerProducts: [],
+    };
   }
 }
 
@@ -64,18 +54,10 @@ const features = [
   }
 ]
 
-// Custom type for categories with product count
-interface CategoryCardType {
-  id: string;
-  name: string;
-  icon: string | null;
-  slug: string;
-  image?: string;
-  productsCount?: number;
-}
-
 export default async function Home() {
-  const { categories, featuredProducts, popularCategories, bestSellerProducts } = await getHomePageData()
+
+  const { popularCategories, newProducts, bestSellerProducts } = await getData()
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-red-50">
@@ -85,24 +67,44 @@ export default async function Home() {
           <HeroSlider />
         </section>
 
-        {/* الفئات الأكثر طلباً - سويبر ديناميكي */}
-        <section className="mb-6 md:mb-10">
-          <CategoriesSwiper 
-            categories={popularCategories as any} 
-            title="الفئات الأكثر طلباً" 
-          />
+        {/* الأكثر طلبا - Categories */}
+        <section className="py-12 bg-gray-50">
+          <div className="container mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">الأكثر طلباً</h2>
+
+            </div>
+            <div>
+              <CategoriesSwiper categories={popularCategories as AppCategory[]} title="الفئات الأكثر طلباً" />
+            </div>
+          </div>
         </section>
 
-        {/* المنتجات الأكثر مبيعاً */}
-        {bestSellerProducts.length > 0 && (
-          <section className="mb-6 md:mb-10">
-            <ProductsSwiper 
-              products={bestSellerProducts} 
-              title="الأكثر مبيعاً" 
-              showBestSellerBadge={true}
-            />
-          </section>
-        )}
+        {/* الأكثر مبيعًا - Products */}
+        <section className="py-12 bg-white">
+          <div className="container mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">الأكثر مبيعًا</h2>
+
+            </div>
+            <div>
+              <ProductsCarousel products={bestSellerProducts as AppProduct[]} title="المنتجات الأكثر مبيعًا" />
+            </div>
+          </div>
+        </section>
+
+        {/* وصل حديثا - Products */}
+        <section className="py-12 bg-gray-50">
+          <div className="container mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">وصل حديثاً</h2>
+
+            </div>
+            <div>
+              <ProductsCarousel products={newProducts as AppProduct[]} title="منتجات جديدة" />
+            </div>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section className="py-8 md:py-14 bg-gradient-to-r from-red-50 via-white to-yellow-50 rounded-2xl shadow-sm mx-2 md:mx-auto mb-6 md:mb-10">
@@ -136,21 +138,14 @@ export default async function Home() {
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
-              {categories.map((category: any) => (
+              {popularCategories.map((category: AppCategory) => ( // <-- 3. تصحيح النوع
                 <CategoryCard key={category.id} category={category} />
               ))}
             </div>
           </div>
         </section>
 
-        {/* المنتجات المميزة */}
-        <section className="mb-6 md:mb-10">
-          <ProductsSwiper 
-            products={featuredProducts} 
-            title="المنتجات المميزة" 
-            showBestSellerBadge={false}
-          />
-        </section>
+
 
         {/* روابط سريعة */}
         <section className="py-8 md:py-12 bg-gradient-to-l from-red-50 via-white to-yellow-50 rounded-2xl shadow-sm mx-2 md:mx-auto mb-6 md:mb-10">
