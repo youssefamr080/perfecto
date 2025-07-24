@@ -4,26 +4,22 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
-import { notFound } from 'next/navigation'
+import { AppProduct } from '@/types';
+import { notFound } from 'next/navigation';
 import ProductDetailsClient from './ProductDetailsClient'
 
 async function getProduct(id: string) {
   try {
     const product = await prisma.product.findUnique({
       where: { id },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        price: true,
-        oldPrice: true,
-        images: true,
-        unitType: true,
-        isAvailable: true,
-        category: true,
-        createdAt: true
-      }
-    })
+      include: {
+        subCategory: {
+          include: {
+            mainCategory: true,
+          },
+        },
+      },
+    });
 
     if (!product) {
       return null
@@ -32,23 +28,19 @@ async function getProduct(id: string) {
     // Get related products from the same category
     const relatedProducts = await prisma.product.findMany({
       where: {
-        category: product.category as string, // Assuming category is string
+        category: product.category,
         isAvailable: true,
-        NOT: { id: product.id }
+        NOT: { id: product.id },
       },
       take: 4,
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        oldPrice: true,
-        images: true,
-        unitType: true,
-        isAvailable: true,
-        category: true,
-        description: true
-      }
-    })
+      include: {
+        subCategory: {
+          include: {
+            mainCategory: true,
+          },
+        },
+      },
+    });
 
     return { product, relatedProducts }
   } catch (error) {
@@ -56,6 +48,8 @@ async function getProduct(id: string) {
     return null
   }
 }
+
+
 
 // Map category codes to Arabic names
 const categoryNames: { [key: string]: string } = {
@@ -78,8 +72,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
-  const { product, relatedProducts } = data
-  const categoryName = product.category ? (categoryNames[product.category] || product.category) : 'غير محدد'
+          const { product, relatedProducts } = data;
+
+  const categoryName = product.subCategory?.name || (product.category ? (categoryNames[product.category] || product.category) : 'غير محدد');
+
+              const mapToAppProduct = (p: typeof product): AppProduct => {
+    return {
+      ...p,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+      category: p.subCategory,
+      images: p.images || [],
+    };
+  };
+
+  const productForClient = {
+    ...product,
+    category: product.subCategory?.name || 'غير محدد',
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -186,10 +197,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
 
               {/* Action Buttons - Client Component */}
-              <ProductDetailsClient product={{
-                ...product,
-                category: product.category || 'غير محدد'
-              }} />
+              <ProductDetailsClient product={productForClient} />
             </div>
           </div>
         </div>
@@ -201,11 +209,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
               منتجات مشابهة
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
-                <ProductCard key={relatedProduct.id} product={{
-                  ...relatedProduct,
-                  category: relatedProduct.category || 'غير محدد'
-                }} />
+                                                        {relatedProducts.map((p) => (
+                <ProductCard key={p.id} product={mapToAppProduct(p)} />
               ))}
             </div>
           </section>

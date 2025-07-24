@@ -11,25 +11,11 @@ import {
   getBreadcrumbForMainCategory 
 } from '@/lib/categories-with-products'
 import Image from 'next/image'
-import type { MainCategory, SubCategory as PrismaSubCategory, Product as PrismaProduct, UnitType } from '@prisma/client';
+import type { MainCategory, SubCategory as PrismaSubCategory } from '@prisma/client';
 import { AppProduct } from '@/types';
 
 // A more specific type for a MainCategory that includes its SubCategories
 type MainCategoryWithSubCats = MainCategory & { subCategories: PrismaSubCategory[] };
-
-// Helper function to map Prisma Product to AppProduct
-const mapPrismaProductToAppProduct = (product: any): AppProduct => ({
-  ...product,
-  createdAt: typeof product.createdAt === 'string' ? product.createdAt : product.createdAt.toISOString(),
-  updatedAt: typeof product.updatedAt === 'string' ? product.updatedAt : product.updatedAt.toISOString(),
-  images: product.images || [],
-  slug: product.name.toLowerCase().replace(/\s+/g, '-'),
-  unitType: product.unitType as UnitType,
-  isAvailable: product.isAvailable || false,
-  isBestSeller: product.isBestSeller || false,
-  inStock: product.inStock || 0,
-  category: product.subCategory ? { ...product.subCategory, productCount: 0, mainCategory: null, icon: product.subCategory.icon || null } : null,
-});
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -44,7 +30,14 @@ async function getCategoryData(slug: string) {
     if (subCategory) {
       // إذا كانت فئة فرعية
       const productsData = await getProductsBySubCategory(subCategory.categoryType)
-      const products = productsData.map(p => mapPrismaProductToAppProduct({ ...p, subCategory: subCategory }));
+      const products: AppProduct[] = productsData.map(p => ({
+        ...p,
+        createdAt: new Date(p.createdAt).toISOString(),
+        updatedAt: new Date(p.updatedAt).toISOString(),
+        images: p.images || [],
+        slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+        category: subCategory ? { ...subCategory, icon: subCategory.icon || null, mainCategory: null } : null,
+      }));
       const breadcrumb = await getBreadcrumbForSubCategory(slug)
       
       return {
@@ -60,10 +53,18 @@ async function getCategoryData(slug: string) {
     
     if (mainCategory) {
       // إذا كانت فئة رئيسية، جمع المنتجات من جميع الفئات الفرعية
-      const allProducts = []
+      let allProducts: AppProduct[] = [];
       for (const subCat of (mainCategory as MainCategoryWithSubCats).subCategories) {
-        const productsData = await getProductsBySubCategory(subCat.categoryType)
-        allProducts.push(...productsData.map(p => mapPrismaProductToAppProduct({ ...p, subCategory: subCat })));
+        const productsData = await getProductsBySubCategory(subCat.categoryType);
+        const mappedProducts: AppProduct[] = productsData.map(p => ({
+          ...p,
+          createdAt: new Date(p.createdAt).toISOString(),
+          updatedAt: new Date(p.updatedAt).toISOString(),
+          images: p.images || [],
+          slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+          category: { ...subCat, icon: subCat.icon || null, mainCategory: null },
+        }));
+        allProducts = allProducts.concat(mappedProducts);
       }
       
       const breadcrumb = await getBreadcrumbForMainCategory(slug)

@@ -113,7 +113,7 @@ export async function getProductsBySubCategory(identifier: string) {
     }) as SubCategory | null
 
     if (subCategory) {
-      return transformProductsForUI((subCategory as any).products)
+      return transformProductsForUI((subCategory as SubCategoryWithProducts).products)
     }
 
     // البحث بالـ categoryType إذا لم يتم العثور على slug
@@ -128,7 +128,7 @@ export async function getProductsBySubCategory(identifier: string) {
     }) as SubCategory | null
 
     if (subCategoryByType) {
-      return transformProductsForUI((subCategoryByType as any).products)
+      return transformProductsForUI((subCategoryByType as SubCategoryWithProducts).products)
     }
 
     // البحث القديم كـ fallback

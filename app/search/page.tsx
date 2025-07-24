@@ -2,11 +2,19 @@ import React from 'react'
 import { Suspense } from 'react'
 import ProductCard from '@/components/ProductCard'
 import { prisma } from '@/lib/prisma'
-import { Search } from 'lucide-react'
+import { AppProduct } from '@/types'
+import { Search } from 'lucide-react';
+import type { Product, SubCategory, MainCategory } from '@prisma/client';
 
 // كاش في الذاكرة لمدة 10 دقائق
-const searchSSRCache: Record<string, { data: { products: ProductLite[], total: number }, timestamp: number }> = {};
+const searchSSRCache: Record<string, { data: { products: AppProduct[], total: number }, timestamp: number }> = {};
 const SEARCH_SSR_CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+
+type ProductWithNestedCategory = Product & {
+  subCategory: (SubCategory & {
+    mainCategory: MainCategory | null;
+  }) | null;
+};
 
 async function getSearchResults(query: string) {
   if (!query || query.trim().length < 1) {
@@ -43,16 +51,12 @@ async function getSearchResults(query: string) {
           }
         ]
       },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        oldPrice: true,
-        images: true,
-        unitType: true,
-        isAvailable: true,
-        category: true,
-        description: true
+      include: {
+        subCategory: {
+          include: {
+            mainCategory: true,
+          },
+        },
       },
       take: 50,
       orderBy: [
@@ -80,7 +84,7 @@ async function getSearchResults(query: string) {
       const searchLower = searchTerm.toLowerCase()
 
       // حساب نقاط الصلة
-      const getRelevanceScore = (product: ProductLite) => {
+            const getRelevanceScore = (product: ProductWithNestedCategory) => {
         const name = (product.name ?? '').toLowerCase()
         const description = (product.description ?? '').toLowerCase()
         let score = 0
@@ -112,9 +116,19 @@ async function getSearchResults(query: string) {
       return aName.localeCompare(bName, 'ar')
     })
 
-    const data = { products: sortedProducts, total }
-    searchSSRCache[cacheKey] = { data, timestamp: now }
-    return data
+        const mapToAppProduct = (p: ProductWithNestedCategory): AppProduct => ({
+      ...p,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+            slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+      category: p.subCategory ? { ...p.subCategory, mainCategory: p.subCategory.mainCategory || null } : null,
+    });
+
+    const appProducts = sortedProducts.map(mapToAppProduct);
+
+    const data = { products: appProducts, total };
+    searchSSRCache[cacheKey] = { data, timestamp: now };
+    return data;
   } catch (error) {
     console.error('Error fetching search results:', error)
     return { products: [], total: 0 }
@@ -164,7 +178,7 @@ async function SearchResults({ query }: { query: string }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product: ProductLite) => (
+        {products.map((product) => (
           <div key={product.id} className="transform transition-all duration-300 hover:scale-105">
             <ProductCard product={product} />
           </div>
@@ -174,18 +188,7 @@ async function SearchResults({ query }: { query: string }) {
   )
 }
 
-// Custom type for search products
-interface ProductLite {
-  id: string;
-  name: string;
-  price: number;
-  oldPrice?: number | null;
-  images: string[];
-  unitType: 'WEIGHT' | 'PIECE';
-  isAvailable: boolean;
-  category: string | null;
-  description?: string | null;
-}
+
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = await searchParams

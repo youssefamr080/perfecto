@@ -4,8 +4,16 @@ import Link from 'next/link'
 import { ArrowRight, ChevronRightIcon } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
 import { getProductWithFullPath } from '@/lib/categories-with-products'
+import { AppProduct } from '@/types';
+import type { Product, SubCategory, MainCategory } from '@prisma/client';
 import { notFound } from 'next/navigation'
-import ProductDetailsClient from './ProductDetailsClient'
+import ProductDetailsClient from './ProductDetailsClient';
+
+type ProductWithNestedCategory = Product & {
+  subCategory: (SubCategory & {
+    mainCategory: MainCategory | null;
+  }) | null;
+};
 
 async function getProduct(id: string) {
   try {
@@ -17,7 +25,7 @@ async function getProduct(id: string) {
     const { product, breadcrumb, subCategory } = data
 
     // جلب المنتجات المشابهة من نفس الفئة الفرعية إذا توفرت
-    let relatedProducts: ProductLite[] = []
+    let relatedProducts: AppProduct[] = []
     if (subCategory) {
       // استخدام العلاقة الجديدة لجلب المنتجات
       try {
@@ -31,24 +39,27 @@ async function getProduct(id: string) {
                   id: { not: product.id }
                 },
                 take: 4,
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  oldPrice: true,
-                  images: true,
-                  unitType: true,
-                  isAvailable: true,
-                  category: true,
-                  description: true
-                }
+                include: {
+                  subCategory: {
+                    include: {
+                      mainCategory: true,
+                    },
+                  },
+                },
               }
             }
           })
         )
         
         if (subCategoryWithProducts) {
-          relatedProducts = subCategoryWithProducts.products
+                    const mapToAppProduct = (p: ProductWithNestedCategory): AppProduct => ({ 
+                        ...p,
+            createdAt: p.createdAt.toISOString(),
+            updatedAt: p.updatedAt.toISOString(),
+                        slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+            category: p.subCategory ? { ...p.subCategory, mainCategory: p.subCategory.mainCategory || null } : null,
+          });
+          relatedProducts = subCategoryWithProducts.products.map(mapToAppProduct);
         }
       } catch {
         console.warn('Error fetching related products, using fallback')
@@ -75,18 +86,7 @@ const categoryNames: { [key: string]: string } = {
   'EGGS': 'البيض'
 }
 
-// Custom types for this file
-interface ProductLite {
-  id: string;
-  name: string;
-  price: number;
-  oldPrice?: number | null;
-  images: string[];
-  unitType: 'WEIGHT' | 'PIECE';
-  isAvailable: boolean;
-  category: string | null;
-  description?: string | null;
-}
+
 interface BreadcrumbItem {
   name: string;
   href: string;
