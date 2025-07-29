@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useCart } from "@/lib/cart-context"
+import { useCartStore } from "@/lib/stores/cart-store"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +25,7 @@ const POINTS_TO_EGP = 100
 const SHIPPING_POINTS_COST = 1500
 
 export default function CheckoutPage() {
-  const { state: cartState, dispatch } = useCart()
+  const { items, total, clearCart } = useCartStore()
   const { state: authState } = useAuth()
   const [editUser, setEditUser] = useState(false)
   const [userData, setUserData] = useState({
@@ -44,7 +44,7 @@ export default function CheckoutPage() {
   const [deliveryNotes, setDeliveryNotes] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const subtotal = cartState.total
+  const subtotal = total
   const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
   const pointsDiscount = Math.floor(pointsToUse / POINTS_TO_EGP)
   const finalShippingFee = usePointsForShipping && shippingFee > 0 ? 0 : shippingFee
@@ -57,10 +57,10 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    if (!authState.isAuthenticated && cartState.items.length > 0) {
+    if (!authState.isAuthenticated && items.length > 0) {
       setShowLoginModal(true)
     }
-  }, [authState.isAuthenticated, cartState.items.length])
+  }, [authState.isAuthenticated, items.length])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,7 +107,7 @@ export default function CheckoutPage() {
         .single()
       if (orderError) throw orderError
       // Create order items
-      const orderItems = cartState.items.map((item) => ({
+      const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.product.id,
         product_name: item.product.name,
@@ -158,7 +158,7 @@ export default function CheckoutPage() {
         data: { order_id: order.id, order_number: orderNumber },
       })
       // Clear cart
-      dispatch({ type: "CLEAR_CART" })
+      clearCart()
       toast({
         title: "تم إنشاء الطلب بنجاح!",
         description: "سيتم التواصل معك قريباً لتأكيد الطلب",
@@ -178,7 +178,7 @@ export default function CheckoutPage() {
 
   if (!mounted) return null
 
-  if (cartState.items.length === 0) {
+  if (items.length === 0) {
     if (typeof window !== "undefined") {
       router.push("/cart")
     }
@@ -375,7 +375,7 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="max-h-64 overflow-y-auto space-y-3">
-                    {cartState.items.map((item) => (
+                    {items.map((item) => (
                       <div key={item.product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                         <div className="relative w-12 h-12 flex-shrink-0">
                           <Image

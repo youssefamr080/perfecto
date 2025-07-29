@@ -158,7 +158,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "perfecto-auth",
-      skipHydration: true,
+      skipHydration: false,
     },
   ),
 )

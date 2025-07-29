@@ -8,7 +8,7 @@ import { BottomNavigation } from "@/components/navigation/bottom-nav"
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float"
 import { InstallPrompt } from "@/components/pwa/install-prompt"
 import { Toaster } from "@/components/ui/toaster"
-import { CartProvider } from "@/lib/cart-context"
+// تم حذف CartProvider
 import { AuthProvider } from "@/lib/auth-context"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useEffect, useState } from "react"
@@ -63,14 +63,12 @@ export default function ClientLayout({
       </head>
       <body className={`${inter.className} pb-16 md:pb-0 bg-gray-50`}>
         <AuthProvider>
-          <CartProvider>
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <BottomNavigation />
-            <WhatsAppFloat />
-            <InstallPrompt />
-            <Toaster />
-          </CartProvider>
+          <Header />
+          <main className="min-h-screen">{children}</main>
+          <BottomNavigation />
+          <WhatsAppFloat />
+          <InstallPrompt />
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
