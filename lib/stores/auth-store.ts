@@ -7,7 +7,7 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (phone: string, password: string) => Promise<boolean>
+  login: (phone: string, name: string, address: string) => Promise<{ success: boolean; message: string }>
   register: (userData: Partial<User>) => Promise<boolean>
   logout: () => void
   updateProfile: (userData: Partial<User>) => Promise<boolean>
@@ -21,21 +21,29 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: async (phone: string, password: string) => {
+      login: async (phone: string, name: string, address: string) => {
         set({ isLoading: true })
-
         try {
-          const { data: user, error } = await supabase
+          // ابحث عن المستخدم برقم الهاتف فقط
+          let { data: user, error } = await supabase
             .from("users")
             .select("*")
             .eq("phone", phone)
-            .eq("password", password)
             .eq("is_active", true)
             .single()
 
-          if (error || !user) {
-            set({ isLoading: false })
-            return false
+          // إذا لم يوجد المستخدم، أنشئه
+          if (!user) {
+            const { data: newUser, error: insertError } = await supabase
+              .from("users")
+              .insert({ phone, name, address, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+              .select()
+              .single()
+            if (insertError || !newUser) {
+              set({ isLoading: false })
+              return { success: false, message: "حدث خطأ أثناء إنشاء الحساب" }
+            }
+            user = newUser
           }
 
           set({
@@ -43,12 +51,11 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           })
-
-          return true
+          return { success: true, message: "تم تسجيل الدخول بنجاح" }
         } catch (error) {
           console.error("Login error:", error)
           set({ isLoading: false })
-          return false
+          return { success: false, message: "حدث خطأ أثناء تسجيل الدخول" }
         }
       },
 

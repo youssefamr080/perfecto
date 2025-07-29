@@ -27,6 +27,13 @@ const SHIPPING_POINTS_COST = 1500
 export default function CheckoutPage() {
   const { state: cartState, dispatch } = useCart()
   const { state: authState } = useAuth()
+  const [editUser, setEditUser] = useState(false)
+  const [userData, setUserData] = useState({
+    name: authState.user?.name || "",
+    phone: authState.user?.phone || "",
+    address: authState.user?.address || "",
+  })
+  const [saveType, setSaveType] = useState<"permanent"|"temporary">("temporary")
   const router = useRouter()
   const { toast } = useToast()
 
@@ -61,13 +68,24 @@ export default function CheckoutPage() {
       setShowLoginModal(true)
       return
     }
-
     setLoading(true)
-
     try {
+      // إذا اختار المستخدم حفظ دائم، حدث البيانات في قاعدة البيانات
+      if (editUser && saveType === "permanent") {
+        await supabase.from("users").update({
+          name: userData.name,
+          phone: userData.phone,
+          address: userData.address,
+          updated_at: new Date().toISOString(),
+        }).eq("id", authState.user.id)
+      }
+      // استخدم بيانات التوصيل (إما المعدلة أو الأصلية)
+      const deliveryName = editUser ? userData.name : authState.user.name
+      const deliveryPhone = editUser ? userData.phone : authState.user.phone
+      const deliveryAddress = editUser ? userData.address : authState.user.address
+
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`
-
       // Create order
       const { data: order, error: orderError } = await supabase
         .from("orders")
@@ -80,16 +98,14 @@ export default function CheckoutPage() {
           final_amount: finalAmount,
           points_earned: pointsEarned,
           points_used: totalPointsUsed,
-          delivery_address: authState.user.address,
-          delivery_phone: authState.user.phone,
+          delivery_address: deliveryAddress,
+          delivery_phone: deliveryPhone,
           delivery_notes: deliveryNotes,
           status: "PENDING",
         })
         .select()
         .single()
-
       if (orderError) throw orderError
-
       // Create order items
       const orderItems = cartState.items.map((item) => ({
         order_id: order.id,
@@ -99,10 +115,8 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         total_price: item.product.price * item.quantity,
       }))
-
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
       if (itemsError) throw itemsError
-
       // Update user loyalty points and stats
       const newLoyaltyPoints = Math.max(0, (authState.user.loyalty_points || 0) - totalPointsUsed + pointsEarned)
       const { error: userUpdateError } = await supabase
@@ -113,9 +127,7 @@ export default function CheckoutPage() {
           total_spent: (authState.user.total_spent || 0) + finalAmount,
         })
         .eq("id", authState.user.id)
-
       if (userUpdateError) throw userUpdateError
-
       // Record loyalty points history
       if (pointsEarned > 0) {
         await supabase.from("loyalty_points_history").insert({
@@ -127,7 +139,6 @@ export default function CheckoutPage() {
           description: `نقاط مكتسبة من الطلب ${orderNumber}`,
         })
       }
-
       if (totalPointsUsed > 0) {
         await supabase.from("loyalty_points_history").insert({
           user_id: authState.user.id,
@@ -138,7 +149,6 @@ export default function CheckoutPage() {
           description: `نقاط مستخدمة في الطلب ${orderNumber}`,
         })
       }
-
       // Create notification
       await supabase.from("notifications").insert({
         user_id: authState.user.id,
@@ -147,15 +157,12 @@ export default function CheckoutPage() {
         type: "ORDER_UPDATE",
         data: { order_id: order.id, order_number: orderNumber },
       })
-
       // Clear cart
       dispatch({ type: "CLEAR_CART" })
-
       toast({
         title: "تم إنشاء الطلب بنجاح!",
         description: "سيتم التواصل معك قريباً لتأكيد الطلب",
       })
-
       router.push(`/order-confirmation/${order.id}`)
     } catch (error) {
       console.error("Error creating order:", error)
@@ -217,29 +224,67 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <User className="h-5 w-5 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">الاسم</p>
-                      <p className="font-semibold">{authState.user?.name}</p>
+                {!editUser ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <User className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm text-gray-600">الاسم</p>
+                          <p className="font-semibold">{authState.user?.name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <Phone className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-sm text-gray-600">رقم الهاتف</p>
+                          <p className="font-semibold">{authState.user?.phone}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Phone className="h-5 w-5 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-600">رقم الهاتف</p>
-                      <p className="font-semibold">{authState.user?.phone}</p>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <MapPin className="h-5 w-5 text-gray-500 mt-1" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600">عنوان التوصيل</p>
+                        <p className="font-semibold">{authState.user?.address}</p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <MapPin className="h-5 w-5 text-gray-500 mt-1" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600">عنوان التوصيل</p>
-                    <p className="font-semibold">{authState.user?.address}</p>
-                  </div>
-                </div>
+                    <Button variant="outline" className="mt-2" onClick={() => setEditUser(true)}>
+                      تعديل البيانات
+                    </Button>
+                  </>
+                ) : (
+                  <form className="space-y-3" onSubmit={e => { e.preventDefault(); }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="editName">الاسم</Label>
+                        <Input id="editName" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} required />
+                      </div>
+                      <div>
+                        <Label htmlFor="editPhone">رقم الهاتف</Label>
+                        <Input id="editPhone" value={userData.phone} onChange={e => setUserData({ ...userData, phone: e.target.value })} required />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="editAddress">العنوان</Label>
+                      <Textarea id="editAddress" value={userData.address} onChange={e => setUserData({ ...userData, address: e.target.value })} required />
+                    </div>
+                    <div className="flex gap-4 items-center">
+                      <Label className="flex items-center gap-2">
+                        <input type="radio" name="saveType" value="permanent" checked={saveType === "permanent"} onChange={() => setSaveType("permanent")}/>
+                        حفظ دائم
+                      </Label>
+                      <Label className="flex items-center gap-2">
+                        <input type="radio" name="saveType" value="temporary" checked={saveType === "temporary"} onChange={() => setSaveType("temporary")}/>
+                        لهذا الطلب فقط
+                      </Label>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => setEditUser(false)}>إلغاء</Button>
+                      <Button type="button" onClick={() => setEditUser(false)}>تأكيد البيانات</Button>
+                    </div>
+                  </form>
+                )}
                 <div>
                   <Label htmlFor="deliveryNotes" className="text-sm font-medium">
                     ملاحظات التوصيل (اختياري)
