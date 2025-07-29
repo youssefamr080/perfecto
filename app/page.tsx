@@ -1,6 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Swiper, SwiperSlide } from "swiper/react"
+import { Pagination } from "swiper/modules"
+import "swiper/css"
+import "swiper/css/pagination"
 import Link from "next/link"
 import { ArrowLeft, Star, Truck, Shield, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -110,36 +114,80 @@ export default function HomePage() {
           {loading ? (
             <CategoryGridSkeleton count={6} />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((category) => (
-                <Link key={category.id} href={`/category/${category.id}`} className="group">
-                  <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden group-hover:scale-105">
-                    <div className="aspect-square bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-2 overflow-hidden">
-                      {category.image_url ? (
-                        <img
-                          src={category.image_url}
-                          alt={category.name}
-                          className="object-contain w-full h-full rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <img
-                          src="/placeholder.svg?height=120&width=120&text=تصنيف"
-                          alt="تصنيف"
-                          className="object-contain w-full h-full rounded-xl opacity-60"
-                        />
-                      )}
+            <>
+              {/* موبايل: سويبر */}
+              <div className="block md:hidden">
+                <Swiper
+                  spaceBetween={12}
+                  slidesPerView={2.2}
+                  pagination={{ clickable: true }}
+                  modules={[Pagination]}
+                  className="pb-8"
+                >
+                  {categories.map((category) => (
+                    <SwiperSlide key={category.id}>
+                      <Link href={`/category/${category.id}`} className="group block">
+                        <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden group-hover:scale-105">
+                          <div className="aspect-square bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-2 overflow-hidden">
+                            {category.image_url ? (
+                              <img
+                                src={category.image_url}
+                                alt={category.name}
+                                className="object-contain w-full h-full rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <img
+                                src="/placeholder.svg?height=120&width=120&text=تصنيف"
+                                alt="تصنيف"
+                                className="object-contain w-full h-full rounded-xl opacity-60"
+                              />
+                            )}
+                          </div>
+                          <div className="p-4 text-center">
+                            <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">
+                              {category.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+              {/* ديسكتوب: شبكة */}
+              <div className="hidden md:grid grid-cols-3 lg:grid-cols-6 gap-4">
+                {categories.map((category) => (
+                  <Link key={category.id} href={`/category/${category.id}`} className="group">
+                    <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden group-hover:scale-105">
+                      <div className="aspect-square bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-2 overflow-hidden">
+                        {category.image_url ? (
+                          <img
+                            src={category.image_url}
+                            alt={category.name}
+                            className="object-contain w-full h-full rounded-xl shadow-sm group-hover:scale-110 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <img
+                            src="/placeholder.svg?height=120&width=120&text=تصنيف"
+                            alt="تصنيف"
+                            className="object-contain w-full h-full rounded-xl opacity-60"
+                          />
+                        )}
+                      </div>
+                      <div className="p-4 text-center">
+                        <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">
+                          {category.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                      </div>
                     </div>
-                    <div className="p-4 text-center">
-                      <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">
-                        {category.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{category.description}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            </>
           )}
         </section>
 

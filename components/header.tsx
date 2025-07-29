@@ -1,5 +1,7 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import type { Category, SubCategory } from "@/lib/types"
+import Image from "next/image"
 import Link from "next/link"
 import { ShoppingCart, Menu, X, User, LogOut, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +21,19 @@ import { LoginModal } from "./auth/login-modal"
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<SubCategory[]>([])
+
+  // جلب الأقسام والفئات الفرعية عند فتح السايدبار
+  useEffect(() => {
+    if (isSidebarOpen) {
+      import("@/lib/supabase").then(({ supabase }) => {
+        supabase.from("categories").select("*").then(({ data }) => setCategories(data || []))
+        supabase.from("subcategories").select("*").then(({ data }) => setSubcategories(data || []))
+      })
+    }
+  }, [isSidebarOpen])
 
   const { itemCount } = useCartStore()
   const { user, isAuthenticated, logout } = useAuthStore()
@@ -30,11 +45,11 @@ export function Header() {
   return (
     <>
       <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-2 md:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="text-2xl font-bold text-red-600 hover:text-red-700 transition-colors">
-              بيرفكتو تيب
+            <Link href="/" className="flex items-center">
+              <Image src="/placeholder-logo.svg" alt="logo" width={40} height={40} className="w-10 h-10 object-contain" priority />
             </Link>
 
             {/* Desktop Navigation */}
@@ -58,8 +73,8 @@ export function Header() {
               <SearchBar />
             </div>
 
-            {/* User Actions */}
-            <div className="flex items-center space-x-4 space-x-reverse">
+            {/* User Actions + Sidebar Button */}
+            <div className="flex items-center gap-2 md:gap-4">
               {/* Notifications */}
               {isAuthenticated && (
                 <Link href="/notifications">
@@ -116,56 +131,68 @@ export function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button onClick={() => setShowLoginModal(true)} className="bg-red-600 hover:bg-red-700 shadow-sm">
+                <Button onClick={() => setShowLoginModal(true)} className="bg-red-600 hover:bg-red-700 shadow-sm text-[10px] px-2 h-7 md:h-10 md:text-sm">
                   تسجيل الدخول
                 </Button>
               )}
 
-              {/* Mobile Menu Button */}
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {/* Sidebar Button (ثلاث شرط) */}
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
+                <span className="sr-only">القائمة الجانبية</span>
+                <Menu className="h-7 w-7" />
               </Button>
             </div>
           </div>
 
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden py-4 border-t bg-white">
-              {/* Mobile Search */}
-              <div className="mb-4">
-                <SearchBar showSuggestions={false} />
-              </div>
-
-              <nav className="flex flex-col space-y-2">
-                <Link
-                  href="/"
-                  className="text-gray-700 hover:text-red-600 py-2 px-2 rounded-md hover:bg-red-50 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  الرئيسية
-                </Link>
-                <Link
-                  href="/categories"
-                  className="text-gray-700 hover:text-red-600 py-2 px-2 rounded-md hover:bg-red-50 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  المنتجات
-                </Link>
-                <Link
-                  href="/offers"
-                  className="text-gray-700 hover:text-red-600 py-2 px-2 rounded-md hover:bg-red-50 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  العروض
-                </Link>
-                <Link
-                  href="/about"
-                  className="text-gray-700 hover:text-red-600 py-2 px-2 rounded-md hover:bg-red-50 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  من نحن
-                </Link>
-              </nav>
+          {/* Sidebar Menu (Mobile) */}
+          {isSidebarOpen && (
+            <div className="fixed inset-0 z-[100] flex">
+              {/* Overlay */}
+              <div className="fixed inset-0 bg-black/40" onClick={() => setIsSidebarOpen(false)} />
+              {/* Sidebar */}
+              <aside className="relative w-72 max-w-[90vw] h-full bg-white shadow-2xl p-4 flex flex-col overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-extrabold text-red-600">القائمة</span>
+                  <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)}>
+                    <X className="h-6 w-6" />
+                  </Button>
+                </div>
+                <nav className="flex flex-col gap-2">
+                  <Link href="/" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-gray-800" onClick={() => setIsSidebarOpen(false)}>
+                    الرئيسية
+                  </Link>
+                  <Link href="/categories" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-gray-800" onClick={() => setIsSidebarOpen(false)}>
+                    كل المنتجات
+                  </Link>
+                  <Link href="/offers" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-gray-800" onClick={() => setIsSidebarOpen(false)}>
+                    العروض
+                  </Link>
+                  <Link href="/about" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-gray-800" onClick={() => setIsSidebarOpen(false)}>
+                    من نحن
+                  </Link>
+                </nav>
+                <hr className="my-4" />
+                <div>
+                  <h4 className="text-base font-extrabold text-gray-700 mb-2">الأقسام</h4>
+                  <div className="flex flex-col gap-1">
+                    {categories.map((cat) => (
+                      <div key={cat.id}>
+                        <Link href={`/category/${cat.id}`} className="block py-2 px-3 rounded-lg hover:bg-green-50 text-base font-bold text-green-800" onClick={() => setIsSidebarOpen(false)}>
+                          {cat.name}
+                        </Link>
+                        {/* الفئات الفرعية */}
+                        <div className="pl-4 border-r-2 border-green-100 ml-2">
+                          {subcategories.filter((sub) => sub.category_id === cat.id).map((sub) => (
+                            <Link key={sub.id} href={`/subcategory/${sub.id}`} className="block py-1 px-2 rounded hover:bg-green-50 text-sm text-green-700 font-semibold" onClick={() => setIsSidebarOpen(false)}>
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
             </div>
           )}
         </div>

@@ -41,14 +41,12 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     set({ isLoading: true, query })
 
     try {
+      // استخدم فلترة أكثر وضوحاً مع دعم العربية والبحث الجزئي
       const { data: products, error } = await supabase
         .from("products")
-        .select(`
-          *,
-          category:categories(*)
-        `)
+        .select(`*, category:categories(*)`)
+        .filter("is_active", "eq", true)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
-        .eq("is_active", true)
         .order("is_featured", { ascending: false })
         .order("name")
 

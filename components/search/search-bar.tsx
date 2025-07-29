@@ -34,6 +34,7 @@ export function SearchBar({
     recentSearches,
     popularProducts,
     categories,
+    results,
     getSuggestions,
     search,
     clearRecentSearches,
@@ -53,12 +54,13 @@ export function SearchBar({
     }
   }, [isOpen, popularProducts.length, categories.length, loadPopularProducts, loadCategories])
 
-  // الحصول على الاقتراحات
+  // الحصول على الاقتراحات والمنتجات أثناء الكتابة
   useEffect(() => {
     if (debouncedQuery && showSuggestions) {
       getSuggestions(debouncedQuery)
+      search(debouncedQuery)
     }
-  }, [debouncedQuery, getSuggestions, showSuggestions])
+  }, [debouncedQuery, getSuggestions, search, showSuggestions])
 
   // إغلاق القائمة عند النقر خارجها
   useEffect(() => {
@@ -186,16 +188,48 @@ export function SearchBar({
           {/* الأقسام */}
           {categories.length > 0 && !localQuery && (
             <div className="p-3 border-b">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">تصفح الأقسام</h4>
+              <h4 className="text-base font-extrabold text-gray-800 mb-2">تصفح الأقسام</h4>
               <div className="grid grid-cols-1 gap-1">
                 {categories.map((category) => (
                   <Link
                     key={category.id}
                     href={`/category/${category.id}`}
                     onClick={() => setIsOpen(false)}
-                    className="p-2 hover:bg-red-50 rounded-md transition-colors text-sm text-right"
+                    className="p-3 hover:bg-red-50 rounded-xl transition-colors text-base text-right font-extrabold text-black border border-gray-100 shadow-sm"
                   >
                     {category.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* المنتجات أثناء الكتابة */}
+          {localQuery && results.length > 0 && (
+            <div className="p-3 border-b">
+              <h4 className="text-base font-extrabold text-gray-800 mb-2 flex items-center gap-2">
+                <Search className="h-4 w-4 text-red-500" />
+                منتجات مطابقة
+              </h4>
+              <div className="space-y-2">
+                {results.slice(0, 5).map((product) => (
+                  <Link
+                    key={product.id}
+                    href={`/product/${product.id}`}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 p-2 hover:bg-green-50 rounded-xl transition-colors border border-gray-100 shadow-sm"
+                  >
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+                      {product.images && product.images[0] ? (
+                        <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
+                      ) : (
+                        <span className="text-2xl">🛒</span>
+                      )}
+                    </div>
+                    <div className="flex-1 text-right">
+                      <p className="text-base font-extrabold text-black line-clamp-1">{product.name}</p>
+                      <p className="text-xs text-red-600 font-bold">{product.price} ج.م</p>
+                    </div>
                   </Link>
                 ))}
               </div>
