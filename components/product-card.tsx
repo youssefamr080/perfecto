@@ -17,32 +17,19 @@ interface ProductCardProps {
 }
 
 function ProductCardComponent({ product, showQuickActions = true }: ProductCardProps) {
-  const { addItem, updateQuantity, getItemQuantity } = useCartStore()
+  const { addItem, getItemQuantity } = useCartStore()
   const { toast } = useToast()
-  const [quantity, setQuantity] = useState(1)
   const [isHovered, setIsHovered] = useState(false)
 
   const cartQuantity = getItemQuantity(product.id)
 
   const handleAddToCart = () => {
-    addItem(product, quantity)
-    setQuantity(1)
+    addItem(product, 1)
     toast({
       title: "تم إضافة المنتج! 🛒",
       description: `تم إضافة ${product.name} إلى السلة`,
       duration: 2000,
     })
-  }
-
-  const handleUpdateCart = (newQuantity: number) => {
-    updateQuantity(product.id, newQuantity)
-    if (newQuantity === 0) {
-      toast({
-        title: "تم حذف المنتج",
-        description: "تم حذف المنتج من السلة",
-        duration: 2000,
-      })
-    }
   }
 
   const discountPercentage = product.original_price
@@ -127,74 +114,13 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
 
         {/* Add to Cart Section */}
         {product.is_available ? (
-          cartQuantity > 0 ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-            <div className="flex items-center bg-gray-100 rounded-full">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleUpdateCart(cartQuantity - 1)}
-                    className="h-8 w-8 p-0 hover:bg-gray-200"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="font-extrabold min-w-[2rem] text-center text-base">{cartQuantity}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleUpdateCart(cartQuantity + 1)}
-                    className="h-8 w-8 p-0 hover:bg-gray-200"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <span className="text-xs text-red-600 font-extrabold flex items-center gap-1">
-                  <ShoppingCart className="h-3 w-3" />
-                  في السلة
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 text-center font-bold">
-                المجموع: {(product.price * cartQuantity).toFixed(2)} ج.م
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center bg-gray-100 rounded-full">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="h-8 w-8 p-0 hover:bg-gray-200"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="font-extrabold min-w-[2rem] text-center text-base">{quantity}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="h-8 w-8 p-0 hover:bg-gray-200"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button
-                  onClick={handleAddToCart}
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-2 h-10 flex-1 shadow-soft font-extrabold rounded-full"
-                >
-                  <ShoppingCart className="h-3 w-3 mr-1" />
-                  أضف للسلة
-                </Button>
-              </div>
-              {quantity > 1 && (
-                <div className="text-xs text-gray-500 text-center font-bold">
-                  المجموع: {(product.price * quantity).toFixed(2)} ج.م
-                </div>
-              )}
-            </div>
-          )
+          <Button
+            onClick={handleAddToCart}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-2 h-10 w-full shadow-soft font-extrabold rounded-full"
+          >
+            <ShoppingCart className="h-3 w-3 mr-1" />
+            أضف للسلة
+          </Button>
         ) : (
           <Button disabled className="w-full text-xs py-2 h-10 bg-gray-100 rounded-full font-extrabold">
             غير متوفر

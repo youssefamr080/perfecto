@@ -118,7 +118,7 @@ export default function AdminPage() {
       if (error) throw error
 
       // Update local state
-      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
+      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: newStatus as Order["status"] } : order)))
 
       // Create notification for user
       const order = orders.find((o) => o.id === orderId)

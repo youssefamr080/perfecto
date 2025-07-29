@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -9,14 +10,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import type { Product } from "@/lib/types"
-import { useCart } from "@/lib/cart-context"
+import { useCartStore } from "@/lib/stores/cart-store"
 import { supabase } from "@/lib/supabase"
 import { ProductCard } from "@/components/product-card"
 import { useToast } from "@/hooks/use-toast"
 
 export default function ProductPage() {
   const params = useParams()
-  const { state, dispatch } = useCart()
+  const router = useRouter()
+  const { items, addItem, updateQuantity, getItemQuantity } = useCartStore()
   const { toast } = useToast()
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
@@ -24,8 +26,7 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
-  const cartItem = state.items.find((item) => item.product.id === product?.id)
-  const cartQuantity = cartItem?.quantity || 0
+  const cartQuantity = product ? getItemQuantity(product.id) : 0
 
   useEffect(() => {
     async function fetchProduct() {
@@ -96,7 +97,7 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     if (product) {
-      dispatch({ type: "ADD_ITEM", product, quantity })
+      addItem(product, quantity)
       setQuantity(1)
       toast({
         title: "تم إضافة المنتج!",
@@ -107,15 +108,14 @@ export default function ProductPage() {
 
   const handleUpdateCart = (newQuantity: number) => {
     if (!product) return
-
     if (newQuantity <= 0) {
-      dispatch({ type: "REMOVE_ITEM", productId: product.id })
+      updateQuantity(product.id, 0)
       toast({
         title: "تم حذف المنتج",
         description: "تم حذف المنتج من السلة",
       })
     } else {
-      dispatch({ type: "UPDATE_QUANTITY", productId: product.id, quantity: newQuantity })
+      updateQuantity(product.id, newQuantity)
     }
   }
 

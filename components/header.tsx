@@ -49,7 +49,7 @@ export function Header() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center">
-              <Image src="/placeholder-logo.svg" alt="logo" width={40} height={40} className="w-10 h-10 object-contain" priority />
+              <Image src="/logo.png" alt="logo" width={44} height={44} className="w-11 h-11 object-contain" priority />
             </Link>
 
             {/* Desktop Navigation */}
@@ -79,7 +79,7 @@ export function Header() {
               {isAuthenticated && (
                 <Link href="/notifications">
                   <Button variant="ghost" size="icon" className="relative hover:bg-red-50">
-                    <Bell className="h-5 w-5" />
+                    <Bell className="h-5 w-5 text-green-800" />
                     <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
                       3
                     </Badge>
@@ -90,7 +90,7 @@ export function Header() {
               {/* Cart */}
               <Link href="/cart">
                 <Button variant="ghost" size="icon" className="relative hover:bg-red-50 group">
-                  <ShoppingCart className="h-5 w-5 group-hover:text-red-600 transition-colors" />
+                  <ShoppingCart className="h-5 w-5 text-green-800 group-hover:text-red-600 transition-colors" />
                   {itemCount > 0 && (
                     <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 animate-pulse">
                       {itemCount}
@@ -104,7 +104,7 @@ export function Header() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="hover:bg-red-50">
-                      <User className="h-5 w-5" />
+                      <User className="h-5 w-5 text-green-800" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -139,7 +139,7 @@ export function Header() {
               {/* Sidebar Button (ثلاث شرط) */}
               <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
                 <span className="sr-only">القائمة الجانبية</span>
-                <Menu className="h-7 w-7" />
+                <Menu className="h-7 w-7 text-green-800" />
               </Button>
             </div>
           </div>
@@ -154,7 +154,7 @@ export function Header() {
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-extrabold text-red-600">القائمة</span>
                   <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)}>
-                    <X className="h-6 w-6" />
+                    <X className="h-6 w-6 text-green-800" />
                   </Button>
                 </div>
                 <nav className="flex flex-col gap-2">
@@ -176,14 +176,14 @@ export function Header() {
                   <h4 className="text-base font-extrabold text-gray-700 mb-2">الأقسام</h4>
                   <div className="flex flex-col gap-1">
                     {categories.map((cat) => (
-                      <div key={cat.id}>
-                        <Link href={`/category/${cat.id}`} className="block py-2 px-3 rounded-lg hover:bg-green-50 text-base font-bold text-green-800" onClick={() => setIsSidebarOpen(false)}>
+                      <div key={cat.id} className="mb-1">
+                        <Link href={`/category/${cat.id}`} className="block py-2 px-3 rounded-lg hover:bg-green-50 text-base font-extrabold text-green-700 bg-green-50/60 border border-green-200 shadow-sm" style={{zIndex:2, position:'relative'}} onClick={() => setIsSidebarOpen(false)}>
                           {cat.name}
                         </Link>
                         {/* الفئات الفرعية */}
-                        <div className="pl-4 border-r-2 border-green-100 ml-2">
+                        <div className="pl-4 border-r-2 border-green-100 ml-2 -mt-1">
                           {subcategories.filter((sub) => sub.category_id === cat.id).map((sub) => (
-                            <Link key={sub.id} href={`/subcategory/${sub.id}`} className="block py-1 px-2 rounded hover:bg-green-50 text-sm text-green-700 font-semibold" onClick={() => setIsSidebarOpen(false)}>
+                            <Link key={sub.id} href={`/subcategory/${sub.id}`} className="block py-1 px-2 rounded hover:bg-yellow-50 text-sm text-yellow-700 font-bold ml-2" style={{zIndex:1, position:'relative'}} onClick={() => setIsSidebarOpen(false)}>
                               {sub.name}
                             </Link>
                           ))}
