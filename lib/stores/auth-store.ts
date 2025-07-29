@@ -1,0 +1,157 @@
+import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import { supabase } from "@/lib/supabase"
+import type { User } from "@/lib/types"
+
+interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: (phone: string, password: string) => Promise<boolean>
+  register: (userData: Partial<User>) => Promise<boolean>
+  logout: () => void
+  updateProfile: (userData: Partial<User>) => Promise<boolean>
+  checkAuth: () => Promise<void>
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+
+      login: async (phone: string, password: string) => {
+        set({ isLoading: true })
+
+        try {
+          const { data: user, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("phone", phone)
+            .eq("password", password)
+            .eq("is_active", true)
+            .single()
+
+          if (error || !user) {
+            set({ isLoading: false })
+            return false
+          }
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          })
+
+          return true
+        } catch (error) {
+          console.error("Login error:", error)
+          set({ isLoading: false })
+          return false
+        }
+      },
+
+      register: async (userData: Partial<User>) => {
+        set({ isLoading: true })
+
+        try {
+          const { data: user, error } = await supabase
+            .from("users")
+            .insert({
+              ...userData,
+              created_at: new Date().toISOString(),
+              is_active: true,
+            })
+            .select()
+            .single()
+
+          if (error || !user) {
+            set({ isLoading: false })
+            return false
+          }
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          })
+
+          return true
+        } catch (error) {
+          console.error("Register error:", error)
+          set({ isLoading: false })
+          return false
+        }
+      },
+
+      logout: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
+      },
+
+      updateProfile: async (userData: Partial<User>) => {
+        const { user } = get()
+        if (!user) return false
+
+        set({ isLoading: true })
+
+        try {
+          const { data: updatedUser, error } = await supabase
+            .from("users")
+            .update(userData)
+            .eq("id", user.id)
+            .select()
+            .single()
+
+          if (error || !updatedUser) {
+            set({ isLoading: false })
+            return false
+          }
+
+          set({
+            user: updatedUser,
+            isLoading: false,
+          })
+
+          return true
+        } catch (error) {
+          console.error("Update profile error:", error)
+          set({ isLoading: false })
+          return false
+        }
+      },
+
+      checkAuth: async () => {
+        const { user } = get()
+        if (!user) return
+
+        try {
+          const { data: currentUser, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", user.id)
+            .eq("is_active", true)
+            .single()
+
+          if (error || !currentUser) {
+            get().logout()
+            return
+          }
+
+          set({ user: currentUser })
+        } catch (error) {
+          console.error("Check auth error:", error)
+          get().logout()
+        }
+      },
+    }),
+    {
+      name: "perfecto-auth",
+      skipHydration: true,
+    },
+  ),
+)
