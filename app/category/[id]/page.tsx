@@ -115,7 +115,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
                   </span>
                 </div>
                 <h3 className="font-semibold text-sm text-gray-800">{subcategory.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">{subcategory.products.length} منتج</p>
+                <p className="text-xs text-black mt-1">{subcategory.products.length} منتج</p>
               </a>
             ))}
           </div>

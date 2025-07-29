@@ -4,9 +4,9 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useCartStore } from "@/lib/stores/cart-store"
-import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -18,21 +18,21 @@ import Image from "next/image"
 import { LoginModal } from "@/components/auth/login-modal"
 import { Gift, Truck, CreditCard, MapPin, Phone, User } from "lucide-react"
 
-const SHIPPING_FEE = 15
+const SHIPPING_FEE = 20
 const FREE_SHIPPING_THRESHOLD = 300
 const POINTS_PER_EGP = 1
 const POINTS_TO_EGP = 100
-const SHIPPING_POINTS_COST = 1500
+const SHIPPING_POINTS_COST = 2000
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCartStore()
-  const { state: authState } = useAuth()
+  const { user, isAuthenticated } = useAuthStore()
   const [editUser, setEditUser] = useState(false)
-  const [userData, setUserData] = useState({
-    name: authState.user?.name || "",
-    phone: authState.user?.phone || "",
-    address: authState.user?.address || "",
-  })
+const [userData, setUserData] = useState({
+  name: user?.name || "",
+  phone: user?.phone || "",
+  address: user?.address || "",
+})
   const [saveType, setSaveType] = useState<"permanent"|"temporary">("temporary")
   const router = useRouter()
   const { toast } = useToast()
@@ -57,14 +57,14 @@ export default function CheckoutPage() {
   }, [])
 
   useEffect(() => {
-    if (!authState.isAuthenticated && items.length > 0) {
+    if (!isAuthenticated && items.length > 0) {
       setShowLoginModal(true)
     }
-  }, [authState.isAuthenticated, items.length])
+  }, [isAuthenticated, items.length])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!authState.user) {
+    if (!user) {
       setShowLoginModal(true)
       return
     }
@@ -77,12 +77,12 @@ export default function CheckoutPage() {
           phone: userData.phone,
           address: userData.address,
           updated_at: new Date().toISOString(),
-        }).eq("id", authState.user.id)
+        }).eq("id", user.id)
       }
       // استخدم بيانات التوصيل (إما المعدلة أو الأصلية)
-      const deliveryName = editUser ? userData.name : authState.user.name
-      const deliveryPhone = editUser ? userData.phone : authState.user.phone
-      const deliveryAddress = editUser ? userData.address : authState.user.address
+      const deliveryName = editUser ? userData.name : user.name
+      const deliveryPhone = editUser ? userData.phone : user.phone
+      const deliveryAddress = editUser ? userData.address : user.address
 
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`
@@ -91,7 +91,7 @@ export default function CheckoutPage() {
         .from("orders")
         .insert({
           order_number: orderNumber,
-          user_id: authState.user.id,
+          user_id: user.id,
           subtotal,
           shipping_fee: finalShippingFee,
           discount_amount: pointsDiscount,
@@ -118,20 +118,20 @@ export default function CheckoutPage() {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
       if (itemsError) throw itemsError
       // Update user loyalty points and stats
-      const newLoyaltyPoints = Math.max(0, (authState.user.loyalty_points || 0) - totalPointsUsed + pointsEarned)
+      const newLoyaltyPoints = Math.max(0, (user.loyalty_points || 0) - totalPointsUsed + pointsEarned)
       const { error: userUpdateError } = await supabase
         .from("users")
         .update({
           loyalty_points: newLoyaltyPoints,
-          total_orders: (authState.user.total_orders || 0) + 1,
-          total_spent: (authState.user.total_spent || 0) + finalAmount,
+          total_orders: (user.total_orders || 0) + 1,
+          total_spent: (user.total_spent || 0) + finalAmount,
         })
-        .eq("id", authState.user.id)
+        .eq("id", user.id)
       if (userUpdateError) throw userUpdateError
       // Record loyalty points history
       if (pointsEarned > 0) {
         await supabase.from("loyalty_points_history").insert({
-          user_id: authState.user.id,
+          user_id: user.id,
           order_id: order.id,
           points_change: pointsEarned,
           points_balance: newLoyaltyPoints,
@@ -141,7 +141,7 @@ export default function CheckoutPage() {
       }
       if (totalPointsUsed > 0) {
         await supabase.from("loyalty_points_history").insert({
-          user_id: authState.user.id,
+          user_id: user.id,
           order_id: order.id,
           points_change: -totalPointsUsed,
           points_balance: newLoyaltyPoints - pointsEarned,
@@ -151,7 +151,7 @@ export default function CheckoutPage() {
       }
       // Create notification
       await supabase.from("notifications").insert({
-        user_id: authState.user.id,
+        user_id: user.id,
         title: "تم إنشاء طلبك بنجاح",
         message: `تم إنشاء طلبك رقم ${orderNumber} بنجاح. سيتم التواصل معك قريباً لتأكيد الطلب.`,
         type: "ORDER_UPDATE",
@@ -185,7 +185,7 @@ export default function CheckoutPage() {
     return null
   }
 
-  if (!authState.isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-8">
@@ -231,14 +231,14 @@ export default function CheckoutPage() {
                         <User className="h-5 w-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-600">الاسم</p>
-                          <p className="font-semibold">{authState.user?.name}</p>
+                          <p className="font-semibold">{user?.name}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                         <Phone className="h-5 w-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-600">رقم الهاتف</p>
-                          <p className="font-semibold">{authState.user?.phone}</p>
+                          <p className="font-semibold">{user?.phone}</p>
                         </div>
                       </div>
                     </div>
@@ -246,7 +246,7 @@ export default function CheckoutPage() {
                       <MapPin className="h-5 w-5 text-gray-500 mt-1" />
                       <div className="flex-1">
                         <p className="text-sm text-gray-600">عنوان التوصيل</p>
-                        <p className="font-semibold">{authState.user?.address}</p>
+                        <p className="font-semibold">{user?.address}</p>
                       </div>
                     </div>
                     <Button variant="outline" className="mt-2" onClick={() => setEditUser(true)}>
@@ -312,8 +312,8 @@ export default function CheckoutPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="font-medium">النقاط المتاحة:</span>
-                  <Badge className="bg-green-600 text-white text-base px-3 py-1">
-                    {authState.user?.loyalty_points || 0} نقطة
+                  <Badge className="bg-green-600 text-black text-base px-3 py-1">
+                    {user?.loyalty_points || 0} نقطة
                   </Badge>
                 </div>
 
@@ -322,7 +322,7 @@ export default function CheckoutPage() {
                   <Badge className="bg-blue-600 text-white text-base px-3 py-1">+{pointsEarned} نقطة</Badge>
                 </div>
 
-                {(authState.user?.loyalty_points || 0) > 0 && (
+                {(user?.loyalty_points || 0) > 0 && (
                   <div className="space-y-3">
                     <Label htmlFor="points" className="text-sm font-medium">
                       استخدام النقاط (كل 100 نقطة = 1 ج.م)
@@ -331,12 +331,12 @@ export default function CheckoutPage() {
                       id="points"
                       type="number"
                       min="0"
-                      max={authState.user?.loyalty_points || 0}
+                      max={user?.loyalty_points || 0}
                       step="100"
                       value={pointsToUse}
                       onChange={(e) =>
                         setPointsToUse(
-                          Math.min(authState.user?.loyalty_points || 0, Number.parseInt(e.target.value) || 0),
+                          Math.min(user?.loyalty_points || 0, Number.parseInt(e.target.value) || 0),
                         )
                       }
                       className="text-right"
@@ -347,7 +347,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {shippingFee > 0 && (authState.user?.loyalty_points || 0) >= SHIPPING_POINTS_COST && (
+                {shippingFee > 0 && (user?.loyalty_points || 0) >= SHIPPING_POINTS_COST && (
                   <div className="flex items-center space-x-2 space-x-reverse p-3 bg-purple-50 rounded-lg">
                     <input
                       type="checkbox"
@@ -459,7 +459,7 @@ export default function CheckoutPage() {
                       <Truck className="h-4 w-4" />
                       <span>الدفع عند الاستلام</span>
                     </div>
-                    <p className="text-xs text-gray-500">سيتم التواصل معك خلال 30 دقيقة لتأكيد الطلب</p>
+                    <p className="text-xs text-black">سيتم التواصل معك خلال 30 دقيقة لتأكيد الطلب</p>
                   </div>
                 </CardContent>
               </Card>

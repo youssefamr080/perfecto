@@ -110,7 +110,7 @@ export function Header() {
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5">
                       <p className="text-sm font-medium">{user?.name}</p>
-                      <p className="text-xs text-gray-500">{user?.phone}</p>
+                      <p className="text-xs text-black">{user?.phone}</p>
                       <p className="text-xs text-red-600 font-medium">{user?.loyalty_points} نقطة ولاء</p>
                     </div>
                     <DropdownMenuSeparator />

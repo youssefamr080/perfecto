@@ -77,7 +77,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "perfecto-cart",
-      skipHydration: true,
+      skipHydration: false,
     },
   ),
 )

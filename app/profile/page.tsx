@@ -176,7 +176,7 @@ export default function ProfilePage() {
                       dir="ltr"
                       disabled
                     />
-                    <p className="text-xs text-gray-500 mt-1">لا يمكن تغيير رقم الهاتف</p>
+                    <p className="text-xs text-black mt-1">لا يمكن تغيير رقم الهاتف</p>
                   </div>
                 </div>
 

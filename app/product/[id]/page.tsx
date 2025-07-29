@@ -313,7 +313,7 @@ export default function ProductPage() {
                     <div className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-bold">
                       وفر {discountPercentage}%
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-black mt-1">
                       توفير {(product.original_price! - product.price).toFixed(2)} ج.م
                     </div>
                   </div>

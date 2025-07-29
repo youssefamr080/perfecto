@@ -201,7 +201,7 @@ export default function LoyaltyPage() {
                     <div>
                       <p className="font-semibold">{getTransactionLabel(transaction.transaction_type)}</p>
                       <p className="text-sm text-gray-600">{transaction.description}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-black">
                         {new Date(transaction.created_at).toLocaleDateString("ar-EG")}
                       </p>
                     </div>

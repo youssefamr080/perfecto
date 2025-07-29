@@ -379,7 +379,7 @@ export default function AdminPage() {
                       <span>إجمالي المبلغ:</span>
                       <span className="text-red-600 font-semibold">{(user.total_spent || 0).toFixed(2)} ج.م</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2">
+                    <div className="text-xs text-black mt-2">
                       انضم في: {new Date(user.created_at).toLocaleDateString("ar-EG")}
                     </div>
                   </div>

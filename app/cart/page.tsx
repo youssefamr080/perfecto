@@ -249,7 +249,7 @@ export default function CartPage() {
                         <span className="text-gray-600">توصيل سريع</span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 text-center mt-3">
+                    <p className="text-xs text-black text-center mt-3">
                       الدفع عند الاستلام • ضمان الجودة • إرجاع مجاني
                     </p>
                   </div>

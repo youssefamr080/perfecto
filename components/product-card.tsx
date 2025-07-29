@@ -106,7 +106,7 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
                   <span className="text-base text-gray-400 line-through font-bold">{product.original_price} ج.م</span>
                 )}
               </div>
-              <span className="text-xs text-gray-500 font-bold">{product.unit_description}</span>
+              <span className="text-xs text-black font-bold">{product.unit_description}</span>
               {savings > 0 && <span className="text-xs text-green-600 font-extrabold">وفر {savings.toFixed(2)} ج.م</span>}
             </div>
           </div>

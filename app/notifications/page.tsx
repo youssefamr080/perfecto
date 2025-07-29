@@ -158,7 +158,7 @@ export default function NotificationsPage() {
                         {!notification.is_read && <Badge className="bg-green-600 text-xs">جديد</Badge>}
                       </div>
                       <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-black">
                         {new Date(notification.created_at).toLocaleDateString("ar-EG", {
                           year: "numeric",
                           month: "long",
