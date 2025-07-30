@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,23 +11,23 @@ import type { Order } from "@/lib/types"
 import { Package, Clock, CheckCircle, XCircle, Truck } from "lucide-react"
 import Link from "next/link"
 
-export default function OrdersPage() {
-  const { state: authState } = useAuth()
+const OrdersPage = () => {
+  const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/")
       return
     }
-
     fetchOrders()
-  }, [authState, router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, router])
 
   const fetchOrders = async () => {
-    if (!authState.user) return
+    if (!user) return
 
     try {
       const { data: ordersData, error } = await supabase
@@ -39,7 +39,7 @@ export default function OrdersPage() {
             product:products (*)
           )
         `)
-        .eq("user_id", authState.user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
 
       if (error) throw error
@@ -91,7 +91,7 @@ export default function OrdersPage() {
     )
   }
 
-  if (!authState.user) {
+  if (!user) {
     return null
   }
 
@@ -108,14 +108,14 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
       <h1 className="text-3xl font-bold mb-8">طلباتي</h1>
 
       {orders.length === 0 ? (
         <div className="text-center py-16">
-          <Package className="h-24 w-24 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-600 mb-4">لا توجد طلبات</h2>
-          <p className="text-gray-500 mb-8">لم تقم بإنشاء أي طلبات بعد</p>
+          <Package className="h-24 w-24 text-gray-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-black mb-4">لا توجد طلبات</h2>
+          <p className="text-black mb-8">لم تقم بإنشاء أي طلبات بعد</p>
           <Link href="/categories">
             <Button className="bg-green-600 hover:bg-green-700">تصفح المنتجات</Button>
           </Link>
@@ -127,24 +127,24 @@ export default function OrdersPage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">طلب #{order.order_number}</CardTitle>
-                    <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString("ar-EG")}</p>
+                    <CardTitle className="text-lg text-black">طلب #{order.order_number}</CardTitle>
+                    <p className="text-sm text-black">{new Date(order.created_at).toLocaleDateString("ar-EG")}</p>
                   </div>
                   <div className="text-left">
                     {getStatusBadge(order.status)}
-                    <p className="text-lg font-bold mt-2">{order.final_amount.toFixed(2)} ج.م</p>
+                    <p className="text-lg font-bold mt-2 text-black">{order.final_amount.toFixed(2)} ج.م</p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-2">المنتجات:</h4>
+                    <h4 className="font-semibold mb-2 text-black">المنتجات:</h4>
                     <div className="space-y-2">
                       {order.order_items?.map((item) => (
                         <div key={item.id} className="flex justify-between items-center text-sm">
-                          <span>{item.product_name}</span>
-                          <span>
+                          <span className="text-black">{item.product_name}</span>
+                          <span className="text-black">
                             {item.quantity} × {item.product_price} ج.م = {item.total_price} ج.م
                           </span>
                         </div>
@@ -155,24 +155,24 @@ export default function OrdersPage() {
                   <div className="border-t pt-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-600">المجموع الفرعي:</span>
-                        <span className="float-left">{order.subtotal.toFixed(2)} ج.م</span>
+                        <span className="text-black">المجموع الفرعي:</span>
+                        <span className="float-left text-black">{order.subtotal.toFixed(2)} ج.م</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">رسوم التوصيل:</span>
-                        <span className="float-left">
+                        <span className="text-black">رسوم التوصيل:</span>
+                        <span className="float-left text-black">
                           {order.shipping_fee === 0 ? "مجاني" : `${order.shipping_fee} ج.م`}
                         </span>
                       </div>
                       {order.discount_amount > 0 && (
                         <div>
-                          <span className="text-gray-600">الخصم:</span>
+                          <span className="text-black">الخصم:</span>
                           <span className="float-left text-green-600">-{order.discount_amount} ج.م</span>
                         </div>
                       )}
                       {order.points_earned > 0 && (
                         <div>
-                          <span className="text-gray-600">النقاط المكتسبة:</span>
+                          <span className="text-black">النقاط المكتسبة:</span>
                           <span className="float-left text-green-600">{order.points_earned} نقطة</span>
                         </div>
                       )}
@@ -180,9 +180,9 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="text-sm text-gray-600">
-                      <p>العنوان: {order.delivery_address}</p>
-                      {order.delivery_notes && <p>ملاحظات: {order.delivery_notes}</p>}
+                    <div className="text-sm text-black">
+                      <p className="text-black">العنوان: {order.delivery_address}</p>
+                      {order.delivery_notes && <p className="text-black">ملاحظات: {order.delivery_notes}</p>}
                     </div>
                     <Link href={`/order-confirmation/${order.id}`}>
                       <Button variant="outline" size="sm">
@@ -199,3 +199,5 @@ export default function OrdersPage() {
     </div>
   )
 }
+
+export default OrdersPage

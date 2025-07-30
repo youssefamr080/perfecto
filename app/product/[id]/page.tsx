@@ -187,7 +187,7 @@ export default function ProductPage() {
       : [`/placeholder.svg?height=500&width=500&text=${encodeURIComponent(product.name)}`]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Breadcrumb */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3">
@@ -292,8 +292,8 @@ export default function ProductPage() {
           {/* Product Info */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3 leading-tight">{product.name}</h1>
-              <p className="text-gray-600 text-base md:text-lg leading-relaxed">{product.description}</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-black mb-3 leading-tight">{product.name}</h1>
+              <p className="text-black text-base md:text-lg font-bold leading-relaxed">{product.description}</p>
             </div>
 
             {/* Price */}
@@ -306,7 +306,7 @@ export default function ProductPage() {
                       <span className="text-lg text-gray-400 line-through">{product.original_price} ج.م</span>
                     )}
                   </div>
-                  <span className="text-sm text-gray-500">{product.unit_description}</span>
+                  <span className="text-sm text-black font-bold">{product.unit_description}</span>
                 </div>
                 {discountPercentage > 0 && (
                   <div className="text-center">
@@ -333,16 +333,16 @@ export default function ProductPage() {
                         onClick={() => handleUpdateCart(cartQuantity - 1)}
                         className="h-12 w-12"
                       >
-                        <Minus className="h-5 w-5" />
+                        <Minus className="h-5 w-5 text-black" />
                       </Button>
-                      <span className="text-2xl font-bold min-w-[3rem] text-center">{cartQuantity}</span>
+                      <span className="text-2xl font-bold text-black min-w-[3rem] text-center">{cartQuantity}</span>
                       <Button
                         size="lg"
                         variant="outline"
                         onClick={() => handleUpdateCart(cartQuantity + 1)}
                         className="h-12 w-12"
                       >
-                        <Plus className="h-5 w-5" />
+                        <Plus className="h-5 w-5 text-black" />
                       </Button>
                     </div>
                     <div className="text-center">
@@ -363,16 +363,16 @@ export default function ProductPage() {
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         className="h-12 w-12"
                       >
-                        <Minus className="h-5 w-5" />
+                        <Minus className="h-5 w-5 text-black" />
                       </Button>
-                      <span className="text-2xl font-bold min-w-[3rem] text-center">{quantity}</span>
+                      <span className="text-2xl font-bold text-black min-w-[3rem] text-center">{quantity}</span>
                       <Button
                         size="lg"
                         variant="outline"
                         onClick={() => setQuantity(quantity + 1)}
                         className="h-12 w-12"
                       >
-                        <Plus className="h-5 w-5" />
+                        <Plus className="h-5 w-5 text-black" />
                       </Button>
                     </div>
                     <Button
@@ -396,23 +396,23 @@ export default function ProductPage() {
 
             {/* Product Features */}
             <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border">
-              <h3 className="font-bold text-lg mb-4">مميزات المنتج</h3>
+              <h3 className="font-bold text-black text-2xl mb-4">مميزات المنتج</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">✅</span>
-                  <span className="text-sm">طبيعي 100%</span>
+                  <span className="text-sm text-black font-bold">طبيعي 100%</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">✅</span>
-                  <span className="text-sm">بدون مواد حافظة</span>
+                  <span className="text-sm text-black font-bold">بدون مواد حافظة</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">✅</span>
-                  <span className="text-sm">جودة عالية</span>
+                  <span className="text-sm text-black font-bold">جودة عالية</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">✅</span>
-                  <span className="text-sm">طازج يومياً</span>
+                  <span className="text-sm text-black font-bold">طازج يومياً</span>
                 </div>
               </div>
             </div>

@@ -51,14 +51,14 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
             <div className="w-32 h-32 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <ShoppingBag className="h-16 w-16 text-red-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">السلة فارغة</h1>
-            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+            <h1 className="text-3xl font-bold text-black mb-4">السلة فارغة</h1>
+            <p className="text-black text-lg mb-8 max-w-md mx-auto">
               لم تقم بإضافة أي منتجات للسلة بعد. ابدأ التسوق واكتشف منتجاتنا الطبيعية!
             </p>
             <Link href="/categories">
@@ -74,12 +74,12 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">سلة التسوق</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-black mb-2">سلة التسوق</h1>
+          <p className="text-black font-bold">
             لديك {itemCount} منتج في السلة
             {remainingForFreeShipping > 0 && (
               <span className="text-red-600 font-medium mr-2">
@@ -94,7 +94,7 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {/* Clear Cart Button */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">المنتجات ({itemCount})</h2>
+              <h2 className="text-xl font-bold text-black">المنتجات ({itemCount})</h2>
               <Button
                 variant="outline"
                 onClick={handleClearCart}
@@ -123,14 +123,14 @@ export default function CartPage() {
 
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.product.id}`}>
-                        <h3 className="font-bold text-lg mb-1 hover:text-red-600 transition-colors line-clamp-2">
+                        <h3 className="font-bold text-black text-lg mb-1 hover:text-red-600 transition-colors line-clamp-2">
                           {item.product.name}
                         </h3>
                       </Link>
-                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">{item.product.description}</p>
+                      <p className="text-black text-sm font-bold mb-2 line-clamp-2">{item.product.description}</p>
                       <div className="flex items-center gap-2">
                         <span className="text-red-600 font-bold text-lg">{item.product.price} ج.م</span>
-                        <span className="text-gray-500 text-sm">{item.product.unit_description}</span>
+                        <span className="text-black text-sm font-bold">{item.product.unit_description}</span>
                       </div>
                     </div>
 
@@ -143,22 +143,22 @@ export default function CartPage() {
                           onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
                           className="h-10 w-10 p-0 hover:bg-gray-200"
                         >
-                          <Minus className="h-4 w-4" />
+                          <Minus className="h-4 w-4 text-black" />
                         </Button>
-                        <span className="font-bold min-w-[3rem] text-center">{item.quantity}</span>
+                        <span className="font-bold text-black min-w-[3rem] text-center">{item.quantity}</span>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
                           className="h-10 w-10 p-0 hover:bg-gray-200"
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-4 w-4 text-black" />
                         </Button>
                       </div>
 
                       {/* Total Price */}
-                      <div className="text-right">
-                        <p className="font-bold text-xl text-red-600">
+                    <div className="text-right">
+                        <p className="font-bold text-xl text-black">
                           {(item.product.price * item.quantity).toFixed(2)} ج.م
                         </p>
                         <Button
@@ -183,19 +183,19 @@ export default function CartPage() {
             <div className="sticky top-24">
               <Card className="shadow-sm border-0">
                 <CardHeader>
-                  <CardTitle className="text-xl">ملخص الطلب</CardTitle>
+                  <CardTitle className="text-xl font-bold text-black">ملخص الطلب</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex justify-between text-lg">
-                      <span>المجموع الفرعي:</span>
-                      <span className="font-semibold">{subtotal.toFixed(2)} ج.م</span>
+                      <span className="font-bold text-black">المجموع الفرعي:</span>
+                      <span className="font-bold text-black">{subtotal.toFixed(2)} ج.م</span>
                     </div>
 
                     <div className="flex justify-between">
-                      <span>رسوم التوصيل:</span>
-                      <span className={`font-semibold ${shippingFee === 0 ? "text-green-600" : ""}`}>
-                        {shippingFee === 0 ? "مجاني 🚚" : `${shippingFee} ج.م`}
+                      <span className="font-bold text-black">رسوم التوصيل:</span>
+                      <span className={`font-bold text-black ${shippingFee === 0 ? "text-green-600" : ""}`}>
+                        {shippingFee === 0 ? <span className="text-green-600 font-bold">مجاني 🚚</span> : `${shippingFee} ج.م`}
                       </span>
                     </div>
 
@@ -209,8 +209,8 @@ export default function CartPage() {
 
                     <div className="border-t pt-4">
                       <div className="flex justify-between text-xl font-bold">
-                        <span>المجموع الكلي:</span>
-                        <span className="text-red-600">{finalTotal.toFixed(2)} ج.م</span>
+                        <span className="font-bold text-black">المجموع الكلي:</span>
+                        <span className="font-bold text-black">{finalTotal.toFixed(2)} ج.م</span>
                       </div>
                     </div>
                   </div>
@@ -240,16 +240,16 @@ export default function CartPage() {
                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                           <span className="text-green-600">🛡️</span>
                         </div>
-                        <span className="text-gray-600">دفع آمن</span>
+                        <span className="text-black font-bold">دفع آمن</span>
                       </div>
                       <div className="flex flex-col items-center gap-1">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600">🚚</span>
                         </div>
-                        <span className="text-gray-600">توصيل سريع</span>
+                        <span className="text-black font-bold">توصيل سريع</span>
                       </div>
                     </div>
-                    <p className="text-xs text-black text-center mt-3">
+                    <p className="text-xs text-black font-bold text-center mt-3">
                       الدفع عند الاستلام • ضمان الجودة • إرجاع مجاني
                     </p>
                   </div>

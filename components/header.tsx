@@ -16,6 +16,7 @@ import {
 import { useCartStore } from "@/lib/stores/cart-store"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { SearchBar } from "@/components/search/search-bar"
+import { useNotificationsStore } from "@/lib/stores/notifications-store"
 import { LoginModal } from "./auth/login-modal"
 
 export function Header() {
@@ -37,6 +38,13 @@ export function Header() {
 
   const { itemCount } = useCartStore()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const { unreadCount, fetchNotifications } = useNotificationsStore()
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchNotifications(user.id)
+    }
+  }, [isAuthenticated, user, fetchNotifications])
 
   const handleLogout = () => {
     logout()
@@ -80,9 +88,11 @@ export function Header() {
                 <Link href="/notifications">
                   <Button variant="ghost" size="icon" className="relative hover:bg-red-50">
                     <Bell className="h-5 w-5 text-green-800" />
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
-                      3
-                    </Badge>
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
+                        {unreadCount}
+                      </Badge>
+                    )}
                   </Button>
                 </Link>
               )}

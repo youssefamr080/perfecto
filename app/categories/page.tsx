@@ -50,9 +50,9 @@ export default async function CategoriesPage() {
                   <Link
                     key={subcategory.id}
                     href={`/subcategory/${subcategory.id}`}
-                    className="block p-3 rounded-lg bg-gray-50 hover:bg-green-50 transition-colors"
+                    className="block p-3 rounded-lg bg-white hover:bg-green-50 transition-colors"
                   >
-                    <span className="text-gray-700 hover:text-green-600">{subcategory.name}</span>
+                    <span className="text-black hover:text-green-600">{subcategory.name}</span>
                   </Link>
                 ))}
               </div>

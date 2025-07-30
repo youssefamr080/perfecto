@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { User, Phone, MapPin, Gift, ShoppingBag, Star } from "lucide-react"
 
-export default function ProfilePage() {
-  const { state: authState, updateUser } = useAuth()
+const ProfilePage: React.FC = () => {
+  const { user, isAuthenticated, updateProfile } = useAuthStore()
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -27,20 +27,19 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/")
       return
     }
-
-    if (authState.user) {
+    if (user) {
       setFormData({
-        name: authState.user.name || "",
-        phone: authState.user.phone || "",
-        address: authState.user.address || "",
-        email: authState.user.email || "",
+        name: user.name || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        email: user.email || "",
       })
     }
-  }, [authState, router])
+  }, [isAuthenticated, user, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -52,9 +51,8 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
     try {
-      await updateUser(formData)
+      await updateProfile(formData)
       toast({
         title: "تم التحديث بنجاح",
         description: "تم تحديث بياناتك الشخصية",
@@ -70,12 +68,12 @@ export default function ProfilePage() {
     }
   }
 
-  if (!authState.user) {
+  if (!user) {
     return null
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
       <h1 className="text-3xl font-bold mb-8">الملف الشخصي</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -89,31 +87,31 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-center">
+              <div className="text-center bg-white rounded-xl p-4 border border-gray-200">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <User className="h-10 w-10 text-green-600" />
                 </div>
-                <h3 className="font-bold text-lg">{authState.user.name}</h3>
-                <p className="text-gray-600">{authState.user.phone}</p>
+                <h3 className="font-bold text-black text-lg">{user.name}</h3>
+                <p className="text-black font-bold">{user.phone}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="p-3 bg-blue-50 rounded-lg">
+                <div className="p-3 bg-white rounded-lg border border-gray-200">
                   <ShoppingBag className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-                  <p className="text-sm text-gray-600">إجمالي الطلبات</p>
-                  <p className="font-bold text-blue-600">{authState.user.total_orders || 0}</p>
+                  <p className="text-sm text-black font-bold">إجمالي الطلبات</p>
+                  <p className="font-bold text-black">{user.total_orders || 0}</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg">
+                <div className="p-3 bg-white rounded-lg border border-gray-200">
                   <Gift className="h-6 w-6 text-green-600 mx-auto mb-1" />
-                  <p className="text-sm text-gray-600">نقاط الولاء</p>
-                  <p className="font-bold text-green-600">{authState.user.loyalty_points || 0}</p>
+                  <p className="text-sm text-black font-bold">نقاط الولاء</p>
+                  <p className="font-bold text-black">{user.loyalty_points || 0}</p>
                 </div>
               </div>
 
-              <div className="p-3 bg-yellow-50 rounded-lg text-center">
+              <div className="p-3 bg-white rounded-lg border border-gray-200 text-center">
                 <Star className="h-6 w-6 text-yellow-600 mx-auto mb-1" />
-                <p className="text-sm text-gray-600">إجمالي المبلغ المنفق</p>
-                <p className="font-bold text-yellow-600">{(authState.user.total_spent || 0).toFixed(2)} ج.م</p>
+                <p className="text-sm text-black font-bold">إجمالي المبلغ المنفق</p>
+                <p className="font-bold text-black">{(user.total_spent || 0).toFixed(2)} ج.م</p>
               </div>
             </CardContent>
           </Card>
@@ -124,12 +122,12 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <div className="text-center mb-4">
-                <Badge className="text-lg px-4 py-2 bg-green-600">{authState.user.loyalty_points || 0} نقطة</Badge>
+                <Badge className="text-lg px-4 py-2 bg-green-600">{user.loyalty_points || 0} نقطة</Badge>
               </div>
-              <div className="space-y-2 text-sm text-gray-600">
+              <div className="space-y-2 text-sm text-black">
                 <p>• كل 1 جنيه = 1 نقطة</p>
                 <p>• كل 100 نقطة = 1 جنيه خصم</p>
-                <p>• 1500 نقطة = توصيل مجاني</p>
+                <p>• 2000 نقطة = توصيل مجاني</p>
               </div>
             </CardContent>
           </Card>
@@ -221,3 +219,5 @@ export default function ProfilePage() {
     </div>
   )
 }
+
+export default ProfilePage

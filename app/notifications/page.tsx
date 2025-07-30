@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,28 +11,28 @@ import type { Notification } from "@/lib/types"
 import { Bell, Package, Gift, Megaphone, Check, Trash2 } from "lucide-react"
 
 export default function NotificationsPage() {
-  const { state: authState } = useAuth()
+  const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/")
       return
     }
-
     fetchNotifications()
-  }, [authState, router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, router])
 
   const fetchNotifications = async () => {
-    if (!authState.user) return
+    if (!user) return
 
     try {
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", authState.user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
 
       if (error) throw error
@@ -72,13 +72,13 @@ export default function NotificationsPage() {
   }
 
   const markAllAsRead = async () => {
-    if (!authState.user) return
+    if (!user) return
 
     try {
       const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
-        .eq("user_id", authState.user.id)
+        .eq("user_id", user.id)
         .eq("is_read", false)
 
       if (error) throw error
@@ -98,11 +98,11 @@ export default function NotificationsPage() {
       case "PROMOTION":
         return <Megaphone className="h-5 w-5 text-orange-600" />
       default:
-        return <Bell className="h-5 w-5 text-gray-600" />
+        return <Bell className="h-5 w-5 text-black" />
     }
   }
 
-  if (!authState.user) {
+  if (!user) {
     return null
   }
 
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">الإشعارات</h1>
@@ -137,9 +137,9 @@ export default function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <div className="text-center py-16">
-          <Bell className="h-24 w-24 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-600 mb-4">لا توجد إشعارات</h2>
-          <p className="text-gray-500">ستظهر إشعاراتك هنا عند وصولها</p>
+          <Bell className="h-24 w-24 text-gray-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-black mb-4">لا توجد إشعارات</h2>
+          <p className="text-black">ستظهر إشعاراتك هنا عند وصولها</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                         <h3 className="font-semibold">{notification.title}</h3>
                         {!notification.is_read && <Badge className="bg-green-600 text-xs">جديد</Badge>}
                       </div>
-                      <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
+                      <p className="text-black text-sm mb-2">{notification.message}</p>
                       <p className="text-xs text-black">
                         {new Date(notification.created_at).toLocaleDateString("ar-EG", {
                           year: "numeric",

@@ -9,7 +9,6 @@ import { WhatsAppFloat } from "@/components/ui/whatsapp-float"
 import { InstallPrompt } from "@/components/pwa/install-prompt"
 import { Toaster } from "@/components/ui/toaster"
 // تم حذف CartProvider
-import { AuthProvider } from "@/lib/auth-context"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useEffect, useState } from "react"
 
@@ -61,15 +60,13 @@ export default function ClientLayout({
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
-      <body className={`${inter.className} pb-16 md:pb-0 bg-gray-50`}>
-        <AuthProvider>
+        <body className={`${inter.className} pb-16 md:pb-0 bg-white`}>
           <Header />
           <main className="min-h-screen">{children}</main>
           <BottomNavigation />
           <WhatsAppFloat />
           <InstallPrompt />
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   )

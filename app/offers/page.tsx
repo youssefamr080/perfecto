@@ -101,8 +101,8 @@ export default function OffersPage() {
         {coupons.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">لا توجد كوبونات متاحة حالياً</p>
+              <Gift className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-black">لا توجد كوبونات متاحة حالياً</p>
             </CardContent>
           </Card>
         ) : (
@@ -136,7 +136,7 @@ export default function OffersPage() {
                       </Button>
                     </div>
 
-                    <div className="text-sm text-gray-600 space-y-1">
+                    <div className="text-sm text-black space-y-1">
                       <p>الحد الأدنى للطلب: {coupon.min_order_amount} ج.م</p>
                       {coupon.max_discount_amount && <p>الحد الأقصى للخصم: {coupon.max_discount_amount} ج.م</p>}
                       {coupon.usage_limit && (
@@ -169,8 +169,8 @@ export default function OffersPage() {
         {featuredProducts.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">
-              <Percent className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600">لا توجد منتجات بخصومات حالياً</p>
+              <Percent className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-black">لا توجد منتجات بخصومات حالياً</p>
             </CardContent>
           </Card>
         ) : (
@@ -202,15 +202,15 @@ export default function OffersPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-white rounded-lg">
                 <div className="text-2xl font-bold text-purple-600 mb-2">1 ج.م = 1 نقطة</div>
-                <p className="text-sm text-gray-600">اكسب نقاط مع كل عملية شراء</p>
+                <p className="text-sm text-black">اكسب نقاط مع كل عملية شراء</p>
               </div>
               <div className="text-center p-4 bg-white rounded-lg">
                 <div className="text-2xl font-bold text-purple-600 mb-2">100 نقطة = 1 ج.م</div>
-                <p className="text-sm text-gray-600">استبدل نقاطك بخصومات</p>
+                <p className="text-sm text-black">استبدل نقاطك بخصومات</p>
               </div>
               <div className="text-center p-4 bg-white rounded-lg">
-                <div className="text-2xl font-bold text-purple-600 mb-2">1500 نقطة</div>
-                <p className="text-sm text-gray-600">توصيل مجاني</p>
+                <div className="text-2xl font-bold text-purple-600 mb-2">2000 نقطة</div>
+                <p className="text-sm text-black">توصيل مجاني</p>
               </div>
             </div>
           </CardContent>
