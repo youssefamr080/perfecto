@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,8 +15,9 @@ import { Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, T
 // رقم الهاتف الخاص بالأدمن - يمكنك تغييره
 const ADMIN_PHONE = "01234567890"
 
+
 export default function AdminPage() {
-  const { state: authState } = useAuth()
+  const { user, isAuthenticated } = useAuthStore()
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -33,12 +34,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     // التحقق من صلاحية الوصول
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/")
       return
     }
 
-    if (authState.user?.phone !== ADMIN_PHONE) {
+    if (user?.phone !== ADMIN_PHONE) {
       toast({
         title: "غير مصرح لك",
         description: "ليس لديك صلاحية للوصول لهذه الصفحة",
@@ -50,7 +51,7 @@ export default function AdminPage() {
 
     setIsAuthorized(true)
     fetchData()
-  }, [authState, router])
+  }, [isAuthenticated, user, router])
 
   const fetchData = async () => {
     try {
@@ -180,7 +181,7 @@ export default function AdminPage() {
   }
 
   // عرض شاشة التحميل أو عدم الصلاحية
-  if (!authState.isAuthenticated || !isAuthorized) {
+  if (!isAuthenticated || !isAuthorized) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-8">
@@ -223,7 +224,7 @@ export default function AdminPage() {
           <Shield className="h-8 w-8" />
           <h1 className="text-3xl font-bold">لوحة التحكم الإدارية</h1>
         </div>
-        <p className="text-red-100">مرحباً {authState.user?.name} - أدمن النظام</p>
+        <p className="text-red-100">مرحباً {user?.name} - أدمن النظام</p>
       </div>
 
       {/* Stats Cards */}
