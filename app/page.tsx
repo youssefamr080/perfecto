@@ -16,6 +16,7 @@ import { ProductGridSkeleton } from "@/components/loading/product-skeleton"
 import { CategoryGridSkeleton } from "@/components/loading/category-skeleton"
 import type { Product, Category } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
+import { getCachedProducts } from "@/lib/utils"
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
@@ -24,18 +25,13 @@ export default function HomePage() {
 
   const fetchData = async () => {
     try {
-      // Fetch featured products
-      const { data: products } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_featured", true)
-        .eq("is_available", true)
-        .limit(8)
+      // Fetch all products from cache
+      const allProducts = await getCachedProducts()
+      // Featured only
+      setFeaturedProducts(allProducts.filter(p => p.is_featured).slice(0, 8))
 
       // Fetch categories
       const { data: categoriesData } = await supabase.from("categories").select("*").limit(6)
-
-      setFeaturedProducts(products || [])
       setCategories(categoriesData || [])
     } catch (error) {
       console.error("Error fetching data:", error)

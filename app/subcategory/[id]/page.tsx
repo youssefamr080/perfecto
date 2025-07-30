@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase"
+import { getCachedProducts } from "@/lib/utils"
 import type { Product, SubCategory, Category } from "@/lib/types"
 import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
@@ -30,17 +31,13 @@ async function getSubcategoryWithProducts(
     console.error("Error fetching category:", categoryError)
   }
 
-  // Get the products
-  const { data: products, error: productsError } = await supabase.from("products").select("*").eq("subcategory_id", id)
-
-  if (productsError) {
-    console.error("Error fetching products:", productsError)
-    return { ...subcategory, products: [], category: category || undefined }
-  }
+  // Get the products from cache
+  const allProducts = await getCachedProducts()
+  const products = allProducts.filter(p => p.subcategory_id === id)
 
   return {
     ...subcategory,
-    products: products || [],
+    products: products,
     category: category || undefined,
   }
 }

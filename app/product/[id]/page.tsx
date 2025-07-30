@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import type { Product } from "@/lib/types"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { supabase } from "@/lib/supabase"
+import { getCachedProducts } from "@/lib/utils"
 import { ProductCard } from "@/components/product-card"
 import { useToast } from "@/hooks/use-toast"
 
@@ -31,16 +32,11 @@ export default function ProductPage() {
   useEffect(() => {
     async function fetchProduct() {
       if (!params.id) return
-
       try {
-        // Get the product
-        const { data: productData, error: productError } = await supabase
-          .from("products")
-          .select("*")
-          .eq("id", params.id)
-          .single()
-
-        if (productError) throw productError
+        // جلب كل المنتجات من الكاش
+        const allProducts = await getCachedProducts()
+        const productData = allProducts.find(p => p.id == params.id)
+        if (!productData) throw new Error("المنتج غير موجود")
 
         // Get the subcategory and category
         let subcategoryData = null
@@ -73,17 +69,12 @@ export default function ProductPage() {
 
         setProduct(fullProduct)
 
-        // Fetch related products from the same subcategory
+        // المنتجات المشابهة من الكاش
         if (productData.subcategory_id) {
-          const { data: related } = await supabase
-            .from("products")
-            .select("*")
-            .eq("subcategory_id", productData.subcategory_id)
-            .neq("id", productData.id)
-            .eq("is_available", true)
-            .limit(6)
-
-          setRelatedProducts(related || [])
+          const related = allProducts.filter(
+            p => p.subcategory_id === productData.subcategory_id && p.id !== productData.id
+          ).slice(0, 6)
+          setRelatedProducts(related)
         }
       } catch (error) {
         console.error("Error fetching product:", error)
