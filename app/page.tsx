@@ -10,13 +10,14 @@ import { ArrowLeft, Star, Truck, Shield, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ProductCard } from "@/components/product-card"
-import { HeroCarousel } from "@/components/banners/hero-carousel"
+// استبدال الهيرو سيكشن بسلايدر بانر مخصص
 import { PullToRefresh } from "@/components/ui/pull-to-refresh"
 import { ProductGridSkeleton } from "@/components/loading/product-skeleton"
 import { CategoryGridSkeleton } from "@/components/loading/category-skeleton"
 import type { Product, Category } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { getCachedProducts } from "@/lib/utils"
+import { HeroCarousel } from "@/components/banners/hero-carousel"
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])

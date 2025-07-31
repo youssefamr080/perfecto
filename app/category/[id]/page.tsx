@@ -64,10 +64,22 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Category Hero Section */}
-      <div className="relative bg-gradient-to-br from-green-600 to-green-800 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative container mx-auto px-4 py-12 md:py-16">
+      {/* Category Hero Section with Banner Image */}
+      <div className="relative text-white">
+        {/* اختر صورة البانر حسب اسم الفئة */}
+        <img
+          src={
+            category.name === "اللحوم والمصنعات"
+              ? "/banner-meat.jpg"
+              : category.name === "الألبان ومنتجاتها"
+              ? "/banner-dairy.jpg"
+              : "/banner-other.jpg"
+          }
+          alt={category.name}
+          className="w-full h-56 md:h-80 object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 flex flex-col justify-center items-center">
           <div className="text-center">
             <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl md:text-4xl">
