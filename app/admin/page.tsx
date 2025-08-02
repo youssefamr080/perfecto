@@ -5,16 +5,25 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import type { Order, User, Product } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, Truck, Shield, Lock } from "lucide-react"
+import { 
+  Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
+  Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
+  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw 
+} from "lucide-react"
+import { formatDistance } from "date-fns"
+import { ar } from "date-fns/locale"
 
-// رقم الهاتف الخاص بالأدمن - يمكنك تغييره
+// رقم الهاتف الخاص بالأدمن
 const ADMIN_PHONE = "01234567890"
-
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore()
@@ -27,13 +36,18 @@ export default function AdminPage() {
     totalUsers: 0,
     totalRevenue: 0,
     pendingOrders: 0,
+    todayOrders: 0,
+    monthlyRevenue: 0,
+    topProducts: [] as any[],
+    recentUsers: 0
   })
   const [loading, setLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState("ALL")
   const { toast } = useToast()
 
   useEffect(() => {
-    // التحقق من صلاحية الوصول
     if (!isAuthenticated) {
       router.push("/")
       return
@@ -51,11 +65,13 @@ export default function AdminPage() {
 
     setIsAuthorized(true)
     fetchData()
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, user, router, toast])
 
   const fetchData = async () => {
     try {
-      // Fetch orders with user and items data
+      setLoading(true)
+      
+      // جلب الطلبات مع بيانات المستخدمين والمنتجات
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
         .select(`
@@ -70,7 +86,7 @@ export default function AdminPage() {
 
       if (ordersError) throw ordersError
 
-      // Fetch users
+      // جلب المستخدمين
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("*")
@@ -78,7 +94,7 @@ export default function AdminPage() {
 
       if (usersError) throw usersError
 
-      // Fetch products
+      // جلب المنتجات
       const { data: productsData, error: productsError } = await supabase
         .from("products")
         .select("*")
@@ -90,16 +106,9 @@ export default function AdminPage() {
       setUsers(usersData || [])
       setProducts(productsData || [])
 
-      // Calculate stats
-      const totalRevenue = ordersData?.reduce((sum, order) => sum + order.final_amount, 0) || 0
-      const pendingOrders = ordersData?.filter((order) => order.status === "PENDING").length || 0
+      // حساب الإحصائيات المتقدمة
+      calculateAdvancedStats(ordersData || [], usersData || [], productsData || [])
 
-      setStats({
-        totalOrders: ordersData?.length || 0,
-        totalUsers: usersData?.length || 0,
-        totalRevenue,
-        pendingOrders,
-      })
     } catch (error) {
       console.error("Error fetching admin data:", error)
       toast({
@@ -112,334 +121,801 @@ export default function AdminPage() {
     }
   }
 
+  const calculateAdvancedStats = (ordersData: Order[], usersData: User[], productsData: Product[]) => {
+    const totalRevenue = ordersData.reduce((sum, order) => sum + (order.final_amount || 0), 0)
+    const pendingOrders = ordersData.filter(order => order.status === "PENDING").length
+    
+    const today = new Date()
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    
+    const todayOrders = ordersData.filter(order => 
+      new Date(order.created_at) >= todayStart
+    ).length
+    
+    const monthlyRevenue = ordersData
+      .filter(order => new Date(order.created_at) >= monthStart)
+      .reduce((sum, order) => sum + (order.final_amount || 0), 0)
+    
+    const recentUsers = usersData.filter(user => 
+      new Date(user.created_at) >= weekAgo
+    ).length
+    
+    // أكثر المنتجات مبيعاً
+    const productSales = new Map()
+    ordersData.forEach(order => {
+      order.order_items?.forEach((item: any) => {
+        const productId = item.product_id
+        const productName = item.product_name || item.product?.name || 'منتج محذوف'
+        const currentSales = productSales.get(productId) || { 
+          quantity: 0, 
+          revenue: 0, 
+          product: { name: productName }
+        }
+        productSales.set(productId, {
+          quantity: currentSales.quantity + (item.quantity || 0),
+          revenue: currentSales.revenue + (item.total_price || ((item.product_price || item.price || 0) * (item.quantity || 0))),
+          product: { name: productName }
+        })
+      })
+    })
+    
+    const topProducts = Array.from(productSales.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5)
+
+    setStats({
+      totalOrders: ordersData.length,
+      totalUsers: usersData.length,
+      totalRevenue,
+      pendingOrders,
+      todayOrders,
+      monthlyRevenue,
+      topProducts,
+      recentUsers
+    })
+  }
+
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId)
-
-      if (error) throw error
-
-      // Update local state
-      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: newStatus as Order["status"] } : order)))
-
-      // Create notification for user
-      const order = orders.find((o) => o.id === orderId)
-      if (order) {
-        const statusMessages = {
-          CONFIRMED: "تم تأكيد طلبك وسيتم تحضيره قريباً",
-          PREPARING: "جاري تحضير طلبك",
-          OUT_FOR_DELIVERY: "طلبك في الطريق إليك",
-          DELIVERED: "تم توصيل طلبك بنجاح",
-          CANCELLED: "تم إلغاء طلبك",
-        }
-
-        await supabase.from("notifications").insert({
-          user_id: order.user_id,
-          title: "تحديث حالة الطلب",
-          message: statusMessages[newStatus as keyof typeof statusMessages] || `تم تحديث حالة طلبك إلى ${newStatus}`,
-          type: "ORDER_UPDATE",
-          data: { order_id: orderId, order_number: order.order_number },
+      console.log('Updating order status:', { orderId, newStatus })
+      
+      const { data, error } = await supabase
+        .from("orders")
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
         })
+        .eq("id", orderId)
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
       }
 
+      console.log('Update successful:', data)
+
+      // Update local state
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: newStatus as Order["status"] } : order
+      ))
+
       toast({
-        title: "تم التحديث",
-        description: "تم تحديث حالة الطلب بنجاح",
+        title: "✅ تم التحديث",
+        description: `تم تحديث حالة الطلب إلى: ${getStatusLabel(newStatus)}`,
       })
-    } catch (error) {
-      console.error("Error updating order status:", error)
+    } catch (error: any) {
+      console.error('Error updating order status:', error)
       toast({
-        title: "خطأ",
-        description: "لم نتمكن من تحديث حالة الطلب",
+        title: "❌ خطأ",
+        description: `فشل في تحديث حالة الطلب: ${error.message || error}`,
         variant: "destructive",
       })
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      PENDING: { label: "قيد المراجعة", color: "bg-yellow-500", icon: Clock },
-      CONFIRMED: { label: "مؤكد", color: "bg-blue-500", icon: CheckCircle },
-      PREPARING: { label: "قيد التحضير", color: "bg-orange-500", icon: Package },
-      OUT_FOR_DELIVERY: { label: "في الطريق", color: "bg-purple-500", icon: Truck },
-      DELIVERED: { label: "تم التوصيل", color: "bg-red-500", icon: CheckCircle },
-      CANCELLED: { label: "ملغي", color: "bg-gray-500", icon: XCircle },
-    }
+  const toggleProductStatus = async (productId: string, isAvailable: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_available: !isAvailable })
+        .eq("id", productId)
 
-    const statusInfo = statusMap[status as keyof typeof statusMap] || {
-      label: status,
-      color: "bg-gray-500",
-      icon: Clock,
-    }
-    const Icon = statusInfo.icon
+      if (error) throw error
 
-    return (
-      <Badge className={`${statusInfo.color} text-white flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {statusInfo.label}
-      </Badge>
-    )
+      setProducts(prev => prev.map(product => 
+        product.id === productId ? { ...product, is_available: !isAvailable } : product
+      ))
+
+      toast({
+        title: "تم التحديث",
+        description: `تم ${!isAvailable ? 'تفعيل' : 'إلغاء'} المنتج`,
+      })
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث المنتج",
+        variant: "destructive",
+      })
+    }
   }
 
-  // عرض شاشة التحميل أو عدم الصلاحية
+  const deleteUser = async (userId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟ سيتم حذف جميع طلباته أيضاً.")) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", userId)
+
+      if (error) throw error
+
+      setUsers(prev => prev.filter(user => user.id !== userId))
+      // إزالة طلبات هذا المستخدم من القائمة أيضاً
+      setOrders(prev => prev.filter(order => order.user_id !== userId))
+
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المستخدم وجميع طلباته بنجاح",
+      })
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف المستخدم",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const exportData = (type: 'orders' | 'users' | 'products') => {
+    let data: any[] = []
+    let filename = ""
+    
+    switch (type) {
+      case 'orders':
+        data = orders.map(order => ({
+          'رقم الطلب': order.order_number,
+          'العميل': order.user?.name || 'غير محدد',
+          'المبلغ': order.final_amount,
+          'الحالة': getStatusLabel(order.status),
+          'التاريخ': new Date(order.created_at).toLocaleDateString('ar-EG')
+        }))
+        filename = "orders.csv"
+        break
+      case 'users':
+        data = users.map(user => ({
+          'الاسم': user.name,
+          'الهاتف': user.phone,
+          'المدينة': user.city || '',
+          'نقاط الولاء': user.loyalty_points,
+          'إجمالي الطلبات': user.total_orders || 0,
+          'تاريخ التسجيل': new Date(user.created_at).toLocaleDateString('ar-EG')
+        }))
+        filename = "users.csv"
+        break
+      case 'products':
+        data = products.map(product => ({
+          'اسم المنتج': product.name,
+          'السعر': product.price,
+          'المخزون': product.stock_quantity,
+          'متوفر': product.is_available ? 'نعم' : 'لا',
+          'مميز': product.is_featured ? 'نعم' : 'لا'
+        }))
+        filename = "products.csv"
+        break
+    }
+
+    const csvContent = [
+      Object.keys(data[0] || {}).join(','),
+      ...data.map(row => Object.values(row).join(','))
+    ].join('\\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const getStatusLabel = (status: string) => {
+    const statusLabels = {
+      PENDING: "معلق",
+      CONFIRMED: "مؤكد", 
+      CANCELLED: "ملغي"
+    }
+    return statusLabels[status as keyof typeof statusLabels] || status
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "PENDING": return <Clock className="h-4 w-4 text-yellow-500" />
+      case "CONFIRMED": return <CheckCircle className="h-4 w-4 text-green-500" />
+      case "CANCELLED": return <XCircle className="h-4 w-4 text-red-500" />
+      default: return <Clock className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.order_number.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "ALL" || order.status === filterStatus
+    return matchesSearch && matchesStatus
+  })
+
   if (!isAuthenticated || !isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="h-12 w-12 text-red-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">صفحة محمية</h1>
-          <p className="text-gray-600 mb-6">هذه الصفحة مخصصة للإدارة فقط</p>
-          <div className="flex items-center justify-center gap-2 text-red-600">
-            <Shield className="h-5 w-5" />
-            <span className="font-semibold">مصرح للأدمن فقط</span>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-96">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="h-8 w-8 text-red-600" />
+            </div>
+            <CardTitle>الوصول محظور</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-gray-600 mb-4">ليس لديك صلاحية للوصول لهذه الصفحة</p>
+            <Button onClick={() => router.push("/")} className="w-full">
+              العودة للرئيسية
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
-            ))}
-          </div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-          ))}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+          <p className="text-gray-600">جاري تحميل لوحة التحكم...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Admin Header */}
-      <div className="mb-8 p-6 bg-gradient-to-r from-red-600 to-red-700 rounded-xl text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className="h-8 w-8" />
-          <h1 className="text-3xl font-bold">لوحة التحكم الإدارية</h1>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              <Shield className="h-8 w-8 text-red-600" />
+              لوحة تحكم الإدارة
+            </h1>
+            <p className="text-gray-600 mt-2">مرحباً بك {user?.name}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={fetchData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              تحديث
+            </Button>
+          </div>
         </div>
-        <p className="text-red-100">مرحباً {user?.name} - أدمن النظام</p>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="border-red-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.totalOrders}</div>
-          </CardContent>
-        </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100">إجمالي الطلبات</p>
+                  <p className="text-3xl font-bold">{stats.totalOrders}</p>
+                  <p className="text-blue-100 text-sm">اليوم: {stats.todayOrders}</p>
+                </div>
+                <ShoppingBag className="h-12 w-12 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-red-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي العملاء</CardTitle>
-            <Users className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.totalUsers}</div>
-          </CardContent>
-        </Card>
+          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100">إجمالي المبيعات</p>
+                  <p className="text-3xl font-bold">{stats.totalRevenue.toFixed(2)} ج.م</p>
+                  <p className="text-green-100 text-sm">هذا الشهر: {stats.monthlyRevenue.toFixed(2)}</p>
+                </div>
+                <DollarSign className="h-12 w-12 text-green-200" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-red-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المبيعات</CardTitle>
-            <TrendingUp className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.totalRevenue.toFixed(2)} ج.م</div>
-          </CardContent>
-        </Card>
+          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100">المستخدمون</p>
+                  <p className="text-3xl font-bold">{stats.totalUsers}</p>
+                  <p className="text-purple-100 text-sm">جدد: {stats.recentUsers}</p>
+                </div>
+                <Users className="h-12 w-12 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-red-200 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">طلبات معلقة</CardTitle>
-            <Clock className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingOrders}</div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100">طلبات معلقة</p>
+                  <p className="text-3xl font-bold">{stats.pendingOrders}</p>
+                  <p className="text-orange-100 text-sm">تحتاج مراجعة</p>
+                </div>
+                <Clock className="h-12 w-12 text-orange-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList className="bg-red-50 border-red-200">
-          <TabsTrigger value="orders" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-            الطلبات
-          </TabsTrigger>
-          <TabsTrigger value="users" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-            العملاء
-          </TabsTrigger>
-          <TabsTrigger value="products" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">
-            المنتجات
-          </TabsTrigger>
-        </TabsList>
+        {/* Main Content */}
+        <Tabs defaultValue="orders" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border">
+            <TabsTrigger value="orders" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">الطلبات</TabsTrigger>
+            <TabsTrigger value="products" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">المنتجات</TabsTrigger>
+            <TabsTrigger value="users" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">المستخدمون</TabsTrigger>
+            <TabsTrigger value="analytics" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">التحليلات</TabsTrigger>
+          </TabsList>
 
-        {/* Orders Tab */}
-        <TabsContent value="orders" className="space-y-4">
-          {orders.map((order) => (
-            <Card key={order.id} className="border-red-100 shadow-sm">
+          {/* Orders Tab */}
+          <TabsContent value="orders">
+            <Card className="border shadow-sm">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">طلب #{order.order_number}</CardTitle>
-                    <p className="text-gray-600">
-                      {order.user?.name} - {order.user?.phone}
-                    </p>
-                    <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleString("ar-EG")}</p>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 font-bold">إدارة الطلبات</CardTitle>
+                  <Button onClick={() => exportData('orders')} size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    تصدير
+                  </Button>
+                </div>
+                
+                {/* Filters */}
+                <div className="flex gap-4 mt-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="البحث في الطلبات..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="max-w-sm"
+                    />
                   </div>
-                  <div className="text-left">
-                    {getStatusBadge(order.status)}
-                    <p className="text-lg font-bold mt-2 text-red-600">{order.final_amount.toFixed(2)} ج.م</p>
-                  </div>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">جميع الحالات</SelectItem>
+                      <SelectItem value="PENDING">معلق</SelectItem>
+                      <SelectItem value="CONFIRMED">مؤكد</SelectItem>
+                      <SelectItem value="PREPARING">قيد التحضير</SelectItem>
+                      <SelectItem value="OUT_FOR_DELIVERY">في الطريق</SelectItem>
+                      <SelectItem value="DELIVERED">تم التسليم</SelectItem>
+                      <SelectItem value="CANCELLED">ملغي</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
+              
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">العنوان:</h4>
-                    <p className="text-gray-600">{order.delivery_address}</p>
-                    {order.delivery_notes && (
-                      <p className="text-sm text-gray-500 mt-1">ملاحظات: {order.delivery_notes}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-2">المنتجات:</h4>
-                    <div className="space-y-2">
-                      {order.order_items?.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center text-sm">
-                          <span>{item.product_name}</span>
-                          <span>
-                            {item.quantity} × {item.product_price} ج.م = {item.total_price} ج.م
-                          </span>
-                        </div>
+                <div className="overflow-x-auto">
+                  <Table className="border">
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 border-b">
+                        <TableHead className="font-semibold text-gray-900 border-r">رقم الطلب</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">العميل</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">تفاصيل الطلب</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">المبلغ</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">الحالة</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">التاريخ</TableHead>
+                        <TableHead className="font-semibold text-gray-900">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id} className="hover:bg-gray-50 border-b">
+                          <TableCell className="font-medium text-gray-900 border-r">
+                            {order.order_number}
+                          </TableCell>
+                          <TableCell className="border-r">
+                            <div>
+                              <p className="font-medium text-gray-900">{order.user?.name || 'غير محدد'}</p>
+                              <p className="text-sm text-gray-600">{order.user?.phone}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="border-r">
+                            <div className="text-center">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200">
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    عرض الفاتورة
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                                  <DialogHeader>
+                                    <DialogTitle>🧾 فاتورة الطلب: {order.order_number}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="bg-blue-50 p-3 rounded border">
+                                        <p className="font-semibold text-gray-900">🧑‍💼 العميل:</p>
+                                        <p className="text-gray-800">{order.user?.name || 'غير محدد'}</p>
+                                        <p className="text-sm text-gray-600">📞 {order.user?.phone || order.delivery_phone}</p>
+                                        {order.delivery_address && (
+                                          <p className="text-sm text-gray-600 mt-1">📍 {order.delivery_address}</p>
+                                        )}
+                                      </div>
+                                      <div className="bg-orange-50 p-3 rounded border">
+                                        <p className="font-semibold text-gray-900">📋 معلومات الطلب:</p>
+                                        <div className="flex items-center gap-2">
+                                          {getStatusIcon(order.status)}
+                                          <span className="font-medium">{getStatusLabel(order.status)}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">💳 {order.payment_method === 'CASH_ON_DELIVERY' ? 'دفع عند الاستلام' : order.payment_method}</p>
+                                        {order.delivery_notes && (
+                                          <p className="text-sm text-gray-600 mt-1">📝 {order.delivery_notes}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <p className="font-semibold text-gray-900 mb-2">📦 المنتجات المطلوبة:</p>
+                                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                                        {order.order_items?.map((item: any, index: number) => (
+                                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded border">
+                                            <div className="flex items-center gap-3">
+                                              {item.product?.images?.[0] && (
+                                                <img 
+                                                  src={item.product.images[0]} 
+                                                  alt={item.product_name || item.product.name}
+                                                  className="w-10 h-10 rounded object-cover"
+                                                />
+                                              )}
+                                              <div>
+                                                <p className="font-medium text-gray-900">
+                                                  {item.product_name || item.product?.name || 'منتج محذوف'}
+                                                </p>
+                                                <p className="text-sm text-gray-600">
+                                                  {item.product?.unit_description || 'وحدة'}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="font-bold text-gray-900">
+                                                الكمية: {item.quantity || 0}
+                                              </p>
+                                              <p className="text-green-600 font-medium">
+                                                {(item.product_price || item.price || 0).toFixed(2)} ج.م × {item.quantity || 0} = {(item.total_price || ((item.product_price || item.price || 0) * (item.quantity || 0))).toFixed(2)} ج.م
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )) || (
+                                          <div className="text-center text-gray-500 p-4">
+                                            لا توجد منتجات في هذا الطلب
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="border-t pt-4">
+                                      <div className="bg-green-50 p-4 rounded border space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                          <span>المجموع الفرعي:</span>
+                                          <span>{(order.subtotal || 0).toFixed(2)} ج.م</span>
+                                        </div>
+                                        {order.shipping_fee > 0 && (
+                                          <div className="flex justify-between text-sm">
+                                            <span>رسوم الشحن:</span>
+                                            <span>{(order.shipping_fee || 0).toFixed(2)} ج.م</span>
+                                          </div>
+                                        )}
+                                        {order.discount_amount > 0 && (
+                                          <div className="flex justify-between text-sm text-red-600">
+                                            <span>الخصم:</span>
+                                            <span>-{(order.discount_amount || 0).toFixed(2)} ج.م</span>
+                                          </div>
+                                        )}
+                                        {order.tax_amount > 0 && (
+                                          <div className="flex justify-between text-sm">
+                                            <span>الضرائب:</span>
+                                            <span>{(order.tax_amount || 0).toFixed(2)} ج.م</span>
+                                          </div>
+                                        )}
+                                        <hr className="my-2" />
+                                        <div className="flex justify-between text-lg font-bold">
+                                          <span>💰 المجموع الإجمالي:</span>
+                                          <span className="text-green-600">{(order.final_amount || 0).toFixed(2)} ج.م</span>
+                                        </div>
+                                        {order.points_earned > 0 && (
+                                          <div className="flex justify-between text-sm text-blue-600">
+                                            <span>⭐ نقاط مكتسبة:</span>
+                                            <span>{order.points_earned || 0} نقطة</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-bold text-gray-900 border-r">
+                            {(order.final_amount || 0).toFixed(2)} ج.م
+                          </TableCell>
+                          <TableCell className="border-r">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(order.status)}
+                              <span className="text-gray-900">{getStatusLabel(order.status)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-gray-700 border-r">
+                            {formatDistance(new Date(order.created_at), new Date(), { 
+                              addSuffix: true, 
+                              locale: ar 
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Select
+                                value={order.status}
+                                onValueChange={(value) => updateOrderStatus(order.id, value)}
+                              >
+                                <SelectTrigger className="w-32 bg-white border-gray-300 text-gray-900">
+                                  <SelectValue className="text-gray-900" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white">
+                                  <SelectItem value="PENDING" className="text-yellow-700 hover:bg-yellow-50">⏳ معلق</SelectItem>
+                                  <SelectItem value="CONFIRMED" className="text-green-700 hover:bg-green-50">✅ مؤكد</SelectItem>
+                                  <SelectItem value="CANCELLED" className="text-red-700 hover:bg-red-50">❌ ملغي</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 pt-4 border-t">
-                    <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
-                      <SelectTrigger className="w-48 border-red-200 focus:border-red-500">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PENDING">قيد المراجعة</SelectItem>
-                        <SelectItem value="CONFIRMED">مؤكد</SelectItem>
-                        <SelectItem value="PREPARING">قيد التحضير</SelectItem>
-                        <SelectItem value="OUT_FOR_DELIVERY">في الطريق</SelectItem>
-                        <SelectItem value="DELIVERED">تم التوصيل</SelectItem>
-                        <SelectItem value="CANCELLED">ملغي</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          </TabsContent>
 
-          {orders.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا توجد طلبات حالياً</p>
-            </div>
-          )}
-        </TabsContent>
+          {/* Products Tab */}
+          <TabsContent value="products">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 font-bold">إدارة المنتجات</CardTitle>
+                  <div className="flex gap-2">
+                    <Button onClick={() => exportData('products')} size="sm" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      تصدير
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table className="border">
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 border-b">
+                        <TableHead className="font-semibold text-gray-900 border-r">اسم المنتج</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">السعر</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">المخزون</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">الحالة</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">مميز</TableHead>
+                        <TableHead className="font-semibold text-gray-900">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.slice(0, 20).map((product) => (
+                        <TableRow key={product.id} className="hover:bg-gray-50 border-b">
+                          <TableCell className="border-r">
+                            <div className="flex items-center gap-3">
+                              {product.images?.[0] && (
+                                <img 
+                                  src={product.images[0]} 
+                                  alt={product.name}
+                                  className="w-10 h-10 rounded object-cover"
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium text-gray-900">{product.name}</p>
+                                <p className="text-sm text-gray-600">{product.unit_description}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-bold text-gray-900 border-r">
+                            {product.price} ج.م
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={product.stock_quantity > 0 ? "default" : "destructive"}>
+                              {product.stock_quantity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={product.is_available ? "default" : "secondary"}>
+                              {product.is_available ? "متوفر" : "غير متوفر"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {product.is_featured && (
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                                مميز
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant={product.is_available ? "destructive" : "default"}
+                                onClick={() => toggleProductStatus(product.id, product.is_available)}
+                                className="text-xs"
+                              >
+                                {product.is_available ? "❌ إلغاء" : "✅ تفعيل"}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Users Tab */}
-        <TabsContent value="users" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {users.map((user) => (
-              <Card key={user.id} className="border-red-100 shadow-sm">
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 font-bold">إدارة المستخدمين</CardTitle>
+                  <Button onClick={() => exportData('users')} size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    تصدير
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table className="border">
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 border-b">
+                        <TableHead className="font-semibold text-gray-900 border-r">الاسم</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">الهاتف</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">نقاط الولاء</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">إجمالي الطلبات</TableHead>
+                        <TableHead className="font-semibold text-gray-900 border-r">تاريخ التسجيل</TableHead>
+                        <TableHead className="font-semibold text-gray-900">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.slice(0, 20).map((user) => (
+                        <TableRow key={user.id} className="hover:bg-gray-50 border-b">
+                          <TableCell className="font-medium text-gray-900 border-r">{user.name}</TableCell>
+                          <TableCell className="text-gray-900 border-r">{user.phone}</TableCell>
+                          <TableCell className="border-r">
+                            <Badge variant="outline">
+                              {user.loyalty_points || 0} نقطة
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-900 border-r">{user.total_orders || 0}</TableCell>
+                          <TableCell className="text-gray-700 border-r">
+                            {formatDistance(new Date(user.created_at), new Date(), { 
+                              addSuffix: true, 
+                              locale: ar 
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteUser(user.id)}
+                              className="text-xs"
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              🗑️ حذف
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Products */}
+              <Card className="border shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">{user.name}</CardTitle>
-                  <p className="text-sm text-gray-600">{user.phone}</p>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 font-bold">
+                    <TrendingUp className="h-5 w-5" />
+                    أكثر المنتجات مبيعاً
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>نقاط الولاء:</span>
-                      <Badge variant="secondary" className="bg-red-100 text-red-700">
-                        {user.loyalty_points}
-                      </Badge>
+                  <div className="space-y-4">
+                    {stats.topProducts.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-bold text-red-600">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{item.product?.name}</p>
+                            <p className="text-sm text-gray-600">مبيع: {item.quantity} قطعة</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">{item.revenue.toFixed(2)} ج.م</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 font-bold">
+                    <BarChart3 className="h-5 w-5" />
+                    إحصائيات سريعة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border">
+                      <span className="text-gray-800 font-medium">متوسط قيمة الطلب</span>
+                      <span className="font-bold text-blue-600">
+                        {stats.totalOrders > 0 ? (stats.totalRevenue / stats.totalOrders).toFixed(2) : 0} ج.م
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>إجمالي الطلبات:</span>
-                      <span>{user.total_orders}</span>
+                    
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border">
+                      <span className="text-gray-800 font-medium">معدل النمو (المستخدمون الجدد)</span>
+                      <span className="font-bold text-green-600">
+                        {stats.recentUsers} هذا الأسبوع
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>إجمالي المبلغ:</span>
-                      <span className="text-red-600 font-semibold">{(user.total_spent || 0).toFixed(2)} ج.م</span>
+                    
+                    <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border">
+                      <span className="text-gray-800 font-medium">المنتجات النشطة</span>
+                      <span className="font-bold text-orange-600">
+                        {products.filter(p => p.is_available).length} / {products.length}
+                      </span>
                     </div>
-                    <div className="text-xs text-black mt-2">
-                      انضم في: {new Date(user.created_at).toLocaleDateString("ar-EG")}
+                    
+                    <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border">
+                      <span className="text-gray-800 font-medium">معدل التحويل</span>
+                      <span className="font-bold text-purple-600">
+                        {stats.totalUsers > 0 ? ((stats.totalOrders / stats.totalUsers) * 100).toFixed(1) : 0}%
+                      </span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {users.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا يوجد عملاء مسجلين</p>
             </div>
-          )}
-        </TabsContent>
-
-        {/* Products Tab */}
-        <TabsContent value="products" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product) => (
-              <Card key={product.id} className="border-red-100 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={product.is_available ? "default" : "secondary"} className="bg-red-600">
-                      {product.is_available ? "متوفر" : "غير متوفر"}
-                    </Badge>
-                    {product.is_featured && <Badge className="bg-yellow-500">مميز</Badge>}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>السعر:</span>
-                      <span className="font-bold text-red-600">{product.price} ج.م</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>المخزون:</span>
-                      <span>{product.stock_quantity}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>الوحدة:</span>
-                      <span>{product.unit_description}</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">{product.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {products.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">لا توجد منتجات</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
