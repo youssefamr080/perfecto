@@ -181,21 +181,39 @@ export default function AdminPage() {
     try {
       console.log('Updating order status:', { orderId, newStatus })
       
+      // Use a direct update with minimal RLS interaction
       const { data, error } = await supabase
         .from("orders")
         .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
+          status: newStatus
         })
         .eq("id", orderId)
-        .select()
+        .select('id, status')
 
       if (error) {
         console.error('Supabase error:', error)
-        throw error
-      }
+        
+        // Try alternative approach with upsert
+        const { data: upsertData, error: upsertError } = await supabase
+          .from("orders")
+          .upsert({ 
+            id: orderId,
+            status: newStatus,
+            updated_at: new Date().toISOString() 
+          }, { 
+            onConflict: 'id' 
+          })
+          .select('id, status')
 
-      console.log('Update successful:', data)
+        if (upsertError) {
+          console.error('Upsert error:', upsertError)
+          throw upsertError
+        }
+        
+        console.log('Upsert successful:', upsertData)
+      } else {
+        console.log('Update successful:', data)
+      }
 
       // Update local state
       setOrders(prev => prev.map(order => 
@@ -210,7 +228,7 @@ export default function AdminPage() {
       console.error('Error updating order status:', error)
       toast({
         title: "❌ خطأ",
-        description: `فشل في تحديث حالة الطلب: ${error.message || error}`,
+        description: `فشل في تحديث حالة الطلب. تحقق من الصلاحيات.`,
         variant: "destructive",
       })
     }
