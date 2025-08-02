@@ -83,6 +83,16 @@ export function SearchBar({
       router.push(`/search?q=${encodeURIComponent(query.trim())}`)
       setIsOpen(false)
       setLocalQuery("")
+      
+      // إضافة إلى البحثات الأخيرة
+      const trimmedQuery = query.trim()
+      const currentSearches = typeof window !== "undefined" 
+        ? JSON.parse(localStorage.getItem("recentSearches") || "[]") 
+        : []
+      const updatedSearches = [trimmedQuery, ...currentSearches.filter((s: string) => s !== trimmedQuery)].slice(0, 5)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("recentSearches", JSON.stringify(updatedSearches))
+      }
     }
   }
 
@@ -252,8 +262,8 @@ export function SearchBar({
                     className="flex items-center gap-3 p-2 hover:bg-red-50 rounded-md transition-colors"
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-xs">📦</div>
-                    <div className="flex-1 text-right">
-                      <p className="text-sm font-medium line-clamp-1">{product.name}</p>
+                  <div className="flex-1 text-right">
+                      <p className="text-sm font-medium line-clamp-1 text-black">{product.name}</p>
                       <p className="text-xs text-red-600 font-semibold">{product.price} ج.م</p>
                     </div>
                   </Link>

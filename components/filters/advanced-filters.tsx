@@ -19,10 +19,11 @@ interface FilterOptions {
 interface AdvancedFiltersProps {
   onFiltersChange: (filters: FilterOptions) => void
   availableCategories: { id: string; name: string; count: number }[]
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function AdvancedFilters({ onFiltersChange, availableCategories }: AdvancedFiltersProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, onClose }: AdvancedFiltersProps) {
   const [filters, setFilters] = useState<FilterOptions>({
     categories: [],
     priceRange: [0, 1000],
@@ -66,7 +67,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories }: Advanc
   return (
     <div className="relative">
       {/* Filter Toggle Button */}
-      <Button variant="outline" onClick={() => setIsOpen(!isOpen)} className="relative bg-white">
+      <Button variant="outline" onClick={() => onClose && onClose()} className="relative bg-white">
         <SlidersHorizontal className="h-4 w-4 ml-2" />
         فلترة
         {activeFiltersCount > 0 && (
@@ -85,7 +86,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories }: Advanc
                 <Filter className="h-5 w-5" />
                 فلترة المنتجات
               </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-6 w-6 p-0">
+              <Button variant="ghost" size="sm" onClick={() => onClose && onClose()} className="h-6 w-6 p-0">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -188,7 +189,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories }: Advanc
               <Button variant="outline" onClick={clearFilters} className="flex-1 bg-transparent">
                 مسح الكل
               </Button>
-              <Button onClick={() => setIsOpen(false)} className="flex-1 bg-red-600 hover:bg-red-700">
+              <Button onClick={() => onClose && onClose()} className="flex-1 bg-red-600 hover:bg-red-700">
                 تطبيق
               </Button>
             </div>

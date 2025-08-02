@@ -12,6 +12,8 @@ import { Filter, Grid, List, SearchIcon } from "lucide-react"
 import Link from "next/link"
 import { ProductGridSkeleton } from "@/components/loading/product-skeleton"
 
+import { AdvancedFilters } from "@/components/filters/advanced-filters"
+
 type SortOption = "name" | "price-low" | "price-high" | "featured"
 type ViewMode = "grid" | "list"
 
@@ -24,7 +26,17 @@ function SearchContent() {
   const [showFilters, setShowFilters] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  const { results, isLoading, hasSearched, search, categories, loadCategories } = useSearchStore()
+  const { 
+    results, 
+    isLoading, 
+    hasSearched, 
+    search, 
+    searchWithFilters, 
+    categories, 
+    loadCategories, 
+    filters,
+    setFilters
+  } = useSearchStore()
 
   useEffect(() => {
     setMounted(true)
@@ -32,12 +44,12 @@ function SearchContent() {
 
   useEffect(() => {
     if (mounted && query) {
-      search(query)
+      searchWithFilters(query, filters)
     }
     if (mounted && categories.length === 0) {
       loadCategories()
     }
-  }, [query, search, categories.length, loadCategories, mounted])
+  }, [query, searchWithFilters, categories.length, loadCategories, mounted, filters])
 
   if (!mounted) {
     return (
@@ -151,26 +163,27 @@ function SearchContent() {
                     className="border-red-200 text-red-600 hover:bg-red-50"
                   >
                     <Filter className="h-4 w-4 mr-2" />
-                    فلتر
+                    فلتر {Object.keys(filters).length > 0 && `(${Object.keys(filters).length})`}
                   </Button>
                 </div>
               </div>
 
-              {/* الفلاتر */}
-              {showFilters && (
-                <div className="bg-white p-4 rounded-lg border border-red-200 mb-6">
-                  <h3 className="font-semibold mb-3">تصفية حسب القسم</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((category) => (
-                      <Link key={category.id} href={`/category/${category.id}`}>
-                        <Badge variant="outline" className="cursor-pointer hover:bg-red-100 hover:border-red-300">
-                          {category.name}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* الفلاتر المتقدمة */}
+              <AdvancedFilters 
+                isOpen={showFilters}
+                onClose={() => setShowFilters(false)}
+                onFiltersChange={(newFilters) => {
+                  setFilters(newFilters)
+                  if (query) {
+                    searchWithFilters(query, newFilters)
+                  }
+                }}
+                availableCategories={categories.map(cat => ({
+                  id: cat.id,
+                  name: cat.name,
+                  count: results.filter(p => p.subcategory?.category?.id === cat.id).length
+                }))}
+              />
             </div>
 
             {/* النتائج */}
