@@ -9,6 +9,8 @@
   "orientation": "portrait",
   "dir": "rtl",
   "lang": "ar",
+  "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -24,6 +26,44 @@
     }
   ],
   "categories": ["medical", "health", "shopping"],
+  "shortcuts": [
+    {
+      "name": "الفئات",
+      "short_name": "Categories",
+      "description": "تصفح فئات المنتجات",
+      "url": "/categories",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "العروض",
+      "short_name": "Offers",
+      "description": "شاهد أحدث العروض",
+      "url": "/offers",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "السلة",
+      "short_name": "Cart",
+      "description": "سلة التسوق",
+      "url": "/cart",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
   "screenshots": [
     {
       "src": "/screenshot-mobile.png",

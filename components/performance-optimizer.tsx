@@ -1,0 +1,70 @@
+"use client"
+
+import { useEffect } from "react"
+
+export function PerformanceOptimizer() {
+  useEffect(() => {
+    // تسجيل Service Worker
+    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((registration) => {
+            console.log("SW registered: ", registration)
+          })
+          .catch((registrationError) => {
+            console.log("SW registration failed: ", registrationError)
+          })
+      })
+    }
+
+    // تحسين أداء الخط
+    if (typeof window !== "undefined") {
+      const link = document.createElement("link")
+      link.rel = "preconnect"
+      link.href = "https://fonts.googleapis.com"
+      document.head.appendChild(link)
+
+      const link2 = document.createElement("link")
+      link2.rel = "preconnect"
+      link2.href = "https://fonts.gstatic.com"
+      link2.crossOrigin = "anonymous"
+      document.head.appendChild(link2)
+    }
+
+    // تحسين الصور المهمة
+    const criticalImages = [
+      "/logo.png",
+      "/banner-dairy.jpg",
+      "/banner-meat.jpg"
+    ]
+
+    criticalImages.forEach(src => {
+      const link = document.createElement("link")
+      link.rel = "preload"
+      link.as = "image"
+      link.href = src
+      document.head.appendChild(link)
+    })
+
+    // تحسين استخدام الذاكرة
+    const cleanup = () => {
+      // مسح المؤقتات القديمة
+      if ("caches" in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            if (name.includes("old") || name.includes("v0")) {
+              caches.delete(name)
+            }
+          })
+        })
+      }
+    }
+
+    // تشغيل التنظيف بعد 5 ثوان
+    const timer = setTimeout(cleanup, 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return null
+}

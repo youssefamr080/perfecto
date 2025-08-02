@@ -16,20 +16,23 @@ import { ProductGridSkeleton } from "@/components/loading/product-skeleton"
 import { CategoryGridSkeleton } from "@/components/loading/category-skeleton"
 import type { Product, Category } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
-import { getCachedProducts } from "@/lib/utils"
+import { useProductsStore } from "@/lib/stores/products-store"
 import { HeroCarousel } from "@/components/banners/hero-carousel"
 
 export default function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
 
+  const { 
+    featuredProducts, 
+    fetchFeaturedProducts, 
+    isLoading: productsLoading 
+  } = useProductsStore()
+
   const fetchData = async () => {
     try {
-      // Fetch all products from cache
-      const allProducts = await getCachedProducts()
-      // Featured only
-      setFeaturedProducts(allProducts.filter(p => p.is_featured).slice(0, 8))
+      // جلب المنتجات المميزة من المخزن
+      await fetchFeaturedProducts()
 
       // Fetch categories
       const { data: categoriesData } = await supabase.from("categories").select("*").limit(6)
@@ -202,7 +205,7 @@ export default function HomePage() {
               </Badge>
             </div>
 
-            {loading ? (
+            {loading || productsLoading ? (
               <ProductGridSkeleton count={8} />
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">

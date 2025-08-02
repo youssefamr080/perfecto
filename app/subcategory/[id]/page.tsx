@@ -50,7 +50,7 @@ export default async function SubcategoryPage({ params }: { params: { id: string
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-white">
       <div className="mb-8">
         <nav className="text-sm text-gray-600 mb-4">
           <span>{subcategory.category?.name}</span>
