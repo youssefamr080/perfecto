@@ -1,6 +1,7 @@
 "use client"
 import { Swiper, SwiperSlide } from "swiper/react"
-import { Pagination } from "swiper/modules"
+import { Pagination, Autoplay, EffectFade } from "swiper/modules"
+import "swiper/css/effect-fade"
 import "swiper/css"
 import "swiper/css/pagination"
 import Link from "next/link"
@@ -12,10 +13,14 @@ export function HeroCarousel() {
       spaceBetween={16}
       slidesPerView={1}
       pagination={{ clickable: true }}
-      modules={[Pagination]}
+      modules={[Pagination, Autoplay, EffectFade]}
+      effect="fade"
+      fadeEffect={{ crossFade: true }}
       className="rounded-xl overflow-hidden shadow-md"
       loop
-      autoplay={{ delay: 5000 }}
+      speed={900}
+      autoplay={{ delay: 3200, disableOnInteraction: false }}
+      style={{ transitionTimingFunction: 'ease-in-out' }}
     >
       {/* ألبان ومنتجات */}
       <SwiperSlide>
