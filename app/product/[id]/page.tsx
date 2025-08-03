@@ -163,7 +163,7 @@ export default function ProductPage() {
             <span className="text-4xl">📦</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-600 mb-2">المنتج غير موجود</h1>
-          <p className="text-gray-500 mb-4">لم نتمكن من العثور على هذا المنتج</p>
+          <p className="text-gray-700 mb-4">لم نتمكن من العثور على هذا المنتج</p>
           <Link href="/categories">
             <Button className="bg-green-600 hover:bg-green-700">تصفح المنتجات</Button>
           </Link>
@@ -186,11 +186,11 @@ export default function ProductPage() {
             <Link href="/" className="hover:text-green-600 whitespace-nowrap">
               الرئيسية
             </Link>
-            <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
+            <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
             <Link href="/categories" className="hover:text-green-600 whitespace-nowrap">
               المنتجات
             </Link>
-            <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
+            <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
             {product.subcategory?.category && (
               <>
                 <Link
@@ -199,7 +199,7 @@ export default function ProductPage() {
                 >
                   {product.subcategory.category.name}
                 </Link>
-                <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
+                <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
               </>
             )}
             {product.subcategory && (
@@ -210,7 +210,7 @@ export default function ProductPage() {
                 >
                   {product.subcategory.name}
                 </Link>
-                <ArrowRight className="h-4 w-4 mx-2 text-gray-400" />
+                <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
               </>
             )}
             <span className="text-green-600 truncate">{product.name}</span>

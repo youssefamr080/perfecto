@@ -104,7 +104,7 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
               <div className="flex items-center gap-2">
                 <span className="text-xl md:text-2xl font-extrabold text-red-600">{product.price} ج.م</span>
                 {product.original_price && (
-                  <span className="text-base text-gray-400 line-through font-bold">{product.original_price} ج.م</span>
+                  <span className="text-base text-gray-600 line-through font-bold">{product.original_price} ج.م</span>
                 )}
               </div>
               <span className="text-xs text-black font-bold">{product.unit_description}</span>
@@ -123,8 +123,8 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
             أضف للسلة
           </Button>
         ) : (
-          <Button disabled className="w-full text-xs py-2 h-10 bg-gray-100 rounded-full font-extrabold">
-            غير متوفر
+                    <Button disabled className="w-full text-xs py-2 h-10 bg-gray-300 text-gray-700 rounded-full font-extrabold">
+            غير متوفر حالياً
           </Button>
         )}
 

@@ -152,3 +152,40 @@ body {
     background-position: 200% 0;
   }
 }
+
+/* تحسينات الألوان والتباين */
+.text-light-fix {
+  color: #1f2937 !important; /* gray-800 */
+}
+
+.bg-light-fix {
+  background-color: #f9fafb !important; /* gray-50 */
+  border: 1px solid #e5e7eb !important; /* gray-200 */
+}
+
+.text-gray-fix {
+  color: #374151 !important; /* gray-700 */
+}
+
+.placeholder-fix::placeholder {
+  color: #6b7280 !important; /* gray-500 */
+}
+
+/* إصلاح الألوان الفاتحة على الخلفيات الفاتحة */
+.bg-white .text-gray-300,
+.bg-gray-50 .text-gray-300,
+.bg-gray-100 .text-gray-300 {
+  color: #374151 !important; /* gray-700 */
+}
+
+.bg-white .text-gray-400,
+.bg-gray-50 .text-gray-400,
+.bg-gray-100 .text-gray-400 {
+  color: #4b5563 !important; /* gray-600 */
+}
+
+.bg-white .text-gray-500,
+.bg-gray-50 .text-gray-500,
+.bg-gray-100 .text-gray-500 {
+  color: #374151 !important; /* gray-700 */
+}

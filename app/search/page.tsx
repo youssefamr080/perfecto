@@ -200,10 +200,10 @@ function SearchContent() {
             ) : (
               <div className="text-center py-16">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <SearchIcon className="h-12 w-12 text-gray-300" />
+                  <SearchIcon className="h-12 w-12 text-gray-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-600 mb-4">لم يتم العثور على نتائج</h2>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">لم يتم العثور على نتائج</h2>
+                <p className="text-gray-700 mb-8 max-w-md mx-auto">
                   لم نتمكن من العثور على منتجات تطابق بحثك "{query}". جرب البحث بكلمات مختلفة أو تصفح الأقسام.
                 </p>
 

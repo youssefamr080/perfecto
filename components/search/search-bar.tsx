@@ -123,7 +123,7 @@ export function SearchBar({
             onFocus={() => setIsOpen(true)}
             className="pl-12 pr-10 text-right border-red-200 focus:border-red-500 bg-white"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 h-4 w-4" />
           {localQuery && (
             <Button
               type="button"
@@ -155,7 +155,7 @@ export function SearchBar({
                     onClick={() => handleSuggestionClick(suggestion)}
                     className="w-full text-right p-2 hover:bg-red-50 rounded-md transition-colors flex items-center gap-2"
                   >
-                    <Search className="h-4 w-4 text-gray-400" />
+                    <Search className="h-4 w-4 text-gray-600" />
                     <span className="text-sm">{suggestion}</span>
                   </button>
                 ))}
@@ -274,8 +274,8 @@ export function SearchBar({
 
           {/* رسالة فارغة */}
           {!suggestions.length && !recentSearches.length && !categories.length && !popularProducts.length && (
-            <div className="p-6 text-center text-gray-500">
-              <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <div className="p-6 text-center text-gray-700">
+              <Search className="h-8 w-8 mx-auto mb-2 text-gray-600" />
               <p className="text-sm">ابدأ بكتابة ما تبحث عنه</p>
             </div>
           )}

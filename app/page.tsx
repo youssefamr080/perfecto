@@ -223,7 +223,7 @@ export default function HomePage() {
                   <span className="text-4xl">🛍️</span>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">لا توجد منتجات مميزة</h3>
-                <p className="text-gray-500">سيتم إضافة منتجات مميزة قريباً</p>
+                <p className="text-gray-700">سيتم إضافة منتجات مميزة قريباً</p>
               </div>
             )}
           </div>

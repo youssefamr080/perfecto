@@ -32,12 +32,12 @@ export function OrderProgress({ status }: OrderProgressProps) {
             <div key={step.key} className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
-                  isCompleted ? "bg-red-600 text-white" : "bg-gray-200 text-gray-400"
+                  isCompleted ? "bg-red-600 text-white" : "bg-gray-300 text-gray-700"
                 } ${isCurrent ? "ring-2 ring-red-300" : ""}`}
               >
                 <Icon className="h-4 w-4" />
               </div>
-              <span className={`text-xs text-center ${isCompleted ? "text-red-600 font-medium" : "text-gray-400"}`}>
+              <span className={`text-xs text-center ${isCompleted ? "text-red-600 font-medium" : "text-gray-600"}`}>
                 {step.label}
               </span>
             </div>

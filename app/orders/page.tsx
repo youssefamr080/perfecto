@@ -113,7 +113,7 @@ const OrdersPage = () => {
 
       {orders.length === 0 ? (
         <div className="text-center py-16">
-          <Package className="h-24 w-24 text-gray-500 mx-auto mb-4" />
+          <Package className="h-24 w-24 text-gray-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-black mb-4">لا توجد طلبات</h2>
           <p className="text-black mb-8">لم تقم بإنشاء أي طلبات بعد</p>
           <Link href="/categories">

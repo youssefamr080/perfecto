@@ -7,9 +7,9 @@ import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { LOYALTY_CONFIG } from "@/lib/utils/loyaltySystem"
 
-const SHIPPING_FEE = 20
-const FREE_SHIPPING_THRESHOLD = 300
+const { SHIPPING_FEE, FREE_SHIPPING_THRESHOLD } = LOYALTY_CONFIG
 
 export default function CartPage() {
   const { items, total, itemCount, updateQuantity, removeItem, clearCart } = useCartStore()
