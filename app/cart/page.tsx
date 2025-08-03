@@ -8,7 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 
-const SHIPPING_FEE = 15
+const SHIPPING_FEE = 20
 const FREE_SHIPPING_THRESHOLD = 300
 
 export default function CartPage() {

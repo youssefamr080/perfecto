@@ -79,40 +79,45 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
 
       {/* Filters Panel */}
       {isOpen && (
-        <Card className="absolute top-12 left-0 w-80 z-50 shadow-xl border">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                فلترة المنتجات
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => onClose && onClose()} className="h-6 w-6 p-0">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/20 z-40" onClick={() => onClose && onClose()} />
+          
+          <Card className="absolute top-12 left-0 w-80 z-50 shadow-2xl border bg-white/95 backdrop-blur-sm">
+            <CardHeader className="pb-3 bg-gradient-to-r from-red-50 to-red-100 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2 text-red-700 font-bold">
+                  <Filter className="h-5 w-5" />
+                  فلترة المنتجات
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => onClose && onClose()} className="h-6 w-6 p-0 hover:bg-red-100">
+                  <X className="h-4 w-4 text-red-600" />
+                </Button>
+              </div>
+            </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 bg-white">
             {/* Categories Filter */}
             <div>
-              <h3 className="font-semibold mb-3">الفئات</h3>
+              <h3 className="font-bold mb-3 text-gray-800 text-base">الفئات</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {availableCategories.map((category) => (
-                  <div key={category.id} className="flex items-center justify-between">
+                  <div key={category.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-red-50 transition-colors">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id={category.id}
                         checked={filters.categories.includes(category.id)}
                         onCheckedChange={() => handleCategoryToggle(category.id)}
+                        className="border-red-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
                       />
                       <label
                         htmlFor={category.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mr-2"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mr-2 text-gray-700 cursor-pointer"
                       >
                         {category.name}
                       </label>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs bg-red-100 text-red-700 border-red-200">
                       {category.count}
                     </Badge>
                   </div>
@@ -122,7 +127,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
 
             {/* Price Range Filter */}
             <div>
-              <h3 className="font-semibold mb-3">نطاق السعر</h3>
+              <h3 className="font-bold mb-3 text-gray-800 text-base">نطاق السعر</h3>
               <div className="px-2">
                 <Slider
                   value={filters.priceRange}
@@ -132,38 +137,40 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
                   step={10}
                   className="mb-2"
                 />
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{filters.priceRange[0]} ج.م</span>
-                  <span>{filters.priceRange[1]} ج.م</span>
+                <div className="flex justify-between text-sm text-gray-700 font-medium">
+                  <span className="bg-red-50 px-2 py-1 rounded-md">{filters.priceRange[0]} ج.م</span>
+                  <span className="bg-red-50 px-2 py-1 rounded-md">{filters.priceRange[1]} ج.م</span>
                 </div>
               </div>
             </div>
 
             {/* Stock Filter */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-lg hover:bg-red-50 transition-colors">
               <Checkbox
                 id="inStock"
                 checked={filters.inStock}
                 onCheckedChange={(checked) => handleFilterChange("inStock", checked)}
+                className="border-red-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
               />
               <label
                 htmlFor="inStock"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mr-2"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mr-2 text-gray-700 cursor-pointer"
               >
                 متوفر فقط
               </label>
             </div>
 
             {/* Featured Filter */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 rounded-lg hover:bg-red-50 transition-colors">
               <Checkbox
                 id="featured"
                 checked={filters.featured}
                 onCheckedChange={(checked) => handleFilterChange("featured", checked)}
+                className="border-red-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
               />
               <label
                 htmlFor="featured"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-found peer-disabled:opacity-70 mr-2"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-found peer-disabled:opacity-70 mr-2 text-gray-700 cursor-pointer"
               >
                 منتجات مميزة فقط
               </label>
@@ -171,11 +178,11 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
 
             {/* Sort By */}
             <div>
-              <h3 className="font-semibold mb-3">ترتيب حسب</h3>
+              <h3 className="font-bold mb-3 text-gray-800 text-base">ترتيب حسب</h3>
               <select
                 value={filters.sortBy}
                 onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full p-3 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-gray-700 font-medium"
               >
                 <option value="name">الاسم</option>
                 <option value="price">السعر</option>
@@ -186,15 +193,16 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
 
             {/* Action Buttons */}
             <div className="flex gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={clearFilters} className="flex-1 bg-transparent">
+              <Button variant="outline" onClick={clearFilters} className="flex-1 bg-white hover:bg-gray-50 border-red-200 text-red-600">
                 مسح الكل
               </Button>
-              <Button onClick={() => onClose && onClose()} className="flex-1 bg-red-600 hover:bg-red-700">
+              <Button onClick={() => onClose && onClose()} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
                 تطبيق
               </Button>
             </div>
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   )

@@ -64,18 +64,18 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold text-red-600">مرحباً بك في بيرفكتو تيب</DialogTitle>
-          <p className="text-center text-gray-600 mt-2">سجل دخولك للاستمتاع بتجربة تسوق مميزة</p>
+      <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-sm border-2 border-red-100">
+        <DialogHeader className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-t-lg -mx-6 -mt-6 mb-4">
+          <DialogTitle className="text-center text-2xl font-bold text-red-700">مرحباً بك في بيرفكتو تيب</DialogTitle>
+          <p className="text-center text-gray-700 mt-2 font-medium">سجل دخولك للاستمتاع بتجربة تسوق مميزة</p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-2 rounded-lg">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+              <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-bold text-gray-800">
                 <Phone className="h-4 w-4 text-red-600" />
-                رقم الهاتف
+                رقم الهاتف <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="phone"
@@ -85,15 +85,16 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="01xxxxxxxxx"
-                className="text-right border-red-200 focus:border-red-500"
+                className="text-right border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
                 dir="ltr"
               />
+              <p className="text-xs text-gray-600 mt-1">يجب أن يكون 11 رقم على الأقل</p>
             </div>
 
             <div>
-              <Label htmlFor="name" className="flex items-center gap-2 text-sm font-medium">
+              <Label htmlFor="name" className="flex items-center gap-2 text-sm font-bold text-gray-800">
                 <User className="h-4 w-4 text-red-600" />
-                الاسم الكامل
+                الاسم الكامل <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
@@ -103,14 +104,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="أدخل اسمك الكامل"
-                className="text-right border-red-200 focus:border-red-500"
+                className="text-right border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
               />
+              <p className="text-xs text-gray-600 mt-1">حرفين على الأقل</p>
             </div>
 
             <div>
-              <Label htmlFor="address" className="flex items-center gap-2 text-sm font-medium">
+              <Label htmlFor="address" className="flex items-center gap-2 text-sm font-bold text-gray-800">
                 <MapPin className="h-4 w-4 text-red-600" />
-                العنوان بالتفصيل
+                العنوان بالتفصيل <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 id="address"
@@ -119,9 +121,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={formData.address}
                 onChange={handleInputChange}
                 placeholder="أدخل عنوانك بالتفصيل (المنطقة، الشارع، رقم المبنى، الدور، الشقة)"
-                className="text-right min-h-[80px] border-red-200 focus:border-red-500"
+                className="text-right min-h-[80px] border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
                 rows={3}
               />
+              <p className="text-xs text-gray-600 mt-1">10 أحرف على الأقل للعنوان المفصل</p>
             </div>
           </div>
 
@@ -140,9 +143,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             )}
           </Button>
 
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية</p>
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+          <div className="text-center space-y-2 bg-gray-50 p-3 rounded-lg">
+            <p className="text-sm text-gray-700 font-medium">بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية</p>
+            <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
               <span className="flex items-center gap-1">🛡️ دفع آمن</span>
               <span className="flex items-center gap-1">🚚 توصيل مجاني</span>
               <span className="flex items-center gap-1">🎁 نقاط ولاء</span>

@@ -17,12 +17,9 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { LoginModal } from "@/components/auth/login-modal"
 import { Gift, Truck, CreditCard, MapPin, Phone, User } from "lucide-react"
+import { calculateLoyaltyPoints, validateLoyaltyTransaction, LOYALTY_CONFIG } from "@/lib/utils/loyaltySystem"
 
-const SHIPPING_FEE = 20
-const FREE_SHIPPING_THRESHOLD = 300
-const POINTS_PER_EGP = 1
-const POINTS_TO_EGP = 100
-const SHIPPING_POINTS_COST = 2000
+const { SHIPPING_FEE, FREE_SHIPPING_THRESHOLD, POINTS_PER_EGP, POINTS_TO_EGP, SHIPPING_POINTS_COST } = LOYALTY_CONFIG
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCartStore()
@@ -46,11 +43,16 @@ const [userData, setUserData] = useState({
 
   const subtotal = total
   const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const pointsDiscount = Math.floor(pointsToUse / POINTS_TO_EGP)
-  const finalShippingFee = usePointsForShipping && shippingFee > 0 ? 0 : shippingFee
-  const finalAmount = Math.max(0, subtotal + finalShippingFee - pointsDiscount)
-  const pointsEarned = Math.floor(subtotal * POINTS_PER_EGP)
-  const totalPointsUsed = pointsToUse + (usePointsForShipping ? SHIPPING_POINTS_COST : 0)
+  
+  // استخدام النظام المحسن لحساب النقاط
+  const loyaltyCalculation = calculateLoyaltyPoints(
+    subtotal,
+    pointsToUse,
+    usePointsForShipping,
+    shippingFee
+  )
+  
+  const { pointsDiscount, finalShippingFee, finalAmount, pointsEarned, totalPointsUsed } = loyaltyCalculation
 
   useEffect(() => {
     setMounted(true)
@@ -68,7 +70,71 @@ const [userData, setUserData] = useState({
       setShowLoginModal(true)
       return
     }
-    setLoading(true)
+
+    // التحقق من صحة البيانات قبل الإرسال
+    const currentName = editUser ? userData.name : user.name
+    const currentPhone = editUser ? userData.phone : user.phone  
+    const currentAddress = editUser ? userData.address : user.address
+
+    if (!currentName || currentName.trim().length < 2) {
+      toast({
+        title: "خطأ في البيانات",
+        description: "يرجى إدخال اسم صحيح (حرفين على الأقل)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!currentPhone || currentPhone.length < 11) {
+      toast({
+        title: "خطأ في البيانات", 
+        description: "يرجى إدخال رقم هاتف صحيح (11 رقم على الأقل)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!currentAddress || currentAddress.trim().length < 10) {
+      toast({
+        title: "خطأ في البيانات",
+        description: "يرجى إدخال عنوان مفصل (10 أحرف على الأقل)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // التحقق من أن رقم الهاتف يحتوي على أرقام فقط
+    const phoneRegex = /^[0-9+\-\s()]+$/
+    if (!phoneRegex.test(currentPhone)) {
+      toast({
+        title: "خطأ في رقم الهاتف",
+        description: "رقم الهاتف يجب أن يحتوي على أرقام فقط",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // التحقق من أن السلة ليست فارغة
+    if (items.length === 0) {
+      toast({
+        title: "سلة فارغة",
+        description: "لا يوجد منتجات في سلة التسوق",
+        variant: "destructive",
+      })
+      router.push("/cart")
+      return
+    }
+
+    // التحقق من صحة العملية باستخدام النظام المحسن
+    const validation = validateLoyaltyTransaction(user.loyalty_points || 0, totalPointsUsed, finalAmount)
+    if (!validation.isValid) {
+      toast({
+        title: "خطأ في النقاط",
+        description: validation.error,
+        variant: "destructive",
+      })
+      return
+    }    setLoading(true)
     try {
       // إذا اختار المستخدم حفظ دائم، حدث البيانات في قاعدة البيانات
       if (editUser && saveType === "permanent") {
@@ -117,20 +183,27 @@ const [userData, setUserData] = useState({
       }))
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
       if (itemsError) throw itemsError
-      // Update user loyalty points and stats
-      const newLoyaltyPoints = Math.max(0, (user.loyalty_points || 0) - totalPointsUsed + pointsEarned)
-      const { error: userUpdateError } = await supabase
-        .from("users")
-        .update({
-          loyalty_points: newLoyaltyPoints,
-          total_orders: (user.total_orders || 0) + 1,
-          total_spent: (user.total_spent || 0) + finalAmount,
+      
+      // حساب النقاط الجديدة بدقة
+      const currentLoyaltyPoints = user.loyalty_points || 0
+      const newLoyaltyPoints = Math.max(0, currentLoyaltyPoints - totalPointsUsed + pointsEarned)
+      
+      // تسجيل استخدام النقاط أولاً (إذا تم استخدام نقاط)
+      if (totalPointsUsed > 0) {
+        const { error: redeemError } = await supabase.from("loyalty_points_history").insert({
+          user_id: user.id,
+          order_id: order.id,
+          points_change: -totalPointsUsed,
+          points_balance: currentLoyaltyPoints - totalPointsUsed,
+          transaction_type: "REDEEMED",
+          description: `نقاط مستخدمة في الطلب ${orderNumber}`,
         })
-        .eq("id", user.id)
-      if (userUpdateError) throw userUpdateError
-      // Record loyalty points history
+        if (redeemError) throw redeemError
+      }
+      
+      // تسجيل النقاط المكتسبة (إذا تم كسب نقاط)
       if (pointsEarned > 0) {
-        await supabase.from("loyalty_points_history").insert({
+        const { error: earnError } = await supabase.from("loyalty_points_history").insert({
           user_id: user.id,
           order_id: order.id,
           points_change: pointsEarned,
@@ -138,17 +211,20 @@ const [userData, setUserData] = useState({
           transaction_type: "EARNED",
           description: `نقاط مكتسبة من الطلب ${orderNumber}`,
         })
+        if (earnError) throw earnError
       }
-      if (totalPointsUsed > 0) {
-        await supabase.from("loyalty_points_history").insert({
-          user_id: user.id,
-          order_id: order.id,
-          points_change: -totalPointsUsed,
-          points_balance: newLoyaltyPoints - pointsEarned,
-          transaction_type: "REDEEMED",
-          description: `نقاط مستخدمة في الطلب ${orderNumber}`,
+      
+      // تحديث بيانات المستخدم
+      const { error: userUpdateError } = await supabase
+        .from("users")
+        .update({
+          loyalty_points: newLoyaltyPoints,
+          total_orders: (user.total_orders || 0) + 1,
+          total_spent: (user.total_spent || 0) + finalAmount,
+          updated_at: new Date().toISOString(),
         })
-      }
+        .eq("id", user.id)
+      if (userUpdateError) throw userUpdateError
       // Create notification
       await supabase.from("notifications").insert({
         user_id: user.id,
@@ -310,16 +386,28 @@ const [userData, setUserData] = useState({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-green-100">
-                  <span className="font-medium text-black">النقاط المتاحة:</span>
-                  <Badge className="bg-green-500 text-black text-base px-3 py-1">
-                    {user?.loyalty_points || 0} نقطة
-                  </Badge>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <span className="font-medium text-green-800">النقاط المتاحة:</span>
+                    <Badge className="bg-green-500 text-white text-base px-3 py-1 font-bold">
+                      {user?.loyalty_points || 0} نقطة
+                    </Badge>
+                  </div>
+
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <span className="font-medium text-blue-800">النقاط المكتسبة:</span>
+                    <Badge className="bg-blue-500 text-white text-base px-3 py-1 font-bold">+{pointsEarned} نقطة</Badge>
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-blue-100">
-                  <span className="font-medium text-black">النقاط المكتسبة من هذا الطلب:</span>
-                  <Badge className="bg-blue-500 text-black text-base px-3 py-1">+{pointsEarned} نقطة</Badge>
+                <div className="p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-purple-800">القيمة النقدية المتاحة:</span>
+                    <span className="font-bold text-purple-800">{Math.floor((user?.loyalty_points || 0) / 100)} ج.م</span>
+                  </div>
+                  <p className="text-xs text-purple-600 mt-1">
+                    يمكنك استخدام حتى {Math.floor((user?.loyalty_points || 0) / 100) * 100} نقطة
+                  </p>
                 </div>
 
                 {(user?.loyalty_points || 0) > 0 && (
@@ -331,34 +419,77 @@ const [userData, setUserData] = useState({
                       id="points"
                       type="number"
                       min="0"
-                      max={user?.loyalty_points || 0}
+                      max={Math.floor((user?.loyalty_points || 0) / 100) * 100}
                       step="100"
                       value={pointsToUse}
-                      onChange={(e) =>
-                        setPointsToUse(
-                          Math.min(user?.loyalty_points || 0, Number.parseInt(e.target.value) || 0),
-                        )
-                      }
+                      onChange={(e) => {
+                        const inputValue = Number.parseInt(e.target.value) || 0
+                        const maxAllowed = Math.floor((user?.loyalty_points || 0) / 100) * 100
+                        const validValue = Math.min(maxAllowed, Math.max(0, inputValue))
+                        // التأكد من أن القيمة من مضاعفات 100
+                        const adjustedValue = Math.floor(validValue / 100) * 100
+                        setPointsToUse(adjustedValue)
+                      }}
+                      placeholder={`الحد الأقصى: ${Math.floor((user?.loyalty_points || 0) / 100) * 100}`}
                       className="text-right"
                     />
                     {pointsToUse > 0 && (
-                      <p className="text-sm text-green-600 font-medium">💰 خصم: {pointsDiscount} ج.م</p>
+                      <div className="space-y-1">
+                        <p className="text-sm text-green-600 font-medium">💰 خصم: {pointsDiscount} ج.م</p>
+                        <p className="text-xs text-gray-600">
+                          سيتبقى لديك: {(user?.loyalty_points || 0) - pointsToUse} نقطة
+                        </p>
+                      </div>
+                    )}
+                    {pointsToUse > 0 && pointsToUse % 100 !== 0 && (
+                      <p className="text-sm text-red-600">⚠️ يجب أن تكون النقاط من مضاعفات 100</p>
                     )}
                   </div>
                 )}
 
                 {shippingFee > 0 && (user?.loyalty_points || 0) >= SHIPPING_POINTS_COST && (
-                  <div className="flex items-center space-x-2 space-x-reverse p-3 bg-white rounded-lg border border-purple-100">
+                  <div className="flex items-center space-x-2 space-x-reverse p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                     <input
                       type="checkbox"
                       id="usePointsShipping"
                       checked={usePointsForShipping}
                       onChange={(e) => setUsePointsForShipping(e.target.checked)}
-                      className="rounded border-gray-300"
+                      className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
                     />
-                    <Label htmlFor="usePointsShipping" className="text-sm font-medium cursor-pointer">
-                      🚚 استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني
+                    <Label htmlFor="usePointsShipping" className="text-sm font-medium cursor-pointer text-purple-800">
+                      🚚 استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني (بدلاً من {shippingFee} ج.م)
                     </Label>
+                  </div>
+                )}
+
+                {/* عرض ملخص النقاط بعد الطلب */}
+                {(pointsToUse > 0 || usePointsForShipping || pointsEarned > 0) && (
+                  <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                    <h4 className="font-bold text-gray-800 mb-2">ملخص النقاط:</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">النقاط الحالية:</span>
+                        <span className="font-medium">{user?.loyalty_points || 0}</span>
+                      </div>
+                      {totalPointsUsed > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>النقاط المستخدمة:</span>
+                          <span className="font-medium">-{totalPointsUsed}</span>
+                        </div>
+                      )}
+                      {pointsEarned > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>النقاط المكتسبة:</span>
+                          <span className="font-medium">+{pointsEarned}</span>
+                        </div>
+                      )}
+                      <div className="border-t pt-2 flex justify-between font-bold">
+                        <span className="text-gray-800">النقاط بعد الطلب:</span>
+                        <span className="text-gray-800">
+                          {Math.max(0, (user?.loyalty_points || 0) - totalPointsUsed + pointsEarned)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>

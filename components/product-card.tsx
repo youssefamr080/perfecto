@@ -26,9 +26,10 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
   const handleAddToCart = () => {
     addItem(product, 1)
     toast({
-      title: "تم إضافة المنتج! 🛒",
-      description: `تم إضافة ${product.name} إلى السلة`,
-      duration: 2000,
+      title: "✅ تمت الإضافة للسلة!",
+      description: `تم إضافة ${product.name} إلى سلة التسوق`,
+      variant: "success",
+      duration: 3000,
     })
   }
 
