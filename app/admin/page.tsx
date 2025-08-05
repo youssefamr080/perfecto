@@ -15,16 +15,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import type { Order, User, Product } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { initializeSound, playNotificationSound, requestNotificationPermission } from "@/lib/notification-sound"
 import { 
   Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
   Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
-  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw 
+  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw, Volume2
 } from "lucide-react"
 import { formatDistance } from "date-fns"
 import { ar } from "date-fns/locale"
 
 // رقم الهاتف الخاص بالأدمن
 const ADMIN_PHONE = "01234567890"
+
+// مفاتيح الأمان الإضافية
+const ADMIN_SECURITY_KEYS = [
+  "01234567890", // رقم أساسي
+  "01000000000", // رقم احتياطي
+]
+
+// التحقق من صلاحية الإدمن
+const isAuthorizedAdmin = (phone: string | undefined): boolean => {
+  if (!phone) return false
+  return ADMIN_SECURITY_KEYS.includes(phone.trim())
+}
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore()
@@ -48,6 +61,7 @@ export default function AdminPage() {
   const [filterStatus, setFilterStatus] = useState("ALL")
   const [showNewOrderAlert, setShowNewOrderAlert] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [soundEnabled, setSoundEnabled] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -56,7 +70,7 @@ export default function AdminPage() {
       return
     }
 
-    if (user?.phone !== ADMIN_PHONE) {
+    if (!isAuthorizedAdmin(user?.phone)) {
       toast({
         title: "غير مصرح لك",
         description: "ليس لديك صلاحية للوصول لهذه الصفحة",
@@ -77,6 +91,40 @@ export default function AdminPage() {
 
     return () => clearInterval(interval)
   }, [isAuthenticated, user, router, toast])
+
+  // تهيئة الصوت والإشعارات
+  const initializeNotifications = async () => {
+    try {
+      const soundInitialized = await initializeSound()
+      const notificationPermission = await requestNotificationPermission()
+      
+      setSoundEnabled(soundInitialized)
+      
+      if (soundInitialized && notificationPermission) {
+        toast({
+          title: "تم تفعيل الإشعارات ✅",
+          description: "ستحصل على إشعار صوتي عند وصول طلبات جديدة",
+          variant: "default",
+        })
+        
+        // تشغيل صوت اختبار
+        await playNotificationSound()
+      } else {
+        toast({
+          title: "تحذير ⚠️",
+          description: "لم يتم تفعيل الصوت بالكامل، تأكد من السماح للصوت والإشعارات",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("خطأ في تهيئة الإشعارات:", error)
+      toast({
+        title: "خطأ",
+        description: "فشل في تهيئة نظام الإشعارات",
+        variant: "destructive",
+      })
+    }
+  }
 
   // إضافة طلب جديد للقائمة بدون إعادة تحميل الصفحة
   const handleNewOrder = (newOrder: Order) => {
@@ -467,6 +515,15 @@ export default function AdminPage() {
             <div className="ml-3">
               <RealtimeOrders onNewOrder={handleNewOrder} />
             </div>
+            <Button 
+              onClick={initializeNotifications} 
+              variant={soundEnabled ? "default" : "destructive"} 
+              size="sm"
+              title="تفعيل الصوت والإشعارات"
+            >
+              <Volume2 className="h-4 w-4 mr-2" />
+              {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
+            </Button>
             <Button onClick={fetchData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               تحديث
