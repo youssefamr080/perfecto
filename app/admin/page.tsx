@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { RealtimeOrders } from "@/components/admin/realtime-orders"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -45,6 +46,8 @@ export default function AdminPage() {
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("ALL")
+  const [showNewOrderAlert, setShowNewOrderAlert] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -65,7 +68,40 @@ export default function AdminPage() {
 
     setIsAuthorized(true)
     fetchData()
+
+    // تحديث تلقائي كل دقيقتين للبيانات
+    const interval = setInterval(() => {
+      console.log("تحديث تلقائي للبيانات...")
+      fetchData()
+    }, 120000) // 2 دقيقة
+
+    return () => clearInterval(interval)
   }, [isAuthenticated, user, router, toast])
+
+  // إضافة طلب جديد للقائمة بدون إعادة تحميل الصفحة
+  const handleNewOrder = (newOrder: Order) => {
+    console.log("تم استلام طلب جديد في صفحة الإدارة:", newOrder)
+    
+    // تحقق من عدم وجود الطلب في القائمة الحالية
+    const orderExists = orders.some(order => order.id === newOrder.id)
+    if (!orderExists) {
+      // إضافة الطلب للقائمة وتحديث الإحصائيات
+      setOrders(prevOrders => [newOrder, ...prevOrders])
+      
+      // تحديث الإحصائيات
+      setStats(prev => ({
+        ...prev,
+        totalOrders: prev.totalOrders + 1,
+        pendingOrders: newOrder.status === "PENDING" ? prev.pendingOrders + 1 : prev.pendingOrders,
+        totalRevenue: prev.totalRevenue + (newOrder.final_amount || 0),
+        todayOrders: prev.todayOrders + 1,
+      }))
+      
+      // إظهار تنبيه بوجود طلب جديد
+      setShowNewOrderAlert(true)
+      setTimeout(() => setShowNewOrderAlert(false), 10000)
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -108,6 +144,9 @@ export default function AdminPage() {
 
       // حساب الإحصائيات المتقدمة
       calculateAdvancedStats(ordersData || [], usersData || [], productsData || [])
+
+      // تحديث وقت آخر تحديث
+      setLastUpdated(new Date())
 
     } catch (error) {
       console.error("Error fetching admin data:", error)
@@ -409,10 +448,25 @@ export default function AdminPage() {
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               <Shield className="h-8 w-8 text-red-600" />
               لوحة تحكم الإدارة
+              {showNewOrderAlert && (
+                <span className="animate-pulse text-green-500 font-bold text-base mr-3">
+                  طلب جديد! قم بالتمرير لأعلى لرؤيته ✨
+                </span>
+              )}
             </h1>
-            <p className="text-gray-600 mt-2">مرحباً بك {user?.name}</p>
+            <p className="text-gray-600 mt-2">
+              مرحباً بك {user?.name}
+              {lastUpdated && (
+                <span className="text-sm text-gray-500 block">
+                  آخر تحديث: {new Date(lastUpdated).toLocaleTimeString('ar-EG')}
+                </span>
+              )}
+            </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="ml-3">
+              <RealtimeOrders onNewOrder={handleNewOrder} />
+            </div>
             <Button onClick={fetchData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               تحديث

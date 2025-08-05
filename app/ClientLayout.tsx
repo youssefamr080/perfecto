@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/error-boundary"
 // تم حذف CartProvider
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { useEffect, useState } from "react"
+import { RealtimeProvider } from "@/lib/realtime-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -64,13 +65,15 @@ export default function ClientLayout({
       </head>
         <body className={`${inter.className} pb-16 md:pb-0 bg-white`}>
           <ErrorBoundary>
-            <PerformanceOptimizer />
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <BottomNavigation />
-            <WhatsAppFloat />
-            <InstallPrompt />
-            <Toaster />
+            <RealtimeProvider>
+              <PerformanceOptimizer />
+              <Header />
+              <main className="min-h-screen">{children}</main>
+              <BottomNavigation />
+              <WhatsAppFloat />
+              <InstallPrompt />
+              <Toaster />
+            </RealtimeProvider>
           </ErrorBoundary>
       </body>
     </html>
