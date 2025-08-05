@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import type { Order, User, Product } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { initializeSound, playNotificationSound, requestNotificationPermission } from "@/lib/notification-sound"
+import { initializeSound, playNotificationSound, requestNotificationPermission, testSound } from "@/lib/notification-sound"
 import { 
   Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
   Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
@@ -82,6 +82,11 @@ export default function AdminPage() {
 
     setIsAuthorized(true)
     fetchData()
+    
+    // تهيئة الصوت تلقائياً عند تحميل الصفحة
+    setTimeout(() => {
+      initializeNotifications()
+    }, 2000) // تأخير لضمان تحميل كامل للصفحة
 
     // تحديث تلقائي كل دقيقتين للبيانات
     const interval = setInterval(() => {
@@ -95,6 +100,8 @@ export default function AdminPage() {
   // تهيئة الصوت والإشعارات
   const initializeNotifications = async () => {
     try {
+      console.log('🎵 بدء تهيئة نظام الإشعارات...')
+      
       const soundInitialized = await initializeSound()
       const notificationPermission = await requestNotificationPermission()
       
@@ -102,24 +109,40 @@ export default function AdminPage() {
       
       if (soundInitialized && notificationPermission) {
         toast({
-          title: "تم تفعيل الإشعارات ✅",
+          title: "✅ تم تفعيل الإشعارات",
           description: "ستحصل على إشعار صوتي عند وصول طلبات جديدة",
           variant: "default",
         })
         
         // تشغيل صوت اختبار
-        await playNotificationSound()
+        console.log('🧪 تشغيل صوت الاختبار...')
+        setTimeout(async () => {
+          await testSound()
+        }, 1000)
+        
+      } else if (soundInitialized && !notificationPermission) {
+        toast({
+          title: "⚠️ تفعيل جزئي",
+          description: "الصوت مفعل لكن إشعارات المتصفح غير مفعلة",
+          variant: "default",
+        })
+        
+        // تشغيل صوت اختبار رغم عدم تفعيل الإشعارات
+        setTimeout(async () => {
+          await testSound()
+        }, 1000)
+        
       } else {
         toast({
-          title: "تحذير ⚠️",
+          title: "⚠️ تحذير",
           description: "لم يتم تفعيل الصوت بالكامل، تأكد من السماح للصوت والإشعارات",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("خطأ في تهيئة الإشعارات:", error)
+      console.error("❌ خطأ في تهيئة الإشعارات:", error)
       toast({
-        title: "خطأ",
+        title: "❌ خطأ",
         description: "فشل في تهيئة نظام الإشعارات",
         variant: "destructive",
       })

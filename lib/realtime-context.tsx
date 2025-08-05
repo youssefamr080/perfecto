@@ -57,18 +57,24 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         
         // إذا لم يكن هذا أول تحميل
         if (lastOrderId !== null) {
-          console.log('تم اكتشاف طلب جديد:', latestOrder)
+          console.log('🎯 تم اكتشاف طلب جديد:', latestOrder)
           
           // إضافة الطلب الجديد
           setNewOrders(prev => [latestOrder, ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
           setHasUnreadOrders(true)
           
-          // تشغيل الصوت والإشعار
-          await playNotificationSound()
+          // تشغيل الصوت والإشعار فوراً
+          console.log('🔊 بدء تشغيل صوت الإشعار...')
+          try {
+            await playNotificationSound()
+            console.log('✅ تم تشغيل صوت الإشعار بنجاح')
+          } catch (soundError) {
+            console.error('❌ فشل في تشغيل الصوت:', soundError)
+          }
           
           toast({
-            title: "طلب جديد! 🛒",
-            description: `تم استلام طلب جديد بقيمة ${latestOrder.final_amount} ج.م من ${latestOrder.user?.name || 'عميل'}`,
+            title: "🛒 طلب جديد وصل!",
+            description: `من ${latestOrder.user?.name || 'عميل'} - بقيمة ${latestOrder.final_amount} ج.م`,
             variant: "default",
           })
         }
@@ -140,10 +146,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               table: 'orders' 
             }, 
             async (payload) => {
-              console.log('Realtime: طلب جديد:', payload)
+              console.log('🔥 Realtime: طلب جديد مباشر:', payload)
+              
+              // تشغيل الصوت فوراً
+              console.log('🔊 تشغيل صوت فوري من Realtime...')
+              try {
+                await playNotificationSound()
+                console.log('✅ تم تشغيل الصوت من Realtime')
+              } catch (error) {
+                console.error('❌ فشل صوت Realtime:', error)
+              }
               
               // تشغيل فحص الطلبات للحصول على البيانات الكاملة
-              await checkForNewOrders()
+              setTimeout(async () => {
+                await checkForNewOrders()
+              }, 500) // تأخير صغير للتأكد من حفظ البيانات
             }
           )
           .subscribe((status) => {

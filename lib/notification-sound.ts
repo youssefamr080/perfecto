@@ -3,6 +3,7 @@ import { Howl } from 'howler';
 
 let notificationSound: Howl | null = null;
 let audioContext: AudioContext | null = null;
+let isAudioEnabled = false;
 
 // تهيئة الصوت مع إذن المستخدم
 export const initializeSound = async (): Promise<boolean> => {
@@ -16,19 +17,29 @@ export const initializeSound = async (): Promise<boolean> => {
         await audioContext.resume();
       }
       
-      // إنشاء ملف الصوت
+      // إنشاء ملف الصوت مع إعدادات محسنة
       notificationSound = new Howl({
         src: ['/sounds/new-notification-022-370046.mp3'],
         volume: 1.0,
         preload: true,
-        html5: true, // استخدام HTML5 Audio API
+        html5: false, // استخدام Web Audio API
+        format: ['mp3'],
         onloaderror: (id, error) => {
           console.error('خطأ في تحميل الصوت:', error);
-          // استخدام صوت النظام كبديل
           createSystemBeep();
         },
         onload: () => {
-          console.log('تم تحميل صوت الإشعار بنجاح');
+          console.log('✅ تم تحميل صوت الإشعار بنجاح');
+          isAudioEnabled = true;
+          // تشغيل صوت اختبار لتفعيل الصوت
+          notificationSound?.play();
+        },
+        onplay: () => {
+          console.log('🔊 يتم تشغيل صوت الإشعار');
+        },
+        onplayerror: (id, error) => {
+          console.error('خطأ في تشغيل الصوت:', error);
+          createSystemBeep();
         }
       });
       
@@ -41,67 +52,109 @@ export const initializeSound = async (): Promise<boolean> => {
   }
 };
 
-// إنشاء صوت النظام كبديل
+// إنشاء صوت النظام كبديل قوي
 const createSystemBeep = () => {
-  if (typeof window !== 'undefined') {
-    // استخدام Web Audio API لإنشاء صوت
-    try {
+  try {
+    if (typeof window !== 'undefined') {
       const context = audioContext || new AudioContext();
-      const oscillator = context.createOscillator();
-      const gainNode = context.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(context.destination);
+      // إنشاء نغمة متعددة لجذب الانتباه
+      const createTone = (frequency: number, startTime: number, duration: number) => {
+        const oscillator = context.createOscillator();
+        const gainNode = context.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(context.destination);
+        
+        oscillator.frequency.value = frequency;
+        gainNode.gain.setValueAtTime(0.3, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
       
-      oscillator.frequency.value = 800; // تردد عالي
-      gainNode.gain.setValueAtTime(0.3, context.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
+      // تشغيل نغمتين متتاليتين
+      const now = context.currentTime;
+      createTone(800, now, 0.2);
+      createTone(1000, now + 0.3, 0.2);
       
-      oscillator.start(context.currentTime);
-      oscillator.stop(context.currentTime + 0.5);
-    } catch (e) {
-      console.log('فشل في إنشاء صوت النظام');
+      console.log('🔊 تم تشغيل صوت النظام البديل');
     }
+  } catch (e) {
+    console.error('فشل في إنشاء صوت النظام:', e);
   }
 };
 
-// تشغيل صوت الإشعار المحسن
+// تشغيل صوت الإشعار المحسن والقوي
 export const playNotificationSound = async () => {
   try {
+    console.log('🔔 محاولة تشغيل صوت الإشعار...');
+    
     // تهيئة الصوت إذا لم يكن متاحاً
-    if (!notificationSound) {
+    if (!notificationSound || !isAudioEnabled) {
+      console.log('⚠️ إعادة تهيئة الصوت...');
       await initializeSound();
     }
     
-    if (notificationSound && notificationSound.state() === 'loaded') {
-      notificationSound.play();
-      console.log('تم تشغيل صوت الإشعار');
+    // تجربة تشغيل الصوت الأساسي
+    if (notificationSound && isAudioEnabled) {
+      try {
+        const playPromise = notificationSound.play();
+        if (playPromise !== undefined) {
+          console.log('✅ تم تشغيل صوت الإشعار الأساسي');
+        }
+      } catch (playError) {
+        console.warn('⚠️ فشل تشغيل الصوت الأساسي، استخدام البديل');
+        createSystemBeep();
+      }
     } else {
-      // استخدام الصوت البديل
+      console.warn('⚠️ الصوت الأساسي غير متاح، استخدام البديل');
       createSystemBeep();
-      console.log('تم استخدام الصوت البديل');
     }
     
-    // إشعار المتصفح كبديل إضافي
+    // إشعار المتصفح كدعم إضافي
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('طلب جديد!', {
-        body: 'تم استلام طلب جديد',
+      new Notification('🛒 طلب جديد!', {
+        body: 'تم استلام طلب جديد في المتجر',
         icon: '/icon-192.png',
-        tag: 'new-order'
+        tag: 'new-order',
+        requireInteraction: true,
+        silent: false
       });
+      console.log('📱 تم إرسال إشعار المتصفح');
     }
+    
+    // اهتزاز الجهاز إذا كان متاحاً
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+      console.log('📳 تم تفعيل اهتزاز الجهاز');
+    }
+    
   } catch (error) {
-    console.error('خطأ في تشغيل الصوت:', error);
-    // صوت بديل أخير
+    console.error('❌ خطأ في تشغيل الصوت:', error);
+    // محاولة أخيرة مع الصوت البديل
     createSystemBeep();
   }
 };
 
-// طلب إذن الإشعارات
+// طلب إذن الإشعارات مع معالجة أفضل
 export const requestNotificationPermission = async (): Promise<boolean> => {
-  if ('Notification' in window) {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
+  try {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      console.log('🔔 إذن الإشعارات:', permission);
+      return permission === 'granted';
+    }
+    return false;
+  } catch (error) {
+    console.error('خطأ في طلب إذن الإشعارات:', error);
+    return false;
   }
-  return false;
+};
+
+// تشغيل صوت اختبار
+export const testSound = async () => {
+  console.log('🧪 اختبار الصوت...');
+  await playNotificationSound();
 };
