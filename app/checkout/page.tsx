@@ -16,20 +16,35 @@ import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { LoginModal } from "@/components/auth/login-modal"
-import { Gift, Truck, CreditCard, MapPin, Phone, User } from "lucide-react"
-import { calculateLoyaltyPoints, validateLoyaltyTransaction, LOYALTY_CONFIG } from "@/lib/utils/loyaltySystem"
+import { Gift, Truck, CreditCard, MapPin, Phone, User, Coins } from "lucide-react"
+import { 
+  calculateLoyaltyPoints, 
+  LOYALTY_CONFIG, 
+  getMaxUsablePoints, 
+  convertPointsToEGP, 
+  canUseShippingPoints 
+} from "@/lib/utils/loyaltySystem"
+import { FreeShippingProgress } from "@/components/ui/free-shipping-progress"
 
-const { SHIPPING_FEE, FREE_SHIPPING_THRESHOLD, POINTS_PER_EGP, POINTS_TO_EGP, SHIPPING_POINTS_COST } = LOYALTY_CONFIG
+const { 
+  SHIPPING_FEE, 
+  FREE_SHIPPING_THRESHOLD, 
+  POINTS_PER_EGP, 
+  POINTS_TO_EGP_RATIO, 
+  DISCOUNT_PER_RATIO, 
+  SHIPPING_POINTS_COST, 
+  MIN_POINTS_USE 
+} = LOYALTY_CONFIG
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCartStore()
   const { user, isAuthenticated } = useAuthStore()
   const [editUser, setEditUser] = useState(false)
-const [userData, setUserData] = useState({
-  name: user?.name || "",
-  phone: user?.phone || "",
-  address: user?.address || "",
-})
+  const [userData, setUserData] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    address: user?.address || "",
+  })
   const [saveType, setSaveType] = useState<"permanent"|"temporary">("temporary")
   const router = useRouter()
   const { toast } = useToast()
@@ -42,138 +57,153 @@ const [userData, setUserData] = useState({
   const [loading, setLoading] = useState(false)
 
   const subtotal = total
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
+  const baseShippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
   
-  // استخدام النظام المحسن لحساب النقاط
-  const loyaltyCalculation = calculateLoyaltyPoints(
+  // حساب نقاط الولاء باستخدام النظام المحسن
+  const loyaltyResult = calculateLoyaltyPoints(
     subtotal,
     pointsToUse,
     usePointsForShipping,
-    shippingFee
+    user?.loyalty_points || 0,
+    baseShippingFee
   )
+
+  const {
+    pointsDiscount,
+    finalShippingFee,
+    finalAmount,
+    pointsEarned,
+    totalPointsUsed,
+    isValid: isLoyaltyValid,
+    error: loyaltyError,
+    breakdown
+  } = loyaltyResult
+
+  // حساب أقصى نقاط يمكن استخدامها
+  const maxUsablePoints = getMaxUsablePoints(subtotal, user?.loyalty_points || 0)
   
-  const { pointsDiscount, finalShippingFee, finalAmount, pointsEarned, totalPointsUsed } = loyaltyCalculation
+  // التحقق من إمكانية استخدام نقاط الشحن
+  const canUseShipping = canUseShippingPoints(user?.loyalty_points || 0, pointsToUse)
+
+  const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    if (user) {
+      setUserData({
+        name: user.name || "",
+        phone: user.phone || "",
+        address: user.address || "",
+      })
+    }
+  }, [user])
 
-  useEffect(() => {
-    if (!isAuthenticated && items.length > 0) {
+  // التحقق من صحة النقاط المدخلة
+  const handlePointsChange = (value: string) => {
+    const points = parseInt(value) || 0
+    
+    if (points < 0) {
+      setPointsToUse(0)
+      return
+    }
+    
+    if (points % MIN_POINTS_USE !== 0) {
+      toast({
+        title: "تنبيه",
+        description: `يجب أن تكون النقاط من مضاعفات ${MIN_POINTS_USE}`,
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (points > maxUsablePoints) {
+      setPointsToUse(maxUsablePoints)
+      toast({
+        title: "تنبيه",
+        description: `أقصى نقاط يمكن استخدامها: ${maxUsablePoints}`,
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setPointsToUse(points)
+  }
+
+  // التحقق من إمكانية استخدام نقاط الشحن
+  const handleShippingPointsChange = (checked: boolean) => {
+    if (checked && !canUseShipping) {
+      toast({
+        title: "نقاط غير كافية",
+        description: `تحتاج إلى ${SHIPPING_POINTS_COST} نقطة إضافية للتوصيل المجاني`,
+        variant: "destructive",
+      })
+      return
+    }
+    setUsePointsForShipping(checked)
+  }
+
+  const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
       setShowLoginModal(true)
-    }
-  }, [isAuthenticated, items.length])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) {
-      setShowLoginModal(true)
       return
     }
 
-    // التحقق من صحة البيانات قبل الإرسال
-    const currentName = editUser ? userData.name : user.name
-    const currentPhone = editUser ? userData.phone : user.phone  
-    const currentAddress = editUser ? userData.address : user.address
-
-    if (!currentName || currentName.trim().length < 2) {
-      toast({
-        title: "خطأ في البيانات",
-        description: "يرجى إدخال اسم صحيح (حرفين على الأقل)",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!currentPhone || currentPhone.length < 11) {
-      toast({
-        title: "خطأ في البيانات", 
-        description: "يرجى إدخال رقم هاتف صحيح (11 رقم على الأقل)",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!currentAddress || currentAddress.trim().length < 10) {
-      toast({
-        title: "خطأ في البيانات",
-        description: "يرجى إدخال عنوان مفصل (10 أحرف على الأقل)",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // التحقق من أن رقم الهاتف يحتوي على أرقام فقط
-    const phoneRegex = /^[0-9+\-\s()]+$/
-    if (!phoneRegex.test(currentPhone)) {
-      toast({
-        title: "خطأ في رقم الهاتف",
-        description: "رقم الهاتف يجب أن يحتوي على أرقام فقط",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // التحقق من أن السلة ليست فارغة
-    if (items.length === 0) {
-      toast({
-        title: "سلة فارغة",
-        description: "لا يوجد منتجات في سلة التسوق",
-        variant: "destructive",
-      })
-      router.push("/cart")
-      return
-    }
-
-    // التحقق من صحة العملية باستخدام النظام المحسن
-    const validation = validateLoyaltyTransaction(user.loyalty_points || 0, totalPointsUsed, finalAmount)
-    if (!validation.isValid) {
+    if (!isLoyaltyValid) {
       toast({
         title: "خطأ في النقاط",
-        description: validation.error,
+        description: loyaltyError || "حدث خطأ في حساب نقاط الولاء",
         variant: "destructive",
       })
       return
-    }    setLoading(true)
-    try {
-      // إذا اختار المستخدم حفظ دائم، حدث البيانات في قاعدة البيانات
-      if (editUser && saveType === "permanent") {
-        await supabase.from("users").update({
-          name: userData.name,
-          phone: userData.phone,
-          address: userData.address,
-          updated_at: new Date().toISOString(),
-        }).eq("id", user.id)
-      }
-      // استخدم بيانات التوصيل (إما المعدلة أو الأصلية)
-      const deliveryName = editUser ? userData.name : user.name
-      const deliveryPhone = editUser ? userData.phone : user.phone
-      const deliveryAddress = editUser ? userData.address : user.address
+    }
 
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}`
-      // Create order
+    if (items.length === 0) {
+      toast({
+        title: "السلة فارغة",
+        description: "يرجى إضافة منتجات للسلة أولاً",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!userData.name || !userData.phone || !userData.address) {
+      toast({
+        title: "بيانات ناقصة",
+        description: "يرجى ملء جميع البيانات المطلوبة",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      // إنشاء الطلب
+      const orderData = {
+        user_id: user?.id,
+        subtotal: subtotal,
+        points_used: totalPointsUsed,
+        points_discount: pointsDiscount,
+        shipping_fee: finalShippingFee,
+        final_amount: finalAmount,
+        points_earned: pointsEarned,
+        delivery_notes: deliveryNotes,
+        status: "PENDING",
+        created_at: new Date().toISOString(),
+      }
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
-        .insert({
-          order_number: orderNumber,
-          user_id: user.id,
-          subtotal,
-          shipping_fee: finalShippingFee,
-          discount_amount: pointsDiscount,
-          final_amount: finalAmount,
-          points_earned: pointsEarned,
-          points_used: totalPointsUsed,
-          delivery_address: deliveryAddress,
-          delivery_phone: deliveryPhone,
-          delivery_notes: deliveryNotes,
-          status: "PENDING",
-        })
+        .insert([orderData])
         .select()
         .single()
-      if (orderError) throw orderError
-      // Create order items
-      const orderItems = items.map((item) => ({
+
+      if (orderError) {
+        console.error("خطأ في إنشاء الطلب:", orderError)
+        throw new Error("فشل في إنشاء الطلب")
+      }
+
+      // إنشاء عناصر الطلب
+      const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.product.id,
         product_name: item.product.name,
@@ -181,70 +211,53 @@ const [userData, setUserData] = useState({
         quantity: item.quantity,
         total_price: item.product.price * item.quantity,
       }))
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
-      if (itemsError) throw itemsError
-      
-      // حساب النقاط الجديدة بدقة
-      const currentLoyaltyPoints = user.loyalty_points || 0
-      const newLoyaltyPoints = Math.max(0, currentLoyaltyPoints - totalPointsUsed + pointsEarned)
-      
-      // تسجيل استخدام النقاط أولاً (إذا تم استخدام نقاط)
-      if (totalPointsUsed > 0) {
-        const { error: redeemError } = await supabase.from("loyalty_points_history").insert({
-          user_id: user.id,
-          order_id: order.id,
-          points_change: -totalPointsUsed,
-          points_balance: currentLoyaltyPoints - totalPointsUsed,
-          transaction_type: "REDEEMED",
-          description: `نقاط مستخدمة في الطلب ${orderNumber}`,
-        })
-        if (redeemError) throw redeemError
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems)
+
+      if (itemsError) {
+        console.error("خطأ في إضافة عناصر الطلب:", itemsError)
+        throw new Error("فشل في إضافة عناصر الطلب")
       }
-      
-      // تسجيل النقاط المكتسبة (إذا تم كسب نقاط)
-      if (pointsEarned > 0) {
-        const { error: earnError } = await supabase.from("loyalty_points_history").insert({
-          user_id: user.id,
-          order_id: order.id,
-          points_change: pointsEarned,
-          points_balance: newLoyaltyPoints,
-          transaction_type: "EARNED",
-          description: `نقاط مكتسبة من الطلب ${orderNumber}`,
-        })
-        if (earnError) throw earnError
-      }
-      
-      // تحديث بيانات المستخدم
+
+      // تحديث نقاط المستخدم
+      const newPointsBalance = (user?.loyalty_points || 0) - totalPointsUsed + pointsEarned
+
       const { error: userUpdateError } = await supabase
         .from("users")
         .update({
-          loyalty_points: newLoyaltyPoints,
-          total_orders: (user.total_orders || 0) + 1,
-          total_spent: (user.total_spent || 0) + finalAmount,
-          updated_at: new Date().toISOString(),
+          loyalty_points: newPointsBalance,
+          ...(saveType === "permanent" ? {
+            name: userData.name,
+            address: userData.address,
+            updated_at: new Date().toISOString()
+          } : {})
         })
-        .eq("id", user.id)
-      if (userUpdateError) throw userUpdateError
-      // Create notification
-      await supabase.from("notifications").insert({
-        user_id: user.id,
-        title: "تم إنشاء طلبك بنجاح",
-        message: `تم إنشاء طلبك رقم ${orderNumber} بنجاح. سيتم التواصل معك قريباً لتأكيد الطلب.`,
-        type: "ORDER_UPDATE",
-        data: { order_id: order.id, order_number: orderNumber },
-      })
-      // Clear cart
+        .eq("id", user?.id)
+
+      if (userUpdateError) {
+        console.error("خطأ في تحديث نقاط المستخدم:", userUpdateError)
+        // لا نوقف العملية هنا، فقط نسجل الخطأ
+      }
+
+      // مسح السلة
       clearCart()
+
       toast({
-        title: "تم إنشاء الطلب بنجاح!",
-        description: "سيتم التواصل معك قريباً لتأكيد الطلب",
+        title: "تم إنشاء الطلب بنجاح! 🎉",
+        description: `رقم الطلب: ${order.id.slice(0, 8)}... - سيتم التواصل معك قريباً`,
+        variant: "default",
       })
+
+      // الانتقال لصفحة تأكيد الطلب
       router.push(`/order-confirmation/${order.id}`)
+
     } catch (error) {
-      console.error("Error creating order:", error)
+      console.error("خطأ في إتمام الطلب:", error)
       toast({
-        title: "حدث خطأ",
-        description: "لم نتمكن من إنشاء الطلب. يرجى المحاولة مرة أخرى",
+        title: "فشل في إتمام الطلب",
+        description: error instanceof Error ? error.message : "حدث خطأ غير متوقع",
         variant: "destructive",
       })
     } finally {
@@ -252,354 +265,331 @@ const [userData, setUserData] = useState({
     }
   }
 
-  if (!mounted) return null
-
-  if (items.length === 0) {
-    if (typeof window !== "undefined") {
-      router.push("/cart")
-    }
-    return null
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    )
   }
 
-  if (!isAuthenticated) {
+  if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <User className="h-12 w-12 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-black mb-4">يجب تسجيل الدخول أولاً</h1>
-          <p className="text-black mb-6">لإتمام عملية الشراء، يرجى تسجيل الدخول أولاً</p>
-          <Button onClick={() => setShowLoginModal(true)} className="bg-green-600 hover:bg-green-700">
-            تسجيل الدخول
-          </Button>
-        </div>
-
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="text-center py-12">
+            <div className="mx-auto mb-4 w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+              <CreditCard className="h-8 w-8 text-gray-400" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">السلة فارغة</h2>
+            <p className="text-gray-600 mb-6">لا توجد منتجات في السلة للدفع</p>
+            <Button asChild>
+              <a href="/categories">تسوق الآن</a>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 md:py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">إتمام الطلب</h1>
-          <p className="text-black">راجع طلبك وأكمل عملية الشراء</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Order Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer Info */}
-            <Card className="shadow-sm border-0">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-bold text-black">
-                  <User className="h-5 w-5 text-green-600" />
-                  بيانات العميل
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">إتمام الطلب</h1>
+        
+        {/* Free Shipping Progress */}
+        <FreeShippingProgress currentAmount={subtotal} className="mb-6" />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* بيانات العميل */}
+          <div className="space-y-6">
+            {/* بيانات التسليم */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  بيانات التسليم
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!editUser ? (
+                {isAuthenticated ? (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-            <User className="h-5 w-5 text-black" />
-                        <div>
-              <p className="text-sm text-black">الاسم</p>
-              <p className="font-semibold text-black">{user?.name}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                          <Phone className="h-5 w-5 text-black" />
-                        <div>
-              <p className="text-sm text-black">رقم الهاتف</p>
-              <p className="font-semibold text-black">{user?.phone}</p>
-                        </div>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">الاسم</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={userData.name}
+                        onChange={(e) => setUserData(prev => ({ ...prev, name: e.target.value }))}
+                        disabled={!editUser}
+                      />
                     </div>
-                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
-                      <MapPin className="h-5 w-5 text-black mt-1" />
-                      <div className="flex-1">
-            <p className="text-sm text-black">عنوان التوصيل</p>
-            <p className="font-semibold text-black">{user?.address}</p>
-                      </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">رقم الهاتف</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={userData.phone}
+                        disabled
+                        className="bg-gray-50"
+                      />
                     </div>
-                    <Button variant="outline" className="mt-2 text-black font-bold" onClick={() => setEditUser(true)}>
-                      تعديل البيانات
-                    </Button>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="address">العنوان</Label>
+                      <Textarea
+                        id="address"
+                        value={userData.address}
+                        onChange={(e) => setUserData(prev => ({ ...prev, address: e.target.value }))}
+                        disabled={!editUser}
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={editUser ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditUser(!editUser)}
+                      >
+                        {editUser ? "حفظ التغييرات" : "تعديل البيانات"}
+                      </Button>
+                      
+                      {editUser && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="temporary"
+                            name="saveType"
+                            value="temporary"
+                            checked={saveType === "temporary"}
+                            onChange={(e) => setSaveType(e.target.value as "temporary")}
+                          />
+                          <Label htmlFor="temporary" className="text-sm">مؤقت</Label>
+                          
+                          <input
+                            type="radio"
+                            id="permanent"
+                            name="saveType"
+                            value="permanent"
+                            checked={saveType === "permanent"}
+                            onChange={(e) => setSaveType(e.target.value as "permanent")}
+                          />
+                          <Label htmlFor="permanent" className="text-sm">دائم</Label>
+                        </div>
+                      )}
+                    </div>
                   </>
                 ) : (
-                  <form className="space-y-3" onSubmit={e => { e.preventDefault(); }}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="editName">الاسم</Label>
-                        <Input id="editName" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} required />
-                      </div>
-                      <div>
-                        <Label htmlFor="editPhone">رقم الهاتف</Label>
-                        <Input id="editPhone" value={userData.phone} onChange={e => setUserData({ ...userData, phone: e.target.value })} required />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="editAddress">العنوان</Label>
-                      <Textarea id="editAddress" value={userData.address} onChange={e => setUserData({ ...userData, address: e.target.value })} required />
-                    </div>
-                    <div className="flex gap-4 items-center">
-                  <Label className="flex items-center gap-2 text-black font-bold">
-                        <input type="radio" name="saveType" value="permanent" checked={saveType === "permanent"} onChange={() => setSaveType("permanent")}/>
-                        حفظ دائم
-                      </Label>
-                      <Label className="flex items-center gap-2">
-                        <input type="radio" name="saveType" value="temporary" checked={saveType === "temporary"} onChange={() => setSaveType("temporary")}/>
-                        <span className="text-black font-bold">لهذا الطلب فقط</span>
-                      </Label>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" className="text-black font-bold" onClick={() => setEditUser(false)}>إلغاء</Button>
-                      <Button type="button" className="text-black font-bold" onClick={() => setEditUser(false)}>تأكيد البيانات</Button>
-                    </div>
-                  </form>
-                )}
-                <div>
-                  <Label htmlFor="deliveryNotes" className="text-sm font-bold text-black">
-                    ملاحظات التوصيل (اختياري)
-                  </Label>
-                  <Textarea
-                    id="deliveryNotes"
-                    value={deliveryNotes}
-                    onChange={(e) => setDeliveryNotes(e.target.value)}
-                    placeholder="أي ملاحظات خاصة للتوصيل..."
-                    className="text-right mt-2 resize-none"
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Loyalty Points */}
-            <Card className="shadow-sm border-0">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-bold text-black">
-                  <Gift className="h-5 w-5 text-green-600" />
-                  نقاط الولاء
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-                    <span className="font-medium text-green-800">النقاط المتاحة:</span>
-                    <Badge className="bg-green-500 text-white text-base px-3 py-1 font-bold">
-                      {user?.loyalty_points || 0} نقطة
-                    </Badge>
-                  </div>
-
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                    <span className="font-medium text-blue-800">النقاط المكتسبة:</span>
-                    <Badge className="bg-blue-500 text-white text-base px-3 py-1 font-bold">+{pointsEarned} نقطة</Badge>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-purple-800">القيمة النقدية المتاحة:</span>
-                    <span className="font-bold text-purple-800">{Math.floor((user?.loyalty_points || 0) / 100)} ج.م</span>
-                  </div>
-                  <p className="text-xs text-purple-600 mt-1">
-                    يمكنك استخدام حتى {Math.floor((user?.loyalty_points || 0) / 100) * 100} نقطة
-                  </p>
-                </div>
-
-                {(user?.loyalty_points || 0) > 0 && (
-                  <div className="space-y-3">
-                    <Label htmlFor="points" className="text-sm font-bold text-black">
-                      استخدام النقاط (كل 100 نقطة = 1 ج.م)
-                    </Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      min="0"
-                      max={Math.floor((user?.loyalty_points || 0) / 100) * 100}
-                      step="100"
-                      value={pointsToUse}
-                      onChange={(e) => {
-                        const inputValue = Number.parseInt(e.target.value) || 0
-                        const maxAllowed = Math.floor((user?.loyalty_points || 0) / 100) * 100
-                        const validValue = Math.min(maxAllowed, Math.max(0, inputValue))
-                        // التأكد من أن القيمة من مضاعفات 100
-                        const adjustedValue = Math.floor(validValue / 100) * 100
-                        setPointsToUse(adjustedValue)
-                      }}
-                      placeholder={`الحد الأقصى: ${Math.floor((user?.loyalty_points || 0) / 100) * 100}`}
-                      className="text-right"
-                    />
-                    {pointsToUse > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-sm text-green-600 font-medium">💰 خصم: {pointsDiscount} ج.م</p>
-                        <p className="text-xs text-gray-600">
-                          سيتبقى لديك: {(user?.loyalty_points || 0) - pointsToUse} نقطة
-                        </p>
-                      </div>
-                    )}
-                    {pointsToUse > 0 && pointsToUse % 100 !== 0 && (
-                      <p className="text-sm text-red-600">⚠️ يجب أن تكون النقاط من مضاعفات 100</p>
-                    )}
-                  </div>
-                )}
-
-                {shippingFee > 0 && (user?.loyalty_points || 0) >= SHIPPING_POINTS_COST && (
-                  <div className="flex items-center space-x-2 space-x-reverse p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                    <input
-                      type="checkbox"
-                      id="usePointsShipping"
-                      checked={usePointsForShipping}
-                      onChange={(e) => setUsePointsForShipping(e.target.checked)}
-                      className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                    />
-                    <Label htmlFor="usePointsShipping" className="text-sm font-medium cursor-pointer text-purple-800">
-                      🚚 استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني (بدلاً من {shippingFee} ج.م)
-                    </Label>
-                  </div>
-                )}
-
-                {/* عرض ملخص النقاط بعد الطلب */}
-                {(pointsToUse > 0 || usePointsForShipping || pointsEarned > 0) && (
-                  <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                    <h4 className="font-bold text-gray-800 mb-2">ملخص النقاط:</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">النقاط الحالية:</span>
-                        <span className="font-medium">{user?.loyalty_points || 0}</span>
-                      </div>
-                      {totalPointsUsed > 0 && (
-                        <div className="flex justify-between text-red-600">
-                          <span>النقاط المستخدمة:</span>
-                          <span className="font-medium">-{totalPointsUsed}</span>
-                        </div>
-                      )}
-                      {pointsEarned > 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>النقاط المكتسبة:</span>
-                          <span className="font-medium">+{pointsEarned}</span>
-                        </div>
-                      )}
-                      <div className="border-t pt-2 flex justify-between font-bold">
-                        <span className="text-gray-800">النقاط بعد الطلب:</span>
-                        <span className="text-gray-800">
-                          {Math.max(0, (user?.loyalty_points || 0) - totalPointsUsed + pointsEarned)}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="text-center py-6">
+                    <p className="text-gray-600 mb-4">يرجى تسجيل الدخول لإتمام الطلب</p>
+                    <Button onClick={() => setShowLoginModal(true)}>
+                      تسجيل الدخول
+                    </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6 space-y-6">
-              {/* Cart Items */}
-              <Card className="shadow-sm border-0">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-black">المنتجات المطلوبة</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-            <div className="max-h-64 overflow-y-auto space-y-3">
-              {items.map((item) => (
-                <div key={item.product.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-300">
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                          <Image
-                            src={
-                              item.product.images[0] ||
-                              `/placeholder.svg?height=48&width=48&text=${encodeURIComponent(item.product.name) || "/placeholder.svg"}`
-                            }
-                            alt={item.product.name}
-                            fill
-                            className="object-cover rounded-md"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-black text-sm truncate">{item.product.name}</h4>
-                          <p className="text-xs text-black font-bold">
-                            {item.quantity} × {item.product.price} ج.م
-                          </p>
-                        </div>
-                        <div className="font-bold text-black text-sm">{(item.product.price * item.quantity).toFixed(2)} ج.م</div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Order Summary */}
-              <Card className="shadow-sm border-0">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg font-bold text-black">
-                    <CreditCard className="h-5 w-5 text-green-600" />
-                    ملخص الطلب
+            {/* نقاط الولاء */}
+            {isAuthenticated && user && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="h-5 w-5" />
+                    نقاط الولاء
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-bold text-black">المجموع الفرعي:</span>
-                      <span className="font-bold text-black">{subtotal.toFixed(2)} ج.م</span>
-                    </div>
-
-                    <div className="flex justify-between text-sm">
-                      <span className="font-bold text-black">رسوم التوصيل:</span>
-                      <span className={`font-bold text-black ${finalShippingFee === 0 ? "text-green-600" : ""}`}>
-                        {finalShippingFee === 0 ? <span className="text-green-600 font-bold">مجاني 🚚</span> : `${finalShippingFee} ج.م`}
-                      </span>
-                    </div>
-
-                    {pointsDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-black">
-                        <span>خصم النقاط:</span>
-                        <span className="font-semibold">-{pointsDiscount} ج.م</span>
-                      </div>
-                    )}
-
-                    <Separator />
-
-                    <div className="flex justify-between text-lg font-bold">
-                      <span className="font-bold text-black">المجموع الكلي:</span>
-                      <span className="font-bold text-black">{finalAmount.toFixed(2)} ج.م</span>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <span className="text-sm">رصيدك الحالي:</span>
+                    <Badge variant="outline" className="bg-blue-100">
+                      <Coins className="h-4 w-4 mr-1" />
+                      {user.loyalty_points || 0} نقطة
+                    </Badge>
                   </div>
 
-                  {subtotal < FREE_SHIPPING_THRESHOLD && !usePointsForShipping && (
-                    <div className="p-3 bg-white rounded-lg border border-blue-100">
-                      <p className="text-sm text-black font-medium">
-                        💡 أضف {(FREE_SHIPPING_THRESHOLD - subtotal).toFixed(2)} ج.م أخرى للحصول على توصيل مجاني!
+                  <div className="space-y-2">
+                    <Label htmlFor="pointsToUse">
+                      استخدام النقاط للخصم (كل {POINTS_TO_EGP_RATIO} نقطة = {DISCOUNT_PER_RATIO} ج.م)
+                    </Label>
+                    <Input
+                      id="pointsToUse"
+                      type="number"
+                      min="0"
+                      max={maxUsablePoints}
+                      step={MIN_POINTS_USE}
+                      value={pointsToUse}
+                      onChange={(e) => handlePointsChange(e.target.value)}
+                      placeholder={`أدخل مضاعفات ${MIN_POINTS_USE}`}
+                    />
+                    <p className="text-xs text-gray-500">
+                      أقصى نقاط متاحة: {maxUsablePoints} (خصم {convertPointsToEGP(maxUsablePoints)} ج.م)
+                    </p>
+                  </div>
+
+                  {baseShippingFee > 0 && (
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <input
+                        type="checkbox"
+                        id="usePointsForShipping"
+                        checked={usePointsForShipping}
+                        onChange={(e) => handleShippingPointsChange(e.target.checked)}
+                        disabled={!canUseShipping}
+                      />
+                      <Label 
+                        htmlFor="usePointsForShipping" 
+                        className={canUseShipping ? "" : "text-gray-400"}
+                      >
+                        استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني
+                        {!canUseShipping && " (نقاط غير كافية)"}
+                      </Label>
+                    </div>
+                  )}
+
+                  {pointsToUse > 0 && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-sm text-green-700">
+                        سيتم خصم {convertPointsToEGP(pointsToUse)} ج.م من إجمالي الطلب
                       </p>
                     </div>
                   )}
 
-                  <Button
-                    onClick={handleSubmit}
-                    className="w-full bg-green-500 hover:bg-green-600 text-black text-lg py-6 font-bold"
-                    disabled={loading}
-                  >
-                    {loading ? "جاري إنشاء الطلب..." : `تأكيد الطلب - ${finalAmount.toFixed(2)} ج.م`}
-                  </Button>
-
-                  <div className="text-center space-y-2">
-                    <div className="flex items-center justify-center gap-2 text-sm text-black">
-                      <Truck className="h-4 w-4" />
-                      <span>الدفع عند الاستلام</span>
+                  {!isLoyaltyValid && loyaltyError && (
+                    <div className="p-3 bg-red-50 rounded-lg">
+                      <p className="text-sm text-red-700">{loyaltyError}</p>
                     </div>
-                    <p className="text-xs text-black">سيتم التواصل معك خلال 30 دقيقة لتأكيد الطلب</p>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-            </div>
+            )}
+
+            {/* ملاحظات التسليم */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  ملاحظات التسليم
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value)}
+                  placeholder="أي ملاحظات خاصة للتسليم (اختياري)"
+                  rows={3}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ملخص الطلب */}
+          <div>
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle>ملخص الطلب</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* عناصر السلة */}
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <div key={item.product.id} className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 rounded-md overflow-hidden">
+                        <Image
+                          src={item.product.images?.[0] || "/placeholder.jpg"}
+                          alt={item.product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{item.product.name}</h4>
+                        <p className="text-xs text-gray-500">
+                          {item.quantity} × {item.product.price} ج.م
+                        </p>
+                      </div>
+                      <span className="font-medium">
+                        {item.product.price * item.quantity} ج.م
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                {/* تفاصيل الفاتورة */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>المجموع الفرعي:</span>
+                    <span>{subtotal} ج.م</span>
+                  </div>
+                  
+                  {pointsDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>خصم النقاط:</span>
+                      <span>-{pointsDiscount} ج.م</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between">
+                    <span>رسوم التوصيل:</span>
+                    <span>
+                      {finalShippingFee === 0 && baseShippingFee > 0 ? (
+                        <>
+                          <span className="line-through text-gray-400">{baseShippingFee} ج.م</span>
+                          <span className="text-green-600 mr-2">مجاني</span>
+                        </>
+                      ) : (
+                        `${finalShippingFee} ج.م`
+                      )}
+                    </span>
+                  </div>
+
+                  {remainingForFreeShipping > 0 && !usePointsForShipping && (
+                    <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                      أضف {remainingForFreeShipping} ج.م أخرى للحصول على توصيل مجاني
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="flex justify-between font-bold text-lg">
+                  <span>الإجمالي:</span>
+                  <span>{finalAmount} ج.م</span>
+                </div>
+
+                {isAuthenticated && pointsEarned > 0 && (
+                  <div className="bg-yellow-50 p-3 rounded-lg">
+                    <p className="text-sm text-yellow-700">
+                      🎉 ستحصل على {pointsEarned} نقطة من هذا الطلب!
+                    </p>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handlePlaceOrder}
+                  disabled={loading || !isAuthenticated || !isLoyaltyValid}
+                  className="w-full"
+                  size="lg"
+                >
+                  {loading ? "جاري إنشاء الطلب..." : "تأكيد الطلب"}
+                </Button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  بالنقر على "تأكيد الطلب" فإنك توافق على شروط وأحكام الموقع
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       </div>
+
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   )
 }

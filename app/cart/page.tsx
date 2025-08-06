@@ -3,11 +3,12 @@
 import { useCartStore } from "@/lib/stores/cart-store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react"
+import { Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Truck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { LOYALTY_CONFIG } from "@/lib/utils/loyaltySystem"
+import { FreeShippingProgress } from "@/components/ui/free-shipping-progress"
 
 const { SHIPPING_FEE, FREE_SHIPPING_THRESHOLD } = LOYALTY_CONFIG
 
@@ -81,13 +82,11 @@ export default function CartPage() {
           <h1 className="text-3xl font-bold text-black mb-2">سلة التسوق</h1>
           <p className="text-black font-bold">
             لديك {itemCount} منتج في السلة
-            {remainingForFreeShipping > 0 && (
-              <span className="text-red-600 font-medium mr-2">
-                • أضف {remainingForFreeShipping.toFixed(2)} ج.م للتوصيل المجاني
-              </span>
-            )}
           </p>
         </div>
+
+        {/* Free Shipping Progress */}
+        <FreeShippingProgress currentAmount={subtotal} className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
@@ -181,43 +180,45 @@ export default function CartPage() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <Card className="shadow-sm border-0">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-black">ملخص الطلب</CardTitle>
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-gray-50 to-white">
+                <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg">
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5" />
+                    ملخص الطلب
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-lg">
-                      <span className="font-bold text-black">المجموع الفرعي:</span>
-                      <span className="font-bold text-black">{subtotal.toFixed(2)} ج.م</span>
+                <CardContent className="space-y-4 p-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-lg p-3 bg-gray-50 rounded-lg">
+                      <span className="font-semibold text-gray-700">المجموع الفرعي:</span>
+                      <span className="font-bold text-gray-900">{subtotal.toFixed(0)} ج.م</span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span className="font-bold text-black">رسوم التوصيل:</span>
-                      <span className={`font-bold text-black ${shippingFee === 0 ? "text-green-600" : ""}`}>
-                        {shippingFee === 0 ? <span className="text-green-600 font-bold">مجاني 🚚</span> : `${shippingFee} ج.م`}
+                    <div className="flex justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="font-semibold text-gray-700">رسوم التوصيل:</span>
+                      <span className={`font-bold ${shippingFee === 0 ? "text-green-600" : "text-gray-900"}`}>
+                        {shippingFee === 0 ? (
+                          <span className="flex items-center gap-1">
+                            <span>مجاني</span>
+                            <Truck className="h-4 w-4" />
+                          </span>
+                        ) : (
+                          `${shippingFee} ج.م`
+                        )}
                       </span>
                     </div>
 
-                    {remainingForFreeShipping > 0 && (
-                      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                        <p className="text-sm text-red-700 font-medium text-center">
-                          💡 أضف {remainingForFreeShipping.toFixed(2)} ج.م أخرى للحصول على توصيل مجاني!
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between text-xl font-bold">
-                        <span className="font-bold text-black">المجموع الكلي:</span>
-                        <span className="font-bold text-black">{finalTotal.toFixed(2)} ج.م</span>
+                    <div className="border-t-2 border-red-100 pt-4">
+                      <div className="flex justify-between text-xl font-bold p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-lg">
+                        <span className="text-red-800">المجموع الكلي:</span>
+                        <span className="text-red-800 text-2xl">{finalTotal.toFixed(0)} ج.م</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3 pt-4">
                     <Link href="/checkout" className="block">
-                      <Button className="w-full bg-red-600 hover:bg-red-700 text-lg py-6 shadow-sm">
+                      <Button className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-lg py-6 shadow-lg transform transition-transform hover:scale-105 rounded-xl">
                         إتمام الطلب
                         <ArrowLeft className="mr-2 h-5 w-5" />
                       </Button>
@@ -226,7 +227,7 @@ export default function CartPage() {
                     <Link href="/categories" className="block">
                       <Button
                         variant="outline"
-                        className="w-full border-red-200 text-red-600 hover:bg-red-50 bg-transparent"
+                        className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 bg-transparent py-4 rounded-xl transition-all duration-200"
                       >
                         متابعة التسوق
                       </Button>

@@ -47,189 +47,147 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, message: "رقم الهاتف يجب أن يحتوي على أرقام فقط" }
           }
 
-          // ابحث عن المستخدم برقم الهاتف فقط
-          let { data: user, error } = await supabase
+          // تنظيف رقم الهاتف
+          const cleanedPhone = phone.replace(/[\s\-\(\)+]/g, '').trim()
+
+          // البحث عن المستخدم الموجود برقم الهاتف
+          const { data: existingUser, error: searchError } = await supabase
             .from("users")
             .select("*")
-            .eq("phone", phone)
-            .eq("is_active", true)
+            .eq("phone", cleanedPhone)
             .single()
 
-          // إذا لم يوجد المستخدم، أنشئه
-          if (!user) {
-            // التحقق من عدم وجود رقم الهاتف في قاعدة البيانات مسبقاً
-            const { data: existingUser, error: checkError } = await supabase
-              .from("users")
-              .select("id, phone")
-              .eq("phone", phone)
-              .maybeSingle()
+          if (searchError && searchError.code !== 'PGRST116') {
+            console.error("خطأ في البحث عن المستخدم:", searchError)
+            set({ isLoading: false })
+            return { success: false, message: "حدث خطأ في النظام، يرجى المحاولة مرة أخرى" }
+          }
 
-            if (existingUser) {
-              set({ isLoading: false })
-              return { success: false, message: "رقم الهاتف مُسجل مسبقاً" }
-            }
+          let userData: User
 
-            const { data: newUser, error: insertError } = await supabase
-              .from("users")
-              .insert({ 
-                phone: phone.trim(), 
-                name: name.trim(), 
-                address: address.trim(), 
-                is_active: true, 
-                created_at: new Date().toISOString(), 
-                updated_at: new Date().toISOString() 
-              })
-              .select()
-              .single()
-              
-            if (insertError || !newUser) {
-              console.error("Insert error:", insertError)
-              set({ isLoading: false })
-              return { success: false, message: "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى" }
-            }
-            user = newUser
-          } else {
-            // تحديث بيانات المستخدم الموجود
+          if (existingUser) {
+            // المستخدم موجود - تسجيل دخول مع تحديث البيانات
             const { data: updatedUser, error: updateError } = await supabase
               .from("users")
-              .update({ 
-                name: name.trim(), 
+              .update({
+                name: name.trim(),
                 address: address.trim(),
+                last_login: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
-              .eq("id", user.id)
+              .eq("phone", cleanedPhone)
               .select()
               .single()
 
             if (updateError) {
-              console.error("Update error:", updateError)
-            } else if (updatedUser) {
-              user = updatedUser
+              console.error("خطأ في تحديث بيانات المستخدم:", updateError)
+              set({ isLoading: false })
+              return { success: false, message: "فشل في تحديث البيانات" }
             }
+
+            userData = updatedUser
+            console.log("✅ تسجيل دخول لمستخدم موجود:", userData)
+          } else {
+            // المستخدم جديد - إنشاء حساب جديد
+            const newUser = {
+              phone: cleanedPhone,
+              name: name.trim(),
+              address: address.trim(),
+              loyalty_points: 0, // بداية بـ 0 نقطة
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              last_login: new Date().toISOString()
+            }
+
+            const { data: createdUser, error: createError } = await supabase
+              .from("users")
+              .insert([newUser])
+              .select()
+              .single()
+
+            if (createError) {
+              console.error("خطأ في إنشاء المستخدم:", createError)
+              set({ isLoading: false })
+              return { success: false, message: "فشل في إنشاء الحساب، يرجى المحاولة مرة أخرى" }
+            }
+
+            userData = createdUser
+            console.log("✅ تم إنشاء مستخدم جديد:", userData)
           }
 
+          // حفظ بيانات المستخدم في التطبيق
           set({
-            user,
+            user: userData,
             isAuthenticated: true,
-            isLoading: false,
+            isLoading: false
           })
-          return { success: true, message: "تم تسجيل الدخول بنجاح" }
+
+          const message = existingUser 
+            ? `مرحباً بعودتك ${userData.name}! تم تحديث بياناتك`
+            : `مرحباً ${userData.name}! تم إنشاء حسابك بنجاح`
+
+          return { success: true, message }
+
         } catch (error) {
-          console.error("Login error:", error)
+          console.error("خطأ غير متوقع في تسجيل الدخول:", error)
           set({ isLoading: false })
-          return { success: false, message: "حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى" }
+          return { success: false, message: "حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى" }
         }
       },
 
       register: async (userData: Partial<User>) => {
-        set({ isLoading: true })
-
-        try {
-          // التحقق من صحة البيانات
-          if (!userData.phone || userData.phone.length < 11) {
-            set({ isLoading: false })
-            return false
-          }
-
-          if (!userData.name || userData.name.trim().length < 2) {
-            set({ isLoading: false })
-            return false
-          }
-
-          if (!userData.address || userData.address.trim().length < 10) {
-            set({ isLoading: false })
-            return false
-          }
-
-          // التحقق من عدم وجود رقم الهاتف مسبقاً
-          const { data: existingUser, error: checkError } = await supabase
-            .from("users")
-            .select("id, phone")
-            .eq("phone", userData.phone)
-            .maybeSingle()
-
-          if (existingUser) {
-            set({ isLoading: false })
-            return false
-          }
-
-          const { data: user, error } = await supabase
-            .from("users")
-            .insert({
-              ...userData,
-              phone: userData.phone.trim(),
-              name: userData.name.trim(),
-              address: userData.address.trim(),
-              created_at: new Date().toISOString(),
-              is_active: true,
-            })
-            .select()
-            .single()
-
-          if (error || !user) {
-            set({ isLoading: false })
-            return false
-          }
-
-          set({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-
-          return true
-        } catch (error) {
-          console.error("Register error:", error)
-          set({ isLoading: false })
-          return false
-        }
+        // هذه الدالة لم تعد ضرورية لأن التسجيل يتم عبر login
+        return true
       },
 
       logout: () => {
+        // تسجيل الخروج فقط عند الطلب الصريح من المستخدم
+        console.log("🚪 تسجيل خروج المستخدم")
         set({
           user: null,
           isAuthenticated: false,
-          isLoading: false,
+          isLoading: false
         })
       },
 
       updateProfile: async (userData: Partial<User>) => {
-        const { user } = get()
-        if (!user) return false
-
-        set({ isLoading: true })
-
         try {
+          const { user } = get()
+          if (!user) return false
+
           const { data: updatedUser, error } = await supabase
             .from("users")
-            .update(userData)
+            .update({
+              ...userData,
+              updated_at: new Date().toISOString()
+            })
             .eq("id", user.id)
             .select()
             .single()
 
-          if (error || !updatedUser) {
-            set({ isLoading: false })
+          if (error) {
+            console.error("خطأ في تحديث الملف الشخصي:", error)
             return false
           }
 
-          set({
-            user: updatedUser,
-            isLoading: false,
-          })
-
+          set({ user: updatedUser })
           return true
         } catch (error) {
-          console.error("Update profile error:", error)
-          set({ isLoading: false })
+          console.error("خطأ في تحديث الملف الشخصي:", error)
           return false
         }
       },
 
       checkAuth: async () => {
-        const { user } = get()
-        if (!user) return
-
         try {
+          const { user } = get()
+          if (!user) {
+            set({ isAuthenticated: false })
+            return
+          }
+
+          // التحقق من صحة بيانات المستخدم في قاعدة البيانات
           const { data: currentUser, error } = await supabase
             .from("users")
             .select("*")
@@ -238,20 +196,35 @@ export const useAuthStore = create<AuthState>()(
             .single()
 
           if (error || !currentUser) {
-            get().logout()
+            console.log("المستخدم غير موجود أو غير نشط")
+            set({
+              user: null,
+              isAuthenticated: false
+            })
             return
           }
 
-          set({ user: currentUser })
+          // تحديث بيانات المستخدم
+          set({
+            user: currentUser,
+            isAuthenticated: true
+          })
         } catch (error) {
-          console.error("Check auth error:", error)
-          get().logout()
+          console.error("خطأ في التحقق من المصادقة:", error)
+          set({
+            user: null,
+            isAuthenticated: false
+          })
         }
-      },
+      }
     }),
     {
-      name: "perfecto-auth",
-      skipHydration: false,
-    },
-  ),
+      name: "auth-storage",
+      // تخزين دائم - لا يتم حذف البيانات إلا عند تسجيل الخروج الصريح
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated
+      })
+    }
+  )
 )
