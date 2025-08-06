@@ -293,98 +293,124 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">إتمام الطلب</h1>
-        
-        {/* Free Shipping Progress */}
-        <FreeShippingProgress currentAmount={subtotal} className="mb-6" />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* بيانات العميل */}
-          <div className="space-y-6">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">إتمام الطلب</h1>
+            <p className="text-gray-600">أكمل بياناتك لتأكيد طلبك</p>
+          </div>
+          
+          {/* Free Shipping Progress */}
+          <FreeShippingProgress currentAmount={subtotal} className="mb-8" />
+          
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+            {/* بيانات العميل - عمودين في الشاشات الكبيرة */}
+            <div className="xl:col-span-2 space-y-6">
             {/* بيانات التسليم */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
+            <Card className="shadow-sm border border-gray-200 bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 rounded-t-xl">
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <div className="p-2 bg-blue-100 rounded-xl">
+                    <MapPin className="h-5 w-5 text-blue-600" />
+                  </div>
                   بيانات التسليم
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6 p-6">
                 {isAuthenticated ? (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="name">الاسم</Label>
+                      <Label htmlFor="name" className="text-sm font-medium text-gray-700">الاسم الكامل</Label>
                       <Input
                         id="name"
                         type="text"
                         value={userData.name}
                         onChange={(e) => setUserData(prev => ({ ...prev, name: e.target.value }))}
                         disabled={!editUser}
+                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="أدخل اسمك الكامل"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="phone">رقم الهاتف</Label>
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700">رقم الهاتف</Label>
                       <Input
                         id="phone"
                         type="tel"
                         value={userData.phone}
                         disabled
-                        className="bg-gray-50"
+                        className="bg-gray-50 border-gray-200"
                       />
+                      <p className="text-xs text-gray-500">لا يمكن تغيير رقم الهاتف المرتبط بالحساب</p>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="address">العنوان</Label>
+                      <Label htmlFor="address" className="text-sm font-medium text-gray-700">العنوان التفصيلي</Label>
                       <Textarea
                         id="address"
                         value={userData.address}
                         onChange={(e) => setUserData(prev => ({ ...prev, address: e.target.value }))}
                         disabled={!editUser}
                         rows={3}
+                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="أدخل عنوانك التفصيلي (الحي، الشارع، رقم المبنى)"
                       />
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
                       <Button
                         variant={editUser ? "default" : "outline"}
                         size="sm"
                         onClick={() => setEditUser(!editUser)}
+                        className={editUser ? "bg-blue-600 hover:bg-blue-700" : "border-blue-200 hover:bg-blue-50"}
                       >
                         {editUser ? "حفظ التغييرات" : "تعديل البيانات"}
                       </Button>
                       
                       {editUser && (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            id="temporary"
-                            name="saveType"
-                            value="temporary"
-                            checked={saveType === "temporary"}
-                            onChange={(e) => setSaveType(e.target.value as "temporary")}
-                          />
-                          <Label htmlFor="temporary" className="text-sm">مؤقت</Label>
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="temporary"
+                              name="saveType"
+                              value="temporary"
+                              checked={saveType === "temporary"}
+                              onChange={(e) => setSaveType(e.target.value as "temporary")}
+                              className="text-blue-600"
+                            />
+                            <Label htmlFor="temporary" className="text-sm text-gray-600">حفظ مؤقت</Label>
+                          </div>
                           
-                          <input
-                            type="radio"
-                            id="permanent"
-                            name="saveType"
-                            value="permanent"
-                            checked={saveType === "permanent"}
-                            onChange={(e) => setSaveType(e.target.value as "permanent")}
-                          />
-                          <Label htmlFor="permanent" className="text-sm">دائم</Label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="permanent"
+                              name="saveType"
+                              value="permanent"
+                              checked={saveType === "permanent"}
+                              onChange={(e) => setSaveType(e.target.value as "permanent")}
+                              className="text-blue-600"
+                            />
+                            <Label htmlFor="permanent" className="text-sm text-gray-600">حفظ دائم</Label>
+                          </div>
                         </div>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="text-center py-6">
-                    <p className="text-gray-600 mb-4">يرجى تسجيل الدخول لإتمام الطلب</p>
-                    <Button onClick={() => setShowLoginModal(true)}>
+                  <div className="text-center py-8">
+                    <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="h-8 w-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">مطلوب تسجيل الدخول</h3>
+                    <p className="text-gray-600 mb-6">يرجى تسجيل الدخول لإتمام عملية الشراء</p>
+                    <Button 
+                      onClick={() => setShowLoginModal(true)}
+                      className="bg-blue-600 hover:bg-blue-700 px-8"
+                    >
                       تسجيل الدخول
                     </Button>
                   </div>
@@ -394,26 +420,33 @@ export default function CheckoutPage() {
 
             {/* نقاط الولاء */}
             {isAuthenticated && user && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gift className="h-5 w-5" />
+              <Card className="shadow-sm border border-gray-200 bg-white rounded-xl">
+                <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b border-gray-100 rounded-t-xl">
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <div className="p-2 bg-yellow-100 rounded-xl">
+                      <Gift className="h-5 w-5 text-yellow-600" />
+                    </div>
                     نقاط الولاء
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <span className="text-sm">رصيدك الحالي:</span>
-                    <Badge variant="outline" className="bg-blue-100">
+                <CardContent className="space-y-6 p-6">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                    <span className="text-sm font-medium text-gray-700">رصيدك الحالي:</span>
+                    <Badge variant="outline" className="bg-yellow-100 border-yellow-300 text-yellow-800 px-3 py-1">
                       <Coins className="h-4 w-4 mr-1" />
                       {user.loyalty_points || 0} نقطة
                     </Badge>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="pointsToUse">
-                      استخدام النقاط للخصم (كل {POINTS_TO_EGP_RATIO} نقطة = {DISCOUNT_PER_RATIO} ج.م)
+                  <div className="space-y-3">
+                    <Label htmlFor="pointsToUse" className="text-sm font-medium text-gray-700">
+                      استخدام النقاط للخصم
                     </Label>
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-xs text-blue-700 mb-2">
+                        كل {POINTS_TO_EGP_RATIO} نقطة = {DISCOUNT_PER_RATIO} ج.م خصم
+                      </p>
+                    </div>
                     <Input
                       id="pointsToUse"
                       type="number"
@@ -423,9 +456,11 @@ export default function CheckoutPage() {
                       value={pointsToUse}
                       onChange={(e) => handlePointsChange(e.target.value)}
                       placeholder={`أدخل مضاعفات ${MIN_POINTS_USE}`}
+                      className="focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                     />
                     <p className="text-xs text-gray-500">
-                      أقصى نقاط متاحة: {maxUsablePoints} (خصم {convertPointsToEGP(maxUsablePoints)} ج.م)
+                      أقصى نقاط متاحة: <span className="font-medium text-gray-700">{maxUsablePoints}</span> 
+                      (خصم <span className="font-medium text-green-600">{convertPointsToEGP(maxUsablePoints)} ج.م</span>)
                     </p>
                   </div>
 
@@ -466,123 +501,159 @@ export default function CheckoutPage() {
             )}
 
             {/* ملاحظات التسليم */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
+            <Card className="shadow-sm border border-gray-200 bg-white rounded-xl">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-100 rounded-t-xl">
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <div className="p-2 bg-green-100 rounded-xl">
+                    <Truck className="h-5 w-5 text-green-600" />
+                  </div>
                   ملاحظات التسليم
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <Textarea
                   value={deliveryNotes}
                   onChange={(e) => setDeliveryNotes(e.target.value)}
-                  placeholder="أي ملاحظات خاصة للتسليم (اختياري)"
-                  rows={3}
+                  placeholder="أي ملاحظات أو تعليمات خاصة للتسليم (اختياري)..."
+                  rows={4}
+                  className="focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  مثال: الدور الثالث، شقة رقم 5، بجانب المصعد
+                </p>
               </CardContent>
             </Card>
           </div>
 
           {/* ملخص الطلب */}
-          <div>
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle>ملخص الطلب</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* عناصر السلة */}
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex items-center gap-3">
-                      <div className="relative w-12 h-12 rounded-md overflow-hidden">
-                        <Image
-                          src={item.product.images?.[0] || "/placeholder.jpg"}
-                          alt={item.product.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{item.product.name}</h4>
-                        <p className="text-xs text-gray-500">
-                          {item.quantity} × {item.product.price} ج.م
-                        </p>
-                      </div>
-                      <span className="font-medium">
-                        {item.product.price * item.quantity} ج.م
-                      </span>
+          <div className="xl:col-span-1">
+            <div className="sticky top-4">
+              <Card className="shadow-lg border border-gray-200 bg-white rounded-xl">
+                <CardHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-t-xl">
+                  <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <CreditCard className="h-5 w-5" />
                     </div>
-                  ))}
-                </div>
-
-                <Separator />
+                    ملخص الطلب
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 p-6">
+                {/* عناصر السلة */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                    منتجات الطلب ({items.length})
+                  </h4>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {items.map((item) => (
+                      <div key={item.product.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
+                          <Image
+                            src={item.product.images?.[0] || "/placeholder.jpg"}
+                            alt={item.product.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm text-gray-900 line-clamp-1">{item.product.name}</h4>
+                          <p className="text-xs text-gray-500">
+                            {item.quantity} × {item.product.price} ج.م
+                          </p>
+                        </div>
+                        <span className="font-bold text-gray-900 text-sm">
+                          {item.product.price * item.quantity} ج.م
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>                <Separator className="border-gray-200" />
 
                 {/* تفاصيل الفاتورة */}
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>المجموع الفرعي:</span>
-                    <span>{subtotal} ج.م</span>
-                  </div>
-                  
-                  {pointsDiscount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>خصم النقاط:</span>
-                      <span>-{pointsDiscount} ج.م</span>
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">تفاصيل الفاتورة</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-700">المجموع الفرعي:</span>
+                      <span className="font-bold text-gray-900">{subtotal} ج.م</span>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-between">
-                    <span>رسوم التوصيل:</span>
-                    <span>
-                      {finalShippingFee === 0 && baseShippingFee > 0 ? (
-                        <>
-                          <span className="line-through text-gray-400">{baseShippingFee} ج.م</span>
-                          <span className="text-green-600 mr-2">مجاني</span>
-                        </>
-                      ) : (
-                        `${finalShippingFee} ج.م`
-                      )}
-                    </span>
-                  </div>
+                    
+                    {pointsDiscount > 0 && (
+                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                        <span className="text-green-700">خصم النقاط:</span>
+                        <span className="font-bold text-green-700">-{pointsDiscount} ج.م</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-700">رسوم التوصيل:</span>
+                      <span className="font-bold">
+                        {finalShippingFee === 0 && baseShippingFee > 0 ? (
+                          <div className="text-right">
+                            <span className="line-through text-gray-400 text-sm">{baseShippingFee} ج.م</span>
+                            <span className="text-green-600 block font-bold">مجاني 🎉</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-900">{finalShippingFee} ج.م</span>
+                        )}
+                      </span>
+                    </div>
 
-                  {remainingForFreeShipping > 0 && !usePointsForShipping && (
-                    <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                      أضف {remainingForFreeShipping} ج.م أخرى للحصول على توصيل مجاني
-                    </div>
-                  )}
+                    {remainingForFreeShipping > 0 && !usePointsForShipping && (
+                      <div className="text-xs text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        💡 أضف {remainingForFreeShipping} ج.م أخرى للحصول على توصيل مجاني
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <Separator />
+                <Separator className="border-gray-200" />
 
-                <div className="flex justify-between font-bold text-lg">
-                  <span>الإجمالي:</span>
-                  <span>{finalAmount} ج.م</span>
+                <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-lg text-gray-900">الإجمالي:</span>
+                    <span className="font-bold text-xl text-red-600">{finalAmount} ج.م</span>
+                  </div>
                 </div>
 
                 {isAuthenticated && pointsEarned > 0 && (
-                  <div className="bg-yellow-50 p-3 rounded-lg">
-                    <p className="text-sm text-yellow-700">
-                      🎉 ستحصل على {pointsEarned} نقطة من هذا الطلب!
-                    </p>
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-yellow-600" />
+                      <p className="text-sm text-yellow-700 font-medium">
+                        🎉 ستحصل على <span className="font-bold">{pointsEarned} نقطة</span> من هذا الطلب!
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 <Button
                   onClick={handlePlaceOrder}
                   disabled={loading || !isAuthenticated || !isLoyaltyValid}
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 text-lg rounded-lg shadow-lg transition-all duration-200"
                   size="lg"
                 >
-                  {loading ? "جاري إنشاء الطلب..." : "تأكيد الطلب"}
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      جاري إنشاء الطلب...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      تأكيد الطلب
+                    </div>
+                  )}
                 </Button>
 
-                <p className="text-xs text-gray-500 text-center">
-                  بالنقر على "تأكيد الطلب" فإنك توافق على شروط وأحكام الموقع
+                <p className="text-xs text-gray-500 text-center leading-relaxed">
+                  بالنقر على "تأكيد الطلب" فإنك توافق على 
+                  <span className="text-blue-600 hover:underline cursor-pointer"> شروط وأحكام الموقع</span>
                 </p>
               </CardContent>
             </Card>
           </div>
+        </div>
+      </div>
         </div>
       </div>
 

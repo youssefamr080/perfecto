@@ -105,10 +105,11 @@ export default function CartPage() {
             </div>
 
             {items.map((item) => (
-              <Card key={item.product.id} className="shadow-sm border-0">
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0">
+              <Card key={item.product.id} className="shadow-sm border-0 rounded-xl">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    {/* صورة المنتج - أصغر للهاتف */}
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
                       <Image
                         src={
                           item.product.images[0] ||
@@ -116,60 +117,64 @@ export default function CartPage() {
                         }
                         alt={item.product.name}
                         fill
-                        className="object-cover rounded-lg"
+                        className="object-cover rounded-xl"
                       />
                     </div>
 
+                    {/* معلومات المنتج */}
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.product.id}`}>
-                        <h3 className="font-bold text-black text-lg mb-1 hover:text-red-600 transition-colors line-clamp-2">
+                        <h3 className="font-bold text-black text-base sm:text-lg mb-2 hover:text-red-600 transition-colors line-clamp-2">
                           {item.product.name}
                         </h3>
                       </Link>
-                      <p className="text-black text-sm font-bold mb-2 line-clamp-2">{item.product.description}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-red-600 font-bold text-lg">{item.product.price} ج.م</span>
-                        <span className="text-black text-sm font-bold">{item.product.unit_description}</span>
+                      {/* إزالة وصف المنتج للهاتف */}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-red-600 font-bold text-lg">{item.product.price} ج.م</span>
+                          <span className="text-gray-500 text-xs">{item.product.unit_description}</span>
+                        </div>
+                        
+                        {/* إجمالي سعر المنتج */}
+                        <div className="text-right">
+                          <p className="font-bold text-xl text-black">
+                            {(item.product.price * item.quantity).toFixed(2)} ج.م
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-3">
-                      {/* Quantity Controls */}
+                    {/* أزرار التحكم في الكمية */}
+                    <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center bg-gray-100 rounded-lg">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
-                          className="h-10 w-10 p-0 hover:bg-gray-200"
+                          className="h-8 w-8 p-0 hover:bg-gray-200"
                         >
-                          <Minus className="h-4 w-4 text-black" />
+                          <Minus className="h-3 w-3 text-black" />
                         </Button>
-                        <span className="font-bold text-black min-w-[3rem] text-center">{item.quantity}</span>
+                        <span className="font-bold text-black min-w-[2.5rem] text-center text-sm">{item.quantity}</span>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
-                          className="h-10 w-10 p-0 hover:bg-gray-200"
+                          className="h-8 w-8 p-0 hover:bg-gray-200"
                         >
-                          <Plus className="h-4 w-4 text-black" />
+                          <Plus className="h-3 w-3 text-black" />
                         </Button>
                       </div>
 
-                      {/* Total Price */}
-                    <div className="text-right">
-                        <p className="font-bold text-xl text-black">
-                          {(item.product.price * item.quantity).toFixed(2)} ج.م
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 mt-1"
-                          onClick={() => handleRemoveItem(item.product.id, item.product.name)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          حذف
-                        </Button>
-                      </div>
+                      {/* زر الحذف */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                        onClick={() => handleRemoveItem(item.product.id, item.product.name)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -180,8 +185,8 @@ export default function CartPage() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-gray-50 to-white">
-                <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg">
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-gray-50 to-white rounded-xl">
+                <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-xl">
                   <CardTitle className="text-xl font-bold flex items-center gap-2">
                     <ShoppingBag className="h-5 w-5" />
                     ملخص الطلب
