@@ -554,6 +554,90 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* أزرار التوجيه السريع */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-blue-600" />
+            التوجيه السريع للإدارة
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* إدارة نقاط الولاء */}
+            <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-yellow-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-yellow-100 rounded-xl">
+                    <Shield className="h-8 w-8 text-yellow-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                    نقاط الولاء
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة ومراقبة نقاط الولاء</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  تدقيق شامل، فحص النقاط، إصلاح المشاكل، ومراقبة المعاملات
+                </p>
+                <Button 
+                  onClick={() => router.push('/admin/loyalty')}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  انتقال إلى إدارة النقاط
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* إدارة الطلبات */}
+            <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <Package className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                    الطلبات
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة الطلبات مع نظام العقوبات</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  متابعة الطلبات، تحديث الحالة، إلغاء مع عقوبات نقاط الولاء
+                </p>
+                <Button 
+                  onClick={() => router.push('/admin/orders')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  انتقال إلى إدارة الطلبات
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* تاريخ النقاط للعملاء */}
+            <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-green-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-green-100 rounded-xl">
+                    <BarChart3 className="h-8 w-8 text-green-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                    تاريخ النقاط
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">تاريخ النقاط للعملاء</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  عرض مفصل لتاريخ معاملات النقاط وإحصائيات شاملة للعملاء
+                </p>
+                <Button 
+                  onClick={() => router.push('/loyalty/history')}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  انتقال إلى تاريخ النقاط
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">

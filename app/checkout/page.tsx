@@ -24,6 +24,11 @@ import {
   convertPointsToEGP, 
   canUseShippingPoints 
 } from "@/lib/utils/loyaltySystem"
+import { 
+  processOrderPoints,
+  validateUserPoints,
+  addLoyaltyTransaction 
+} from "@/lib/utils/loyaltyProtection"
 import { FreeShippingProgress } from "@/components/ui/free-shipping-progress"
 
 const { 
@@ -182,30 +187,52 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
-      // إنشاء الطلب
-      const orderData = {
-        user_id: user?.id,
-        subtotal: subtotal,
-        points_used: totalPointsUsed,
-        points_discount: pointsDiscount,
-        shipping_fee: finalShippingFee,
-        final_amount: finalAmount,
-        points_earned: pointsEarned,
-        delivery_notes: deliveryNotes,
-        status: "PENDING",
-        created_at: new Date().toISOString(),
+      // التحقق من صحة نقاط المستخدم قبل إنشاء الطلب
+      console.log("🔍 Validating user points before order creation...")
+      const pointsValidation = await validateUserPoints(user?.id!)
+      
+      if (pointsValidation && !pointsValidation.is_valid) {
+        console.warn("⚠️ User points validation failed:", pointsValidation)
+        toast({
+          title: "خطأ في نقاط الولاء",
+          description: `يوجد خلل في رصيد نقاطك. يرجى التواصل مع الدعم الفني.`,
+          variant: "destructive",
+        })
+        return
       }
 
+      // إنشاء الطلب
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
+      
+      const orderData = {
+        user_id: user?.id,
+        order_number: orderNumber,
+        delivery_address: userData.address || user?.address || "العنوان غير محدد",
+        subtotal: subtotal,
+        points_used: totalPointsUsed || 0,
+        points_discount: parseFloat(pointsDiscount.toFixed(2)),
+        shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
+        final_amount: parseFloat(finalAmount.toFixed(2)),
+        points_earned: pointsEarned || 0,
+        delivery_notes: deliveryNotes || null,
+        status: "PENDING"
+      }
+
+      console.log("🔄 محاولة إنشاء طلب مع البيانات:", orderData)
+      
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert([orderData])
-        .select()
+        .select("*")
         .single()
 
       if (orderError) {
-        console.error("خطأ في إنشاء الطلب:", orderError)
-        throw new Error("فشل في إنشاء الطلب")
+        console.error("❌ خطأ في إنشاء الطلب:", orderError)
+        console.error("❌ تفاصيل الخطأ:", JSON.stringify(orderError, null, 2))
+        throw new Error(`فشل في إنشاء الطلب: ${orderError.message || 'خطأ غير معروف'}`)
       }
+
+      console.log("✅ تم إنشاء الطلب بنجاح:", order)
 
       // إنشاء عناصر الطلب
       const orderItems = items.map(item => ({
@@ -226,24 +253,52 @@ export default function CheckoutPage() {
         throw new Error("فشل في إضافة عناصر الطلب")
       }
 
-      // تحديث نقاط المستخدم
-      const newPointsBalance = (user?.loyalty_points || 0) - totalPointsUsed + pointsEarned
+      // معالجة نقاط الولاء باستخدام النظام المحمي
+      console.log("💳 Processing loyalty points with protection system...")
+      const pointsResult = await processOrderPoints(
+        user?.id!,
+        order.id,
+        totalPointsUsed || 0,
+        pointsEarned || 0,
+        orderNumber,
+        finalAmount
+      )
 
-      const { error: userUpdateError } = await supabase
-        .from("users")
-        .update({
-          loyalty_points: newPointsBalance,
-          ...(saveType === "permanent" ? {
-            name: userData.name,
-            address: userData.address,
-            updated_at: new Date().toISOString()
-          } : {})
-        })
-        .eq("id", user?.id)
+      if (!pointsResult.success) {
+        console.error("❌ فشل في معالجة نقاط الولاء:", pointsResult.error)
+        
+        // محاولة حذف الطلب في حالة فشل معالجة النقاط
+        await supabase.from("orders").delete().eq("id", order.id)
+        await supabase.from("order_items").delete().eq("order_id", order.id)
+        
+        throw new Error(`فشل في معالجة نقاط الولاء: ${pointsResult.error}`)
+      }
 
-      if (userUpdateError) {
-        console.error("خطأ في تحديث نقاط المستخدم:", userUpdateError)
-        // لا نوقف العملية هنا، فقط نسجل الخطأ
+      // تحديث بيانات المستخدم (بدون تحديث النقاط لأنها تم تحديثها في النظام المحمي)
+      const updateData: any = {}
+
+      if (saveType === "permanent") {
+        updateData.name = userData.name
+        updateData.address = userData.address
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: userUpdateError } = await supabase
+          .from("users")
+          .update(updateData)
+          .eq("id", user?.id)
+
+        if (userUpdateError) {
+          console.error("خطأ في تحديث بيانات المستخدم:", userUpdateError)
+          // لا نوقف العملية هنا، فقط نسجل الخطأ
+        }
+      }
+
+      // التحقق النهائي من صحة النقاط بعد المعالجة
+      const finalValidation = await validateUserPoints(user?.id!)
+      if (finalValidation && !finalValidation.is_valid) {
+        console.error("❌ Points validation failed after order processing:", finalValidation)
+        // نسجل الخطأ لكن لا نوقف العملية لأن الطلب تم إنشاؤه بنجاح
       }
 
       // مسح السلة
