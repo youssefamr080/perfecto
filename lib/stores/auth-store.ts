@@ -24,6 +24,8 @@ export const useAuthStore = create<AuthState>()(
       login: async (phone: string, name: string, address: string) => {
         set({ isLoading: true })
         try {
+          console.log("🔄 بدء تسجيل الدخول...")
+          
           // التحقق من صحة البيانات
           if (!phone || phone.length < 11) {
             set({ isLoading: false })
@@ -49,8 +51,10 @@ export const useAuthStore = create<AuthState>()(
 
           // تنظيف رقم الهاتف
           const cleanedPhone = phone.replace(/[\s\-\(\)+]/g, '').trim()
+          console.log("📱 رقم الهاتف المنظف:", cleanedPhone)
 
           // البحث عن المستخدم الموجود برقم الهاتف
+          console.log("🔍 البحث عن المستخدم...")
           const { data: existingUser, error: searchError } = await supabase
             .from("users")
             .select("*")
@@ -58,21 +62,27 @@ export const useAuthStore = create<AuthState>()(
             .single()
 
           if (searchError && searchError.code !== 'PGRST116') {
-            console.error("خطأ في البحث عن المستخدم:", searchError)
+            console.error("❌ خطأ في البحث عن المستخدم:", searchError)
+            console.error("تفاصيل الخطأ:", {
+              code: searchError.code,
+              message: searchError.message,
+              details: searchError.details,
+              hint: searchError.hint
+            })
             set({ isLoading: false })
-            return { success: false, message: "حدث خطأ في النظام، يرجى المحاولة مرة أخرى" }
+            return { success: false, message: `خطأ في قاعدة البيانات: ${searchError.message}` }
           }
 
           let userData: User
 
           if (existingUser) {
+            console.log("👤 مستخدم موجود، تحديث البيانات...")
             // المستخدم موجود - تسجيل دخول مع تحديث البيانات
             const { data: updatedUser, error: updateError } = await supabase
               .from("users")
               .update({
                 name: name.trim(),
                 address: address.trim(),
-                last_login: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
               .eq("phone", cleanedPhone)
@@ -80,24 +90,30 @@ export const useAuthStore = create<AuthState>()(
               .single()
 
             if (updateError) {
-              console.error("خطأ في تحديث بيانات المستخدم:", updateError)
+              console.error("❌ خطأ في تحديث بيانات المستخدم:", updateError)
+              console.error("تفاصيل الخطأ:", {
+                code: updateError.code,
+                message: updateError.message,
+                details: updateError.details,
+                hint: updateError.hint
+              })
               set({ isLoading: false })
-              return { success: false, message: "فشل في تحديث البيانات" }
+              return { success: false, message: `فشل في تحديث البيانات: ${updateError.message}` }
             }
 
             userData = updatedUser
             console.log("✅ تسجيل دخول لمستخدم موجود:", userData)
           } else {
+            console.log("👤 مستخدم جديد، إنشاء حساب...")
             // المستخدم جديد - إنشاء حساب جديد
             const newUser = {
               phone: cleanedPhone,
               name: name.trim(),
               address: address.trim(),
-              loyalty_points: 0, // بداية بـ 0 نقطة
+              loyalty_points: 0,
               is_active: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              last_login: new Date().toISOString()
+              updated_at: new Date().toISOString()
             }
 
             const { data: createdUser, error: createError } = await supabase
@@ -107,9 +123,15 @@ export const useAuthStore = create<AuthState>()(
               .single()
 
             if (createError) {
-              console.error("خطأ في إنشاء المستخدم:", createError)
+              console.error("❌ خطأ في إنشاء المستخدم:", createError)
+              console.error("تفاصيل الخطأ:", {
+                code: createError.code,
+                message: createError.message,
+                details: createError.details,
+                hint: createError.hint
+              })
               set({ isLoading: false })
-              return { success: false, message: "فشل في إنشاء الحساب، يرجى المحاولة مرة أخرى" }
+              return { success: false, message: `فشل في إنشاء الحساب: ${createError.message}` }
             }
 
             userData = createdUser
@@ -127,12 +149,13 @@ export const useAuthStore = create<AuthState>()(
             ? `مرحباً بعودتك ${userData.name}! تم تحديث بياناتك`
             : `مرحباً ${userData.name}! تم إنشاء حسابك بنجاح`
 
+          console.log("🎉 تم تسجيل الدخول بنجاح!")
           return { success: true, message }
 
         } catch (error) {
-          console.error("خطأ غير متوقع في تسجيل الدخول:", error)
+          console.error("💥 خطأ غير متوقع في تسجيل الدخول:", error)
           set({ isLoading: false })
-          return { success: false, message: "حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى" }
+          return { success: false, message: `خطأ غير متوقع: ${error instanceof Error ? error.message : 'خطأ غير محدد'}` }
         }
       },
 

@@ -144,6 +144,11 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async () => {
     if (!isAuthenticated) {
+      toast({
+        title: "مطلوب تسجيل الدخول",
+        description: "يرجى تسجيل الدخول أولاً لإتمام عملية الشراء",
+        variant: "destructive",
+      })
       setShowLoginModal(true)
       return
     }
@@ -364,7 +369,7 @@ export default function CheckoutPage() {
                         variant={editUser ? "default" : "outline"}
                         size="sm"
                         onClick={() => setEditUser(!editUser)}
-                        className={editUser ? "bg-blue-600 hover:bg-blue-700" : "border-blue-200 hover:bg-blue-50"}
+                        className={editUser ? "bg-blue-600 hover:bg-blue-700" : "border-gray-800 text-gray-900 hover:bg-gray-100"}
                       >
                         {editUser ? "حفظ التغييرات" : "تعديل البيانات"}
                       </Button>
@@ -430,64 +435,149 @@ export default function CheckoutPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6 p-6">
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                    <span className="text-sm font-medium text-gray-700">رصيدك الحالي:</span>
-                    <Badge variant="outline" className="bg-yellow-100 border-yellow-300 text-yellow-800 px-3 py-1">
-                      <Coins className="h-4 w-4 mr-1" />
-                      {user.loyalty_points || 0} نقطة
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="pointsToUse" className="text-sm font-medium text-gray-700">
-                      استخدام النقاط للخصم
-                    </Label>
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs text-blue-700 mb-2">
-                        كل {POINTS_TO_EGP_RATIO} نقطة = {DISCOUNT_PER_RATIO} ج.م خصم
-                      </p>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">رصيدك الحالي:</span>
+                        <Badge variant="outline" className="bg-yellow-100 border-yellow-300 text-yellow-800 px-3 py-1">
+                          <Coins className="h-4 w-4 mr-1" />
+                          {user.loyalty_points || 0} نقطة
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-yellow-700 mt-2">
+                        💰 قيمة نقاطك: {convertPointsToEGP(user.loyalty_points || 0)} ج.م
+                      </div>
                     </div>
-                    <Input
-                      id="pointsToUse"
-                      type="number"
-                      min="0"
-                      max={maxUsablePoints}
-                      step={MIN_POINTS_USE}
-                      value={pointsToUse}
-                      onChange={(e) => handlePointsChange(e.target.value)}
-                      placeholder={`أدخل مضاعفات ${MIN_POINTS_USE}`}
-                      className="focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    />
-                    <p className="text-xs text-gray-500">
-                      أقصى نقاط متاحة: <span className="font-medium text-gray-700">{maxUsablePoints}</span> 
-                      (خصم <span className="font-medium text-green-600">{convertPointsToEGP(maxUsablePoints)} ج.م</span>)
-                    </p>
-                  </div>
+
+                    {/* حاسبة النقاط التفاعلية */}
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                      <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+                        🧮 حاسبة النقاط
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-white p-2 rounded-lg text-center">
+                          <div className="font-bold text-blue-600">200 نقطة</div>
+                          <div className="text-gray-600">= 4 ج.م خصم</div>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg text-center">
+                          <div className="font-bold text-green-600">1000 نقطة</div>
+                          <div className="text-gray-600">= توصيل مجاني</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="pointsToUse" className="text-sm font-medium text-gray-700">
+                        💎 استخدام النقاط للخصم
+                      </Label>
+                      
+                      {/* أزرار سريعة للنقاط */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {[200, 400, 600, 800, 1000].map((points) => (
+                          <button
+                            key={points}
+                            type="button"
+                            onClick={() => {
+                              if (points <= (user.loyalty_points || 0) && points <= maxUsablePoints) {
+                                setPointsToUse(points)
+                              }
+                            }}
+                            disabled={points > (user.loyalty_points || 0) || points > maxUsablePoints}
+                            className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
+                              points <= (user.loyalty_points || 0) && points <= maxUsablePoints
+                                ? pointsToUse === points
+                                  ? 'bg-yellow-500 text-white'
+                                  : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {points} نقطة
+                            <div className="text-[10px]">
+                              {points === 1000 ? 'توصيل مجاني' : `${convertPointsToEGP(points)} ج.م`}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      <Input
+                        id="pointsToUse"
+                        type="number"
+                        min="0"
+                        max={maxUsablePoints}
+                        step={MIN_POINTS_USE}
+                        value={pointsToUse}
+                        onChange={(e) => handlePointsChange(e.target.value)}
+                        placeholder={`أدخل مضاعفات ${MIN_POINTS_USE}`}
+                        className="focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                      />
+                      
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">
+                          أقصى نقاط متاحة: <span className="font-medium text-gray-700">{maxUsablePoints}</span>
+                        </span>
+                        <span className="text-green-600 font-medium">
+                          خصم {convertPointsToEGP(maxUsablePoints)} ج.م
+                        </span>
+                      </div>
+                    </div>
+
+                    </div>
 
                   {baseShippingFee > 0 && (
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <input
-                        type="checkbox"
-                        id="usePointsForShipping"
-                        checked={usePointsForShipping}
-                        onChange={(e) => handleShippingPointsChange(e.target.checked)}
-                        disabled={!canUseShipping}
-                      />
-                      <Label 
-                        htmlFor="usePointsForShipping" 
-                        className={canUseShipping ? "" : "text-gray-400"}
-                      >
-                        استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني
-                        {!canUseShipping && " (نقاط غير كافية)"}
-                      </Label>
+                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center space-x-2 space-x-reverse">
+                        <input
+                          type="checkbox"
+                          id="usePointsForShipping"
+                          checked={usePointsForShipping}
+                          onChange={(e) => handleShippingPointsChange(e.target.checked)}
+                          disabled={!canUseShipping}
+                          className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <Label 
+                          htmlFor="usePointsForShipping" 
+                          className={`text-sm ${canUseShipping ? 'text-purple-700' : 'text-gray-400'}`}
+                        >
+                          🚚 استخدام {SHIPPING_POINTS_COST} نقطة للتوصيل المجاني
+                          {!canUseShipping && " (نقاط غير كافية)"}
+                        </Label>
+                      </div>
+                      {canUseShipping && (
+                        <div className="text-xs text-purple-600 mt-2">
+                          💡 وفر {SHIPPING_FEE} ج.م رسوم توصيل
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {pointsToUse > 0 && (
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm text-green-700">
-                        سيتم خصم {convertPointsToEGP(pointsToUse)} ج.م من إجمالي الطلب
-                      </p>
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-green-700">💰 توفيرك</span>
+                        <span className="text-lg font-bold text-green-600">
+                          {convertPointsToEGP(pointsToUse)} ج.م
+                        </span>
+                      </div>
+                      <div className="text-xs text-green-600">
+                        ✨ سيتم خصم {pointsToUse} نقطة من رصيدك
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        رصيدك بعد الاستخدام: {(user.loyalty_points || 0) - pointsToUse} نقطة
+                      </div>
+                    </div>
+                  )}
+
+                  {usePointsForShipping && (
+                    <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-purple-700">🚚 توصيل مجاني</span>
+                        <span className="text-lg font-bold text-purple-600">
+                          {SHIPPING_FEE} ج.م
+                        </span>
+                      </div>
+                      <div className="text-xs text-purple-600">
+                        ✨ سيتم خصم {SHIPPING_POINTS_COST} نقطة إضافية
+                      </div>
                     </div>
                   )}
 
@@ -578,19 +668,29 @@ export default function CheckoutPage() {
                     </div>
                     
                     {pointsDiscount > 0 && (
-                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                        <span className="text-green-700">خصم النقاط:</span>
-                        <span className="font-bold text-green-700">-{pointsDiscount} ج.م</span>
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                        <div className="flex flex-col">
+                          <span className="text-green-700 font-medium">💎 خصم النقاط</span>
+                          <span className="text-xs text-green-600">{pointsToUse} نقطة مستخدمة</span>
+                        </div>
+                        <span className="font-bold text-green-700 text-lg">-{pointsDiscount} ج.م</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="text-gray-700">رسوم التوصيل:</span>
+                      <div className="flex flex-col">
+                        <span className="text-gray-700">رسوم التوصيل:</span>
+                        {usePointsForShipping && (
+                          <span className="text-xs text-purple-600">🚚 {SHIPPING_POINTS_COST} نقطة مستخدمة</span>
+                        )}
+                      </div>
                       <span className="font-bold">
                         {finalShippingFee === 0 && baseShippingFee > 0 ? (
                           <div className="text-right">
                             <span className="line-through text-gray-400 text-sm">{baseShippingFee} ج.م</span>
-                            <span className="text-green-600 block font-bold">مجاني 🎉</span>
+                            <span className="text-green-600 block font-bold">
+                              {usePointsForShipping ? '🎉 مجاني بالنقاط' : 'مجاني 🎉'}
+                            </span>
                           </div>
                         ) : (
                           <span className="text-gray-900">{finalShippingFee} ج.م</span>
@@ -608,20 +708,33 @@ export default function CheckoutPage() {
 
                 <Separator className="border-gray-200" />
 
-                <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
-                  <div className="flex justify-between items-center">
+                <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-xl border border-red-200">
+                  <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-lg text-gray-900">الإجمالي:</span>
-                    <span className="font-bold text-xl text-red-600">{finalAmount} ج.م</span>
+                    <span className="font-bold text-2xl text-red-600">{finalAmount} ج.م</span>
                   </div>
+                  {(pointsDiscount > 0 || usePointsForShipping) && (
+                    <div className="text-xs text-gray-600 text-center">
+                      💰 توفيرك الإجمالي: {pointsDiscount + (usePointsForShipping ? SHIPPING_FEE : 0)} ج.م
+                      {totalPointsUsed > 0 && ` | ${totalPointsUsed} نقطة مستخدمة`}
+                    </div>
+                  )}
                 </div>
 
                 {isAuthenticated && pointsEarned > 0 && (
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-200">
-                    <div className="flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
+                    <div className="flex items-center gap-2 mb-2">
                       <Gift className="h-5 w-5 text-yellow-600" />
-                      <p className="text-sm text-yellow-700 font-medium">
-                        🎉 ستحصل على <span className="font-bold">{pointsEarned} نقطة</span> من هذا الطلب!
-                      </p>
+                      <span className="font-bold text-yellow-700">🎁 مكافأة نقاط الولاء</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-yellow-700">ستحصل على:</span>
+                      <span className="text-xl font-bold text-yellow-600">
+                        +{pointsEarned} نقطة
+                      </span>
+                    </div>
+                    <div className="text-xs text-yellow-600 mt-2">
+                      💡 كل جنيه = نقطة واحدة | رصيدك الجديد: {(user?.loyalty_points || 0) - totalPointsUsed + pointsEarned} نقطة
                     </div>
                   </div>
                 )}

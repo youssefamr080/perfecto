@@ -1,12 +1,12 @@
 // نظام نقاط الولاء المحسن والقوي
 export const LOYALTY_CONFIG = {
-  // النظام الجديد: كل 200 نقطة = 5 جنيه
+  // النظام الجديد: كل 200 نقطة = 4 جنيه (نسبة 2%)
   POINTS_PER_EGP: 1, // نقطة واحدة لكل جنيه
   POINTS_TO_EGP_RATIO: 200, // 200 نقطة
-  DISCOUNT_PER_RATIO: 5, // = 5 جنيه
+  DISCOUNT_PER_RATIO: 4, // = 4 جنيه
   
-  // التوصيل المجاني: 800 نقطة
-  SHIPPING_POINTS_COST: 800,
+  // التوصيل المجاني: 1000 نقطة
+  SHIPPING_POINTS_COST: 1000,
   
   // الحد الأدنى لاستخدام النقاط: 200 نقطة
   MIN_POINTS_USE: 200,

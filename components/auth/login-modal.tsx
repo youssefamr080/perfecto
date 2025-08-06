@@ -36,7 +36,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     e.preventDefault()
 
     try {
+      console.log("🚀 بدء تسجيل الدخول من المكون...")
       const result = await login(formData.phone, formData.name, formData.address)
+
+      console.log("📤 نتيجة تسجيل الدخول:", result)
 
       if (result.success) {
         toast({
@@ -47,6 +50,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         onClose()
         setFormData({ phone: "", name: "", address: "" })
       } else {
+        console.error("❌ فشل تسجيل الدخول:", result.message)
         toast({
           title: "خطأ في تسجيل الدخول",
           description: result.message,
@@ -54,9 +58,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         })
       }
     } catch (error) {
+      console.error("💥 خطأ في المكون:", error)
       toast({
         title: "خطأ",
-        description: "حدث خطأ غير متوقع",
+        description: `حدث خطأ غير متوقع: ${error instanceof Error ? error.message : 'خطأ غير محدد'}`,
         variant: "destructive",
       })
     }
