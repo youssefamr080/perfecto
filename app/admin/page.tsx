@@ -19,7 +19,8 @@ import { initializeSound, playNotificationSound, requestNotificationPermission, 
 import { 
   Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
   Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
-  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw, Volume2
+  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw, Volume2,
+  Gift, Users2
 } from "lucide-react"
 import { formatDistance } from "date-fns"
 import { ar } from "date-fns/locale"
@@ -560,7 +561,7 @@ export default function AdminPage() {
             <Activity className="h-5 w-5 text-blue-600" />
             التوجيه السريع للإدارة
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* إدارة نقاط الولاء */}
             <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-yellow-500">
               <CardContent className="p-6">
@@ -632,6 +633,31 @@ export default function AdminPage() {
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
                   انتقال إلى تاريخ النقاط
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* إدارة أكواد السفراء */}
+            <Card className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-purple-500">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-purple-100 rounded-xl">
+                    <Gift className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                    أكواد السفراء
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">إدارة أكواد السفراء</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  إنشاء أكواد خصم للسفراء، تتبع الاستخدام، وإدارة نظام الإحالة
+                </p>
+                <Button 
+                  onClick={() => router.push('/admin/codes')}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Gift className="h-4 w-4 mr-2" />
+                  انتقال إلى إدارة الأكواد
                 </Button>
               </CardContent>
             </Card>
