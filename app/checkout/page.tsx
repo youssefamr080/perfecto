@@ -209,11 +209,11 @@ export default function CheckoutPage() {
         order_number: orderNumber,
         delivery_address: userData.address || user?.address || "العنوان غير محدد",
         subtotal: subtotal,
-        points_used: totalPointsUsed || 0,
-        points_discount: parseFloat(pointsDiscount.toFixed(2)),
-        shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
-        final_amount: parseFloat(finalAmount.toFixed(2)),
-        points_earned: pointsEarned || 0,
+  points_used: totalPointsUsed || 0,
+  points_discount: parseFloat(pointsDiscount.toFixed(2)),
+  shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
+  final_amount: parseFloat(finalAmount.toFixed(2)),
+  points_earned: pointsEarned || 0,
         delivery_notes: deliveryNotes || null,
         status: "PENDING"
       }

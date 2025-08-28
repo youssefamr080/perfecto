@@ -170,12 +170,12 @@ export default function LoyaltyPage() {
             <div className="p-4 bg-blue-50 rounded-lg">
               <Gift className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <h3 className="font-semibold mb-1 text-black">استبدل النقاط</h3>
-              <p className="text-sm text-black">كل 100 نقطة = 1 جنيه خصم</p>
+              <p className="text-sm text-black">كل 100 نقطة = 2 جنيه خصم</p>
             </div>
             <div className="p-4 bg-purple-50 rounded-lg">
               <Award className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <h3 className="font-semibold mb-1 text-black">توصيل مجاني</h3>
-              <p className="text-sm text-black">2000 نقطة = توصيل مجاني</p>
+              <p className="text-sm text-black">1000 نقطة = توصيل مجاني</p>
             </div>
           </div>
         </CardContent>

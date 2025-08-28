@@ -1,17 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Plus, Minus, Star, Share2, ArrowRight } from "lucide-react"
+import { Plus, Minus, Star, Share2, ArrowRight, Truck, Gift, Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import type { Product } from "@/lib/types"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { supabase } from "@/lib/supabase"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { LoginModal } from "@/components/auth/login-modal"
+import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 import { getCachedProducts } from "@/lib/utils"
 import { ProductCard } from "@/components/product-card"
 import { useToast } from "@/hooks/use-toast"
@@ -26,8 +29,64 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [reviews, setReviews] = useState<any[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [ratingInput, setRatingInput] = useState<number>(5)
+  const [commentInput, setCommentInput] = useState<string>("")
+  const [commentTouched, setCommentTouched] = useState<boolean>(false)
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  // track expanded review ids for "عرض المزيد"
+  const [expandedReviews, setExpandedReviews] = useState<string[]>([])
+
+  const toggleExpanded = (id: string) => {
+    setExpandedReviews((prev) => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
+  }
+
+  const CHAR_LIMIT = 220
+
+  // quick preset comments users can pick to autofill the textarea
+  const quickComments = ['ممتاز', 'رائع جدا', 'أنصح به', 'لم يعجبني']
+
+  const averageRating = useMemo(() => {
+    if (!reviews || reviews.length === 0) return 0
+    const sum = reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0)
+    return +(sum / reviews.length)
+  }, [reviews])
+  // Use the local auth store to determine whether the user is logged in.
+  // We rely on `lib/stores/auth-store.ts` (Zustand persist) rather than
+  // calling `supabase.auth.getUser()` here to avoid race conditions where
+  // the persisted store may not be rehydrated yet. The store is the
+  // single source of truth for UI-level auth state in this app.
+  const { user: currentUser, isAuthenticated } = useAuthStore()
 
   const cartQuantity = product ? getItemQuantity(product.id) : 0
+
+  // SVG star component with gradient fill for a premium look
+  const StarSVG = ({ filled, size = 20 }: { filled: boolean; size?: number }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="inline-block"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="starGrad" x1="0" x2="1">
+          <stop offset="0%" stopColor="#FFD54A" />
+          <stop offset="100%" stopColor="#FFB300" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 2.5l2.755 5.583 6.165.896-4.46 4.347 1.052 6.135L12 17.77l-5.512 2.69L7.54 13.33 3.08 8.983l6.165-.896L12 2.5z"
+        fill={filled ? 'url(#starGrad)' : 'none'}
+        stroke={filled ? 'none' : '#e5e7eb'}
+        strokeWidth={1.2}
+      />
+    </svg>
+  )
 
   useEffect(() => {
     async function fetchProduct() {
@@ -85,6 +144,37 @@ export default function ProductPage() {
 
     fetchProduct()
   }, [params.id])
+
+  // NOTE: we intentionally do NOT call `supabase.auth.getUser()` here.
+  // Authentication state is provided by `useAuthStore()` which reads the
+  // persisted user (from `lib/stores/auth-store.ts`). This keeps UI logic
+  // consistent and avoids prompting the user to log in again due to
+  // rehydration timing issues.
+
+  useEffect(() => {
+    // fetch approved reviews for this product
+    const fetchReviews = async () => {
+      if (!product) return
+      setReviewsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('product_reviews')
+          .select('id, user_id, rating, comment, created_at, users(name)')
+          .eq('product_id', product.id)
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        setReviews((data as any[]) || [])
+      } catch (err) {
+        console.error('Error fetching reviews:', err)
+      } finally {
+        setReviewsLoading(false)
+      }
+    }
+
+    fetchReviews()
+  }, [product])
 
   const handleAddToCart = () => {
     if (product) {
@@ -179,42 +269,20 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumb */}
+      {/* Breadcrumb - reusable component */}
       <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-3">
-          <nav className="flex items-center text-sm text-gray-600 overflow-x-auto">
-            <Link href="/" className="hover:text-green-600 whitespace-nowrap">
-              الرئيسية
-            </Link>
-            <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
-            <Link href="/categories" className="hover:text-green-600 whitespace-nowrap">
-              المنتجات
-            </Link>
-            <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
-            {product.subcategory?.category && (
-              <>
-                <Link
-                  href={`/category/${product.subcategory.category.id}`}
-                  className="hover:text-green-600 whitespace-nowrap"
-                >
-                  {product.subcategory.category.name}
-                </Link>
-                <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
-              </>
-            )}
-            {product.subcategory && (
-              <>
-                <Link
-                  href={`/subcategory/${product.subcategory.id}`}
-                  className="hover:text-green-600 whitespace-nowrap"
-                >
-                  {product.subcategory.name}
-                </Link>
-                <ArrowRight className="h-4 w-4 mx-2 text-gray-600" />
-              </>
-            )}
-            <span className="text-green-600 truncate">{product.name}</span>
-          </nav>
+        <div className="container mx-auto px-4 py-3 overflow-hidden">
+          <div className="max-w-full truncate">
+            <Breadcrumbs
+            segments={[
+              { href: "/", label: "الرئيسية" },
+              { href: "/categories", label: "المنتجات" },
+              ...(product.subcategory?.category ? [{ href: `/category/${product.subcategory.category.id}`, label: product.subcategory.category.name }] : []),
+              ...(product.subcategory ? [{ href: `/subcategory/${product.subcategory.id}`, label: product.subcategory.name }] : []),
+              { label: product.name },
+            ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -368,7 +436,7 @@ export default function ProductPage() {
                     </div>
                     <Button
                       size="lg"
-                      className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6"
+                      className="w-full bg-red-600 hover:bg-green-700 text-white text-lg py-6"
                       onClick={handleAddToCart}
                     >
                       أضف للسلة - {(product.price * quantity).toFixed(2)} ج.م
@@ -410,6 +478,187 @@ export default function ProductPage() {
           </div>
         </div>
 
+        {/* Reviews Section - redesigned with polished cards and interactive stars */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">تقييمات ومراجعات العملاء</h2>
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className="inline-block" aria-hidden role="img">
+                      <StarSVG filled={i < Math.round(averageRating)} size={22} />
+                    </span>
+                  ))}
+                </div>
+                <div className="text-sm text-gray-700">{averageRating.toFixed(1)} / 5</div>
+              </div>
+            </div>
+            <div className="text-sm text-gray-600">{reviews.length} مراجعة</div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              {reviewsLoading ? (
+                <div className="space-y-4">
+                  <div className="h-6 bg-gray-200 rounded w-2/5" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-gray-600">لا توجد مراجعات حتى الآن.</div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((r) => (
+                    <article key={r.id} className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+                      <div className="flex items-start gap-4">
+                        {/* avatar initials */}
+                        <div className="flex-shrink-0">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-semibold shadow-md">{(r.users?.name || 'مستخدم').split(' ').map((s:string)=>s[0]).slice(0,2).join('')}</div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-semibold text-gray-900">{r.users?.name || 'مستخدم'}</div>
+                            <div className="text-sm text-gray-500">{new Date(r.created_at).toLocaleDateString('ar-EG')}</div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-3">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className="inline-block" aria-hidden>
+                                <StarSVG filled={i < Number(r.rating)} size={18} />
+                              </span>
+                            ))}
+                            <span className="text-sm text-gray-500">{r.rating}/5</span>
+                          </div>
+
+                          <p className="text-gray-700 leading-relaxed">
+                            {typeof r.comment === 'string' && r.comment.length > CHAR_LIMIT && !expandedReviews.includes(r.id)
+                              ? `${r.comment.slice(0, CHAR_LIMIT).trim()}...`
+                              : r.comment}
+                          </p>
+                          {typeof r.comment === 'string' && r.comment.length > CHAR_LIMIT && (
+                            <button type="button" onClick={() => toggleExpanded(r.id)} className="mt-3 text-sm text-red-600 font-medium">
+                              {expandedReviews.includes(r.id) ? 'عرض أقل' : 'عرض المزيد'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <aside className="lg:col-span-1">
+              <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
+                <h3 className="font-semibold text-lg mb-3">اكتب مراجعتك</h3>
+                {!currentUser ? (
+                  <div className="text-sm text-gray-600">يجب أن تكون مسجلاً لتترك مراجعة. <button type="button" onClick={() => setShowLoginModal(true)} className="text-red-600 font-medium underline">تسجيل الدخول</button></div>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    if (!product) return
+                    // Client-side validation: rating and non-empty comment
+                    if (ratingInput < 1 || ratingInput > 5) {
+                      toast({ title: 'خطأ', description: 'التقييم يجب أن يكون بين 1 و 5', variant: 'destructive' })
+                      return
+                    }
+                    if (!commentInput || commentInput.trim().length === 0) {
+                      toast({ title: 'خطأ', description: 'التعليق لا يمكن أن يكون فارغاً', variant: 'destructive' })
+                      return
+                    }
+                    setSubmittingReview(true)
+                    try {
+                      const { data, error } = await supabase.from('product_reviews').insert([
+                        {
+                          user_id: currentUser.id,
+                          product_id: product.id,
+                          rating: ratingInput,
+                          comment: commentInput,
+                          // is_approved omitted so DB default applies
+                        }
+                      ])
+                      if (error) throw error
+                      setCommentInput('')
+                      setRatingInput(5)
+                      setCommentTouched(false)
+                      toast({ title: `شكراً ${currentUser?.name || ''}!`, description: 'شكراً على تقييمك لمنتجنا', duration: 4000 })
+                    } catch (err) {
+                      console.error('Error submitting review:', err)
+                      toast({ title: 'خطأ', description: 'فشل إرسال المراجعة', variant: 'destructive' })
+                    } finally {
+                      setSubmittingReview(false)
+                    }
+                  }}>
+                    <div className="mb-3">
+                      <label className="block text-sm text-gray-700 mb-2">التقييم</label>
+                      <div className="flex items-center gap-2">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const idx = i + 1
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setRatingInput(idx)}
+                              aria-label={`${idx} نجوم`}
+                              className={`p-1 rounded-lg transform transition duration-150 ${ratingInput >= idx ? 'scale-105' : 'hover:scale-110'}`}
+                            >
+                              <StarSVG filled={ratingInput >= idx} size={28} />
+                            </button>
+                          )
+                        })}
+                        <span className="text-sm text-gray-500">{ratingInput}/5</span>
+                      </div>
+                    </div>
+
+                    {/* Quick comment presets */}
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {quickComments.map((qc) => (
+                          <button
+                            key={qc}
+                            type="button"
+                            onClick={() => setCommentInput(qc)}
+                            className={`text-sm px-3 py-1 rounded-full border ${commentInput === qc ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-800 border-gray-200'}`}
+                          >
+                            {qc}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm text-gray-700 mb-2">التعليق</label>
+                      <textarea
+                        value={commentInput}
+                        onChange={(e) => {
+                          setCommentInput(e.target.value)
+                          setCommentTouched(true)
+                        }}
+                        onFocus={() => setCommentTouched(true)}
+                        placeholder="اكتب تعليقك هنا..."
+                        aria-label="تعليق"
+                        className="w-full mt-2 border border-gray-200 rounded-lg px-3 py-2 h-28 text-black placeholder-gray-500 focus:border-red-300 focus:ring-1 focus:ring-red-100"
+                      />
+                      {commentTouched && (commentInput || '').trim().length < 5 && (
+                        <p className="mt-2 text-xs text-gray-500">الحد الأدنى: 5 أحرف</p>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={submittingReview || (commentInput || '').trim().length < 5}
+                      aria-disabled={submittingReview || (commentInput || '').trim().length < 5}
+                      className={`w-full text-white ${submittingReview || (commentInput || '').trim().length < 5 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                    >
+                      {submittingReview ? 'جاري الإرسال...' : 'أرسل المراجعة'}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </aside>
+          </div>
+        </section>
+
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <section className="mb-12">
@@ -431,41 +680,62 @@ export default function ProductPage() {
           </section>
         )}
 
-        {/* Trust Badges */}
-        <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 md:p-8">
-          <h3 className="text-xl md:text-2xl font-bold text-center mb-6 text-green-800">لماذا تختار بيرفكتو تيب؟</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl md:text-3xl">🌱</span>
+        {/* Trust Badges - polished, mobile-first, black text */}
+        <div className="bg-green-50 rounded-xl p-4 md:p-6">
+          <h3 className="text-xl md:text-2xl font-bold text-center mb-4 text-black">لماذا تختار بيرفكتو تيب؟</h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="flex items-start gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 text-green-700 rounded-lg flex items-center justify-center">
+                  <Leaf className="h-6 w-6" />
+                </div>
               </div>
-              <h4 className="font-semibold text-sm md:text-base mb-1">طبيعي 100%</h4>
-              <p className="text-xs md:text-sm text-gray-600">بدون مواد حافظة</p>
+              <div>
+                <h4 className="font-semibold text-sm md:text-base text-black">طبيعي 100%</h4>
+                <p className="text-xs md:text-sm text-gray-700 mt-1">بدون مواد حافظة</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl md:text-3xl">🚚</span>
+
+            <div className="flex items-start gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 text-green-700 rounded-lg flex items-center justify-center">
+                  <Truck className="h-6 w-6" />
+                </div>
               </div>
-              <h4 className="font-semibold text-sm md:text-base mb-1">توصيل سريع</h4>
-              <p className="text-xs md:text-sm text-gray-600">نفس اليوم</p>
+              <div>
+                <h4 className="font-semibold text-sm md:text-base text-black">توصيل سريع</h4>
+                <p className="text-xs md:text-sm text-gray-700 mt-1">مباشرة </p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl md:text-3xl">⭐</span>
+
+            <div className="flex items-start gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 text-green-700 rounded-lg flex items-center justify-center">
+                  <Star className="h-6 w-6" />
+                </div>
               </div>
-              <h4 className="font-semibold text-sm md:text-base mb-1">جودة مضمونة</h4>
-              <p className="text-xs md:text-sm text-gray-600">أو استرداد المبلغ</p>
+              <div>
+                <h4 className="font-semibold text-sm md:text-base text-black">جودة مضمونة</h4>
+                <p className="text-xs md:text-sm text-gray-700 mt-1">أو استرداد المبلغ</p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-green-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl md:text-3xl">🎁</span>
+
+            <div className="flex items-start gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-green-100 text-green-700 rounded-lg flex items-center justify-center">
+                  <Gift className="h-6 w-6" />
+                </div>
               </div>
-              <h4 className="font-semibold text-sm md:text-base mb-1">نقاط ولاء</h4>
-              <p className="text-xs md:text-sm text-gray-600">مع كل طلب</p>
+              <div>
+                <h4 className="font-semibold text-sm md:text-base text-black">نقاط ولاء</h4>
+                <p className="text-xs md:text-sm text-gray-700 mt-1">مع كل طلب</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   )
 }

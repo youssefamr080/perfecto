@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase"
 import type { Category, SubCategory } from "@/lib/types"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 
 // Update the getCategoriesWithSubcategories function to use separate queries
 async function getCategoriesWithSubcategories(): Promise<(Category & { subcategories: SubCategory[] })[]> {
@@ -36,6 +37,11 @@ export default async function CategoriesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="overflow-hidden mb-4">
+        <div className="max-w-full truncate">
+          <Breadcrumbs segments={[{ href: '/', label: 'الرئيسية' }, { label: 'المنتجات' }]} />
+        </div>
+      </div>
       <h1 className="text-3xl font-bold text-center mb-8">جميع الأقسام</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

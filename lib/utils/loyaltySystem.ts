@@ -16,7 +16,7 @@ export const LOYALTY_CONFIG = {
   SHIPPING_FEE: 20,
   
   // حدود الاستخدام
-  MAX_POINTS_PERCENTAGE: 50, // لا يمكن استخدام أكثر من 50% من قيمة الطلب
+  MAX_POINTS_PERCENTAGE: 10, // لا يمكن استخدام أكثر من 10% من قيمة الطلب
 } as const
 
 export type LoyaltyTransaction = {

@@ -21,6 +21,7 @@ import { HeroCarousel } from "@/components/banners/hero-carousel"
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
 
   const { 
@@ -37,6 +38,13 @@ export default function HomePage() {
       // Fetch categories
       const { data: categoriesData } = await supabase.from("categories").select("*").limit(6)
       setCategories(categoriesData || [])
+
+      // Fetch subcategories for discovery (show after featured products)
+      const { data: subcategoriesData } = await supabase
+        .from("subcategories")
+        .select("*")
+        .limit(12)
+      setSubcategories(subcategoriesData || [])
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {
@@ -206,7 +214,7 @@ export default function HomePage() {
             </div>
 
             {loading || productsLoading ? (
-              <ProductGridSkeleton count={8} />
+              <ProductGridSkeleton count={12} />
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {featuredProducts.map((product) => (
@@ -228,31 +236,40 @@ export default function HomePage() {
             )}
           </div>
         </section>
-
-        {/* Call to Action Section */}
-        <section className="bg-gradient-to-r from-green-600 to-green-700 py-12">
-          <div className="container mx-auto px-4 text-center">
-            <div className="max-w-2xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">ابدأ التسوق الآن</h2>
-              <p className="text-xl text-green-100 mb-8">اكتشف أجود المنتجات الطبيعية واستمتع بالتوصيل المجاني</p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/categories">
-                  <Button size="lg" className="bg-white text-green-600 hover:bg-gray-100 w-full sm:w-auto">
-                    تصفح المنتجات
-                  </Button>
-                </Link>
-                <Link href="/offers">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-white text-white hover:bg-white hover:text-green-600 w-full sm:w-auto bg-transparent"
-                  >
-                    العروض الخاصة
-                  </Button>
-                </Link>
-              </div>
-            </div>
+        {/* Subcategories Discovery - shown after featured products */}
+        <section className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">استكشف الفئات الفرعية</h2>
+            <Link href="/categories">
+              <Button variant="outline" className="group bg-transparent">
+                عرض الفئات
+                <ArrowLeft className="mr-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+              </Button>
+            </Link>
           </div>
+
+          {subcategories.length === 0 ? (
+            <CategoryGridSkeleton count={10} />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {subcategories.map((sc) => (
+                <Link key={sc.id} href={`/subcategory/${sc.id}`} className="group">
+                  <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden group-hover:scale-105">
+                    <div className="aspect-square bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-2 overflow-hidden">
+                      {sc.image_url ? (
+                        <img src={sc.image_url} alt={sc.name} className="object-contain w-full h-full rounded-xl" loading="lazy" />
+                      ) : (
+                        <img src="/placeholder.svg?height=120&width=120&text=فرعي" alt="فرعي" className="object-contain w-full h-full rounded-xl opacity-60" />
+                      )}
+                    </div>
+                    <div className="p-3 text-center">
+                      <h3 className="font-semibold text-gray-800 group-hover:text-green-600 transition-colors duration-200">{sc.name}</h3>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Newsletter Section تم حذفه بناءً على طلب المستخدم */}

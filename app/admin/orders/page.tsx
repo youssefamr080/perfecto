@@ -197,6 +197,46 @@ export default function OrderManagementPage() {
     return earnedPenalty + additionalPenalty
   }
 
+  // تنسيق التاريخ/الوقت للعرض في صفحة الإدارة:
+  // - أول 5 ساعات: مفصل بالدقايق (مثال: "منذ 3 ساعة و 12 دقيقة" أو "منذ 45 دقيقة")
+  // - من 5 ساعات حتى 24 ساعة: بالساعات (مثال: "منذ 6 ساعة")
+  // - بعد يوم: عرض التاريخ فقط (مثال: 28/8/2025)
+  const formatOrderDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr)
+      const now = new Date()
+      const diffMs = now.getTime() - d.getTime()
+
+      if (isNaN(d.getTime())) return dateStr
+      if (diffMs < 0) {
+        // موعد في المستقبل — عرض الوقت الكامل مع الدقائق
+        return new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit' }).format(d)
+      }
+
+      const diffMinutes = Math.floor(diffMs / 60000)
+      const diffHours = diffMinutes / 60
+
+      if (diffHours < 5) {
+        if (diffMinutes < 60) {
+          return `منذ ${diffMinutes} دقيقة`
+        }
+        const hours = Math.floor(diffMinutes / 60)
+        const minutes = diffMinutes % 60
+        return `منذ ${hours} ساعة${minutes ? ' و ' + minutes + ' دقيقة' : ''}`
+      }
+
+      if (diffHours < 24) {
+        const hours = Math.floor(diffHours)
+        return `منذ ${hours} ساعة`
+      }
+
+      // بعد يوم: عرض التاريخ فقط
+      return d.toLocaleDateString('ar-EG')
+    } catch (e) {
+      return dateStr
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-7xl mx-auto">
@@ -311,7 +351,7 @@ export default function OrderManagementPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
-                          <span>{new Date(order.created_at).toLocaleDateString('ar-EG')}</span>
+                          <span>{formatOrderDate(order.created_at)}</span>
                         </div>
                       </div>
                     </div>

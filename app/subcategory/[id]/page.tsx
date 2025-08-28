@@ -3,6 +3,7 @@ import { getCachedProducts } from "@/lib/utils"
 import type { Product, SubCategory, Category } from "@/lib/types"
 import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
+import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 
 // Update the getSubcategoryWithProducts function to use separate queries
 async function getSubcategoryWithProducts(
@@ -52,11 +53,18 @@ export default async function SubcategoryPage({ params }: { params: { id: string
   return (
     <div className="container mx-auto px-4 py-8 bg-white">
       <div className="mb-8">
-        <nav className="text-sm text-gray-600 mb-4">
-          <span>{subcategory.category?.name}</span>
-          <span className="mx-2">{">"}</span>
-          <span className="text-green-600">{subcategory.name}</span>
-        </nav>
+        <div className="overflow-hidden">
+          <div className="max-w-full truncate">
+            <Breadcrumbs
+              segments={[
+                { href: '/', label: 'الرئيسية' },
+                { href: '/categories', label: 'المنتجات' },
+                ...(subcategory.category ? [{ href: `/category/${subcategory.category.id}`, label: subcategory.category.name }] : []),
+                { label: subcategory.name, count: subcategory.products?.length || 0 }
+              ]}
+            />
+          </div>
+        </div>
         <h1 className="text-3xl font-bold">{subcategory.name}</h1>
       </div>
 
