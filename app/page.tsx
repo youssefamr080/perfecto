@@ -199,6 +199,35 @@ export default function HomePage() {
           )}
         </section>
 
+        
+        {/* Compact Offers Strip (marquee) */}
+        <section className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between bg-yellow-50 border border-yellow-100 rounded-full px-3 py-2 gap-3">
+            <div className="flex-1 overflow-hidden">
+              <div
+                className="inline-block whitespace-nowrap text-sm text-yellow-800"
+                style={{ animation: 'marquee 12s linear infinite' }}
+                aria-hidden={true}
+              >
+                <span className="mx-6">🚚 توصيل مجاني للطلبات فوق 300 ج.م</span>
+                <span className="mx-6">⭐ منتجات طبيعية 100% بدون مواد حافظة</span>
+                <span className="mx-6">🎁 عروض حصرية لمستخدمي التطبيق</span>
+              </div>
+            </div>
+
+            <Link href="/offers">
+              <Button size="sm" className="bg-yellow-500 text-white hover:bg-yellow-600">تسوق العروض</Button>
+            </Link>
+          </div>
+
+          <style jsx>{`
+            @keyframes marquee {
+              0% { transform: translateX(100%); }
+              100% { transform: translateX(-100%); }
+            }
+          `}</style>
+        </section>
+
         {/* Featured Products Section */}
         <section className="bg-gradient-to-r from-green-50 to-green-100 py-8">
           <div className="container mx-auto px-4">
@@ -235,7 +264,7 @@ export default function HomePage() {
               </div>
             )}
           </div>
-        </section>
+  </section>
         {/* Subcategories Discovery - shown after featured products */}
         <section className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-6">

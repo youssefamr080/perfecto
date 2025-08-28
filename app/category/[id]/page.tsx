@@ -113,8 +113,6 @@ export default async function CategoryPage({ params }: { params: { id: string } 
                         ? "🥓"
                         : subcategory.name.includes("مجمدات")
                           ? "🧊"
-                          : subcategory.name.includes("شاورما")
-                            ? "🌯"
                             : subcategory.name.includes("أجبان")
                               ? "🧀"
                               : subcategory.name.includes("حلاوة")
