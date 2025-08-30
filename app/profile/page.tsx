@@ -126,8 +126,8 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="space-y-2 text-sm text-black">
                 <p>• كل 1 جنيه = 1 نقطة</p>
-                <p>• كل 100 نقطة = 1 جنيه خصم</p>
-                <p>• 2000 نقطة = توصيل مجاني</p>
+                <p>• كل 100 نقطة = 2 جنيه خصم</p>
+                <p>• 1000 نقطة = توصيل مجاني</p>
               </div>
             </CardContent>
           </Card>
