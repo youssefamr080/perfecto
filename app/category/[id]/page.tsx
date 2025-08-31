@@ -1,8 +1,19 @@
 import { supabase } from "@/lib/supabase"
 import type { Category, SubCategory, Product } from "@/lib/types"
+import Image from "next/image"
 import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+
+// جلب جميع الأقسام
+async function getAllCategories(): Promise<Category[]> {
+  const { data, error } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order")
+  if (error) {
+    console.error("Error fetching all categories:", error)
+    return []
+  }
+  return data || []
+}
 
 async function getCategoryWithProducts(
   id: string,
@@ -54,20 +65,26 @@ async function getCategoryWithProducts(
 }
 
 export default async function CategoryPage({ params }: { params: { id: string } }) {
-  const category = await getCategoryWithProducts(params.id)
+  const [category, allCategories] = await Promise.all([
+    getCategoryWithProducts(params.id),
+    getAllCategories(),
+  ])
 
   if (!category) {
     notFound()
   }
 
-  const totalProducts = category.subcategories.reduce((sum, sub) => sum + sub.products.length, 0)
+  // استبعاد القسم الحالي
+  const otherCategories = allCategories.filter((cat: Category) => cat.id !== params.id)
+
+  const totalProducts = category.subcategories.reduce((sum: number, sub: SubCategory & { products: Product[] }) => sum + sub.products.length, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Category Hero Section with Banner Image */}
       <div className="relative text-white">
         {/* اختر صورة البانر حسب اسم الفئة */}
-        <img
+        <Image
           src={
             category.name === "اللحوم والمصنعات"
               ? "/banner-meat.jpg"
@@ -76,7 +93,10 @@ export default async function CategoryPage({ params }: { params: { id: string } 
               : "/banner-other.jpg"
           }
           alt={category.name}
+          width={1600}
+          height={600}
           className="w-full h-56 md:h-80 object-cover"
+          priority
         />
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="absolute inset-0 flex flex-col justify-center items-center">
@@ -99,7 +119,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
         {/* Subcategories Navigation */}
         <div className="mb-8">
           <div className="flex overflow-x-auto pb-4 gap-4 scrollbar-hide">
-            {category.subcategories.map((subcategory) => (
+            {category.subcategories.map((subcategory: SubCategory & { products: Product[] }) => (
               <a
                 key={subcategory.id}
                 href={`#${subcategory.id}`}
@@ -132,7 +152,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
         </div>
 
         {/* Products by Subcategory */}
-        {category.subcategories.map((subcategory) => (
+  {category.subcategories.map((subcategory: SubCategory & { products: Product[] }) => (
           <section key={subcategory.id} id={subcategory.id} className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -166,7 +186,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
             {subcategory.products.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {subcategory.products.map((product) => (
+                {subcategory.products.map((product: Product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -192,6 +212,43 @@ export default async function CategoryPage({ params }: { params: { id: string } 
           </div>
         )}
       </div>
+
+      {/* الأقسام الأخرى */}
+      {otherCategories.length > 0 && (
+        <div className="container mx-auto px-4 pb-12">
+          <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">تصفح أقسام أخرى</h2>
+          <div className="grid grid-cols-2 gap-4 justify-items-center items-stretch">
+            {otherCategories.map((cat: Category) => (
+              <a
+                key={cat.id}
+                href={`/category/${cat.id}`}
+                aria-label={cat.name}
+                className="w-full max-w-[360px] bg-white rounded-2xl shadow-lg overflow-hidden transition-transform duration-200 hover:shadow-2xl transform hover:-translate-y-1"
+              >
+                {/* top image block: mint background with large rounded corners */}
+                <div className="bg-green-50 p-4 flex justify-center items-center rounded-t-2xl">
+                  <div className="w-36 h-36 rounded-2xl overflow-hidden bg-white shadow-md border border-white">
+                    <Image
+                      src={cat.image_url || "/placeholder-logo.png"}
+                      alt={cat.name}
+                      width={300}
+                      height={300}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+
+                {/* white body with text, matching the screenshot spacing */}
+                <div className="px-5 pb-6 pt-4 text-center">
+                  <div className="text-lg font-semibold text-gray-800 mb-1">{cat.name}</div>
+                  <div className="text-sm text-gray-500">{cat.description?.slice(0, 80) || "قسم متنوع"}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
