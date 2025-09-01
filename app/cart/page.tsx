@@ -117,6 +117,7 @@ export default function CartPage() {
                         }
                         alt={item.product.name}
                         fill
+                        sizes="(max-width: 640px) 64px, 80px"
                         className="object-cover rounded-xl"
                       />
                     </div>

@@ -341,6 +341,7 @@ export default function ProductPage() {
                 src={productImages[selectedImageIndex] || "/placeholder.svg"}
                 alt={product.name}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover"
                 priority
               />
@@ -555,11 +556,15 @@ export default function ProductPage() {
                     
                     try {
                       // استخدم API統 واحد للتصويت مع التعرّف على المستخدم من الهيدر
+                      const { data: sessionData } = await supabase.auth.getSession()
+                      const token = sessionData.session?.access_token
+                      
                       const res = await fetch('/api/reviews/vote', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'x-user-id': currentUser.id,
+              'x-user-id': currentUser.id,
+              ...(token ? { 'authorization': `Bearer ${token}` } : {}),
                         },
                         body: JSON.stringify({ reviewId, voteType: helpful ? 'helpful' : 'not_helpful' })
                       })

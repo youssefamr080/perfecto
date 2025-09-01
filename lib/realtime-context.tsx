@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from './supabase'
-import { playNotificationSound, requestNotificationPermission, initializeSound } from './notification-sound'
+import { safePlayNotificationSound, requestNotificationPermission, initializeSound, enableAudioByUserGesture } from './notification-sound'
 import { useToast } from '@/hooks/use-toast'
 import { Order } from './types'
 
@@ -66,7 +66,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           // تشغيل الصوت والإشعار فوراً
           console.log('🔊 بدء تشغيل صوت الإشعار...')
           try {
-            await playNotificationSound()
+            await safePlayNotificationSound()
             console.log('✅ تم تشغيل صوت الإشعار بنجاح')
           } catch (soundError) {
             console.error('❌ فشل في تشغيل الصوت:', soundError)
@@ -151,7 +151,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               // تشغيل الصوت فوراً
               console.log('🔊 تشغيل صوت فوري من Realtime...')
               try {
-                await playNotificationSound()
+                await safePlayNotificationSound()
                 console.log('✅ تم تشغيل الصوت من Realtime')
               } catch (error) {
                 console.error('❌ فشل صوت Realtime:', error)

@@ -44,11 +44,10 @@ export function PerformanceOptimizer() {
       document.head.appendChild(link2)
     }
 
-    // تحسين الصور المهمة
-    const criticalImages = [
-      "/logo.png",
-      "/banner-dairy.jpg",
-      "/banner-meat.jpg"
+    // تحسين الصور المهمة (تم تقليل القائمة لتجنب تحذيرات preload غير المستخدم)
+    const criticalImages: string[] = [
+      // "/banner-dairy.jpg", // مؤقتاً معطل لتجنب تحذير preload
+      // "/banner-meat.jpg"   // مؤقتاً معطل لتجنب تحذير preload
     ]
 
     criticalImages.forEach(src => {

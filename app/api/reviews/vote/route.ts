@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 
-// بسيط: حد معدّل داخل ذاكرة العملية (قد يعاد تشغيله على السيرفر عديم الحالة)
-// المفتاح: userId|ip لكل دقيقة
+// Rate limiting for vote API
 const rateBucket = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT = 30 // 30 طلب/دقيقة لكل مستخدم/آي بي
+const RATE_LIMIT = 30 // 30 requests per minute per user/IP
 
 function rateLimit(key: string): boolean {
   const now = Date.now()
@@ -24,10 +23,9 @@ function rateLimit(key: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const { reviewId, voteType } = await request.json()
-    // اشتقاق هوية المستخدم من الهيدر (بديل بسيط لحين اعتماد جلسة فعلية)
     const userId = request.headers.get('x-user-id') || ''
     const ip = request.headers.get('x-forwarded-for') || request.ip || 'unknown'
-  const authHeader = request.headers.get('authorization') || ''
+    const authHeader = request.headers.get('authorization') || ''
 
     if (!reviewId || !voteType || !userId) {
       return NextResponse.json(
@@ -52,9 +50,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  // استخدام عميل الخدمة لتجاوز RLS (مع تحقق بسيط من المستخدم)
-  const adminClient = getServiceSupabase()
-    if (process.env.NODE_ENV === 'production' && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const adminClient = getServiceSupabase()
+    const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (process.env.NODE_ENV === 'production' && !hasServiceKey) {
       console.error('Vote API misconfig: SUPABASE_SERVICE_ROLE_KEY not set in production')
       return NextResponse.json(
         { success: false, error: 'Server misconfiguration' },
@@ -62,61 +61,100 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // مساران: (1) مفتاح خدمة متاح => استخدام صلاحيات الخدمة. (2) لا يوجد => استخدم توكن المستخدم.
     let actor: 'service' | 'userToken' = 'service'
     let userScopedClient: ReturnType<typeof createClient> | null = null
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      // بناء عميل مستخدم باستخدام توكن Authorization
+    // Use Authorization header if available
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      if (authHeader.toLowerCase().startsWith('bearer ') && supabaseUrl && supabaseAnonKey) {
-        userScopedClient = createClient(supabaseUrl, supabaseAnonKey, {
-          global: { headers: { Authorization: authHeader } },
-          auth: { persistSession: false, autoRefreshToken: false }
-        })
-        actor = 'userToken'
-      } else if (process.env.NODE_ENV !== 'production') {
-        // في التطوير بدون توكن ولا مفتاح خدمة
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized: missing user token' },
-          { status: 401 }
-        )
-      }
+      userScopedClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false, autoRefreshToken: false }
+      })
+      actor = 'userToken'
+    } else if (!hasServiceKey) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: missing user token and no service key available' },
+        { status: 401 }
+      )
     }
 
     let effectiveUserId = userId
+    
+    // User validation for service path
     if (actor === 'service') {
-      // تحقق من المستخدم من auth (مصدر الحقيقة) عبر Admin API
-      const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
+      const { data: authUser, error: authUserError } = await adminClient.auth.admin.getUserById(userId)
       if (!authUser?.user) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid user' },
-          { status: 401 }
-        )
-      }
-      // تأكد من وجود صف للمستخدم في public.users
-      const { error: publicUserErr } = await adminClient
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .single()
-      if (publicUserErr && publicUserErr.code === 'PGRST116') {
-        await adminClient.from('users').insert({ id: userId }).single()
+        // In development, be more permissive
+        if (process.env.NODE_ENV === 'development') {
+          const { data: publicUser } = await adminClient
+            .from('users')
+            .select('id')
+            .eq('id', userId)
+            .single()
+          
+          if (!publicUser) {
+            // Create user in development mode
+            try {
+              await adminClient.from('users').insert({ id: userId }).single()
+            } catch (insertError) {
+              return NextResponse.json(
+                { success: false, error: 'Invalid user: could not validate or create user' },
+                { status: 401 }
+              )
+            }
+          }
+        } else {
+          // Production: be strict
+          return NextResponse.json(
+            { success: false, error: 'Invalid user: not found in auth' },
+            { status: 401 }
+          )
+        }
+      } else {
+        // Ensure user exists in public.users
+        const { error: publicUserErr } = await adminClient
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .single()
+        
+        if (publicUserErr?.code === 'PGRST116') {
+          await adminClient.from('users').insert({ id: userId }).single()
+        }
       }
     } else if (userScopedClient) {
-      // استخرج هوية المستخدم من التوكن
+      // Extract user ID from token
       const { data: gotUser, error: getUserErr } = await userScopedClient.auth.getUser()
-      if (getUserErr || !gotUser?.user) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid user token' },
-          { status: 401 }
-        )
+      if (gotUser?.user?.id) {
+        effectiveUserId = gotUser.user.id
+      } else {
+        // Fallback to JWT decode
+        const raw = authHeader.replace(/^Bearer\s+/i, '')
+        try {
+          const parts = raw.split('.')
+          if (parts.length !== 3) throw new Error('Invalid JWT format')
+          const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8')
+          const payload = JSON.parse(payloadJson)
+          if (payload?.sub) {
+            effectiveUserId = payload.sub
+          } else {
+            return NextResponse.json(
+              { success: false, error: 'Invalid user token: no sub claim' },
+              { status: 401 }
+            )
+          }
+        } catch (jwtErr) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid user token: JWT decode failed' },
+            { status: 401 }
+          )
+        }
       }
-      effectiveUserId = gotUser.user.id
     }
 
-    // البحث عن تصويت موجود
+    // Check for existing vote
     const dbClient = actor === 'service' ? adminClient : (userScopedClient as any)
     const { data: existingVote, error: fetchError } = await dbClient
       .from('review_votes')
@@ -137,167 +175,120 @@ export async function POST(request: NextRequest) {
 
     if (existingVote) {
       if (existingVote.vote_type === voteType) {
-        // إلغاء التصويت إذا كان نفس النوع
-  const { error: deleteError } = await dbClient
-          .from('review_votes')
-          .delete()
-          .eq('id', existingVote.id)
+        // Remove vote if same type
+        const { error: deleteError } = await dbClient.rpc('delete_review_vote', {
+          p_vote_id: existingVote.id
+        })
 
+        // Fallback to direct delete if RPC fails
         if (deleteError) {
-          console.error('Error deleting vote:', deleteError)
-          return NextResponse.json(
-            { success: false, error: 'Failed to remove vote' },
-            { status: 500 }
-          )
+          const { error: directDeleteError } = await adminClient
+            .from('review_votes')
+            .delete()
+            .eq('id', existingVote.id)
+
+          if (directDeleteError) {
+            console.error('Error deleting vote:', directDeleteError)
+            return NextResponse.json(
+              { success: false, error: 'Failed to remove vote' },
+              { status: 500 }
+            )
+          }
         }
 
         result = { action: 'removed', voteType: null }
       } else {
-        // تغيير نوع التصويت
-  const { error: updateError } = await dbClient
-          .from('review_votes')
-          .update({ vote_type: voteType })
-          .eq('id', existingVote.id)
+        // Update vote type
+        const { error: updateError } = await dbClient.rpc('update_review_vote', {
+          p_vote_id: existingVote.id,
+          p_vote_type: voteType
+        })
 
+        // Fallback to direct update if RPC fails
         if (updateError) {
-          console.error('Error updating vote:', updateError)
-          return NextResponse.json(
-            { success: false, error: 'Failed to update vote' },
-            { status: 500 }
-          )
+          const { error: directUpdateError } = await adminClient
+            .from('review_votes')
+            .update({ vote_type: voteType })
+            .eq('id', existingVote.id)
+
+          if (directUpdateError) {
+            console.error('Error updating vote:', directUpdateError)
+            return NextResponse.json(
+              { success: false, error: 'Failed to update vote' },
+              { status: 500 }
+            )
+          }
         }
 
         result = { action: 'updated', voteType }
       }
     } else {
-      // إضافة تصويت جديد
-    const { error: insertError } = await dbClient
-        .from('review_votes')
-        .insert([{
-      user_id: effectiveUserId,
-          review_id: reviewId,
-          vote_type: voteType
-        }])
+      // Insert new vote
+      const { error: insertError } = await dbClient.rpc('insert_review_vote', {
+        p_user_id: effectiveUserId,
+        p_review_id: reviewId,
+        p_vote_type: voteType
+      })
 
+      // Fallback to direct insert if RPC fails
       if (insertError) {
-        console.error('Error inserting vote:', insertError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to add vote' },
-          { status: 500 }
-        )
+        const { error: directInsertError } = await adminClient
+          .from('review_votes')
+          .insert([{
+            user_id: effectiveUserId,
+            review_id: reviewId,
+            vote_type: voteType
+          }])
+
+        if (directInsertError) {
+          console.error('Error inserting vote:', directInsertError)
+          return NextResponse.json(
+            { success: false, error: 'Failed to add vote' },
+            { status: 500 }
+          )
+        }
       }
 
       result = { action: 'added', voteType }
     }
 
-  let updatedReview: any = null
-  let reviewError: any = null
-  if (actor === 'service') {
-    const { data, error } = await adminClient
-      .from('product_reviews')
-      .select('helpful_count, not_helpful_count')
-      .eq('id', reviewId)
-      .single()
-    updatedReview = data
-    reviewError = error
-  } else {
-    // احسب الإحصائيات من جدول الأصوات لتجنب مشاكل RLS على product_reviews
-    const { count: helpfulCount } = await dbClient
-      .from('review_votes')
-      .select('*', { count: 'exact', head: true })
-      .eq('review_id', reviewId)
-      .eq('vote_type', 'helpful')
-    const { count: notHelpfulCount } = await dbClient
-      .from('review_votes')
-      .select('*', { count: 'exact', head: true })
-      .eq('review_id', reviewId)
-      .eq('vote_type', 'not_helpful')
-    updatedReview = { helpful_count: helpfulCount || 0, not_helpful_count: notHelpfulCount || 0 }
-    reviewError = null
-  }
-
-    if (reviewError) {
-      console.error('Error fetching updated review stats:', reviewError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch updated stats' },
-        { status: 500 }
-      )
+    // Get updated review stats
+    let updatedReview: any = null
+    if (actor === 'service') {
+      const { data } = await adminClient
+        .from('product_reviews')
+        .select('helpful_count, not_helpful_count')
+        .eq('id', reviewId)
+        .single()
+      updatedReview = data
+    } else {
+      // Calculate stats from votes table to avoid RLS issues
+      const { count: helpfulCount } = await dbClient
+        .from('review_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('review_id', reviewId)
+        .eq('vote_type', 'helpful')
+      
+      const { count: notHelpfulCount } = await dbClient
+        .from('review_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('review_id', reviewId)
+        .eq('vote_type', 'not_helpful')
+      
+      updatedReview = { 
+        helpful_count: helpfulCount || 0, 
+        not_helpful_count: notHelpfulCount || 0 
+      }
     }
 
     return NextResponse.json({
       success: true,
       ...result,
-      stats: {
-        helpful_count: updatedReview.helpful_count || 0,
-        not_helpful_count: updatedReview.not_helpful_count || 0
-      }
+      stats: updatedReview
     })
 
   } catch (error) {
     console.error('Vote API error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const reviewId = searchParams.get('reviewId')
-    const userId = searchParams.get('userId')
-    
-  if (!reviewId || !userId) {
-      return NextResponse.json(
-    { success: false, error: 'Review ID and User ID are required' },
-        { status: 400 }
-      )
-    }
-
-  const adminClient = getServiceSupabase()
-  // جلب تصويت المستخدم الحالي
-  const { data: userVote, error: voteError } = await adminClient
-      .from('review_votes')
-      .select('vote_type')
-      .eq('user_id', userId)
-      .eq('review_id', reviewId)
-      .single()
-
-  if (voteError && voteError.code !== 'PGRST116') {
-      console.error('Error fetching user vote:', voteError)
-      return NextResponse.json(
-    { success: false, error: 'Database error' },
-        { status: 500 }
-      )
-    }
-
-    // جلب إحصائيات المراجعة
-  const { data: reviewStats, error: statsError } = await adminClient
-      .from('product_reviews')
-      .select('helpful_count, not_helpful_count')
-      .eq('id', reviewId)
-      .single()
-
-    if (statsError) {
-      console.error('Error fetching review stats:', statsError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch review stats' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({
-      success: true,
-      userVote: userVote?.vote_type || null,
-      stats: {
-        helpful_count: reviewStats.helpful_count || 0,
-        not_helpful_count: reviewStats.not_helpful_count || 0
-      }
-    })
-
-  } catch (error) {
-    console.error('Vote GET API error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

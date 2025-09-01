@@ -1,3 +1,5 @@
+"use client"
+import { getSupabaseClient } from "@/lib/supabase"
 import { Star, ThumbsUp, ThumbsDown, Flag, User, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -37,6 +39,7 @@ export function EnhancedReviewDisplay({
   onReportClick,
   currentUserId 
 }: EnhancedReviewDisplayProps) {
+  const supabaseClient = getSupabaseClient()
 
   const handleVoteClick = async (reviewId: string, voteType: 'helpful' | 'not_helpful') => {
     if (!currentUserId) {
@@ -52,11 +55,25 @@ export function EnhancedReviewDisplay({
         return
       }
 
+      const session = await supabaseClient.auth.getSession()
+      const token = session.data.session?.access_token
+      
+      // إذا لم نحصل على token، جرّب الحصول على المستخدم مباشرة
+      if (!token) {
+        const { data: user, error: userError } = await supabaseClient.auth.getUser()
+        
+        if (!user.user) {
+          alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.')
+          return
+        }
+      }
+
       const response = await fetch('/api/reviews/vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': currentUserId,
+          ...(token ? { 'authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           reviewId,

@@ -696,6 +696,7 @@ export default function CheckoutPage() {
                             src={item.product.images?.[0] || "/placeholder.jpg"}
                             alt={item.product.name}
                             fill
+                            sizes="48px"
                             className="object-cover"
                           />
                         </div>

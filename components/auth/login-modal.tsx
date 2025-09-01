@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -72,7 +72,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-sm border-2 border-red-100">
         <DialogHeader className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-t-lg -mx-6 -mt-6 mb-4">
           <DialogTitle className="text-center text-2xl font-bold text-red-700">مرحباً بك في بيرفكتو تيب</DialogTitle>
-          <p className="text-center text-gray-700 mt-2 font-medium">سجل دخولك للاستمتاع بتجربة تسوق مميزة</p>
+          <DialogDescription className="text-center text-gray-700 mt-2 font-medium">
+            سجل دخولك للاستمتاع بتجربة تسوق مميزة
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-2 rounded-lg">

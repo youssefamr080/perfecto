@@ -75,7 +75,6 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
             loading="lazy"
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             onLoad={() => setImgLoaded(true)}
-            onLoadingComplete={() => setImgLoaded(true)}
           />
           {/* Image skeleton while loading */}
           <div

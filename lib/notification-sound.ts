@@ -4,12 +4,17 @@ import { Howl } from 'howler';
 let notificationSound: Howl | null = null;
 let audioContext: AudioContext | null = null;
 let isAudioEnabled = false;
+let hasUserGesture = false;
 
 // تهيئة الصوت مع إذن المستخدم
 export const initializeSound = async (): Promise<boolean> => {
   try {
     // طلب إذن من المستخدم لتشغيل الصوت
     if (typeof window !== 'undefined') {
+      // يجب استدعاء هذه الدالة بعد تفاعل المستخدم (نقرة/لمس)
+      if (!hasUserGesture) {
+        console.warn('initializeSound يجب استدعاؤها بعد تفاعل المستخدم لتفادي سياسات التشغيل التلقائي')
+      }
       // إنشاء AudioContext للتأكد من عمل الصوت
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
@@ -31,8 +36,6 @@ export const initializeSound = async (): Promise<boolean> => {
         onload: () => {
           console.log('✅ تم تحميل صوت الإشعار بنجاح');
           isAudioEnabled = true;
-          // تشغيل صوت اختبار لتفعيل الصوت
-          notificationSound?.play();
         },
         onplay: () => {
           console.log('🔊 يتم تشغيل صوت الإشعار');
@@ -158,3 +161,24 @@ export const testSound = async () => {
   console.log('🧪 اختبار الصوت...');
   await playNotificationSound();
 };
+
+// يجب استدعاؤها من حدث مستخدم (click/touch)
+export const enableAudioByUserGesture = () => {
+  hasUserGesture = true
+}
+
+// تحديث: منع تشغيل الصوت قبل تفاعل المستخدم
+const ensureGesture = () => {
+  if (!hasUserGesture) {
+    console.warn('محاولة تشغيل الصوت قبل تفاعل المستخدم. سيتم التجاهل.')
+    return false
+  }
+  return true
+}
+
+// التفاف على playNotificationSound لضمان سياسة المتصفح
+const _origPlay = playNotificationSound
+export const safePlayNotificationSound = async () => {
+  if (!ensureGesture()) return
+  await _origPlay()
+}

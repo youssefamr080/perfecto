@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { Category, SubCategory } from "@/lib/types"
 import Image from "next/image"
 import Link from "next/link"
@@ -20,6 +21,7 @@ import { useNotificationsStore } from "@/lib/stores/notifications-store"
 import { LoginModal } from "./auth/login-modal"
 
 export function Header() {
+  const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -46,6 +48,29 @@ export function Header() {
       fetchNotifications(user.id)
     }
   }, [isAuthenticated, user, fetchNotifications])
+
+  // حاول تعيين كوكي الأدمن تلقائياً عندما يكون المستخدم أدمن
+  useEffect(() => {
+    let cancelled = false
+    const setAdminCookie = async () => {
+      try {
+        if (isAuthenticated && isAdmin && user?.id) {
+          await fetch('/api/auth/admin-cookie', { method: 'POST', headers: { 'x-user-id': user.id } })
+        }
+      } catch {}
+    }
+    setAdminCookie()
+    return () => { cancelled = true }
+  }, [isAuthenticated, isAdmin, user?.id])
+
+  const handleGoAdmin = async () => {
+    try {
+      if (isAuthenticated && isAdmin && user?.id) {
+        await fetch('/api/auth/admin-cookie', { method: 'POST', headers: { 'x-user-id': user.id } })
+      }
+    } catch {}
+    router.push('/admin')
+  }
 
   const handleLogout = () => {
     logout()
@@ -78,9 +103,9 @@ export function Header() {
                 من نحن
               </Link>
               {isAuthenticated && isAdmin && (
-                <Link href="/admin" className="text-red-700 hover:text-red-800 transition-colors font-semibold">
+                <button onClick={handleGoAdmin} className="text-red-700 hover:text-red-800 transition-colors font-semibold">
                   الأدمن
-                </Link>
+                </button>
               )}
             </nav>
 
@@ -141,8 +166,8 @@ export function Header() {
                     </div>
                     <DropdownMenuSeparator />
                     {isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin">لوحة التحكم</Link>
+                      <DropdownMenuItem onClick={(e) => { e.preventDefault(); handleGoAdmin() }}>
+                        لوحة التحكم
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
@@ -202,9 +227,12 @@ export function Header() {
                     من نحن
                   </Link>
                   {isAuthenticated && isAdmin && (
-                    <Link href="/admin" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-red-700" onClick={() => setIsSidebarOpen(false)}>
+                    <button
+                      className="text-right py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-red-700"
+                      onClick={async () => { await handleGoAdmin(); setIsSidebarOpen(false) }}
+                    >
                       الأدمن
-                    </Link>
+                    </button>
                   )}
                 </nav>
                 <hr className="my-4" />

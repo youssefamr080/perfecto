@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import type { Order, User, Product } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { initializeSound, playNotificationSound, requestNotificationPermission, testSound } from "@/lib/notification-sound"
+import { initializeSound, requestNotificationPermission, testSound, enableAudioByUserGesture, safePlayNotificationSound } from "@/lib/notification-sound"
 import { 
   Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
   Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
@@ -86,10 +86,7 @@ export default function AdminPage() {
     setIsAuthorized(true)
     fetchData()
     
-    // تهيئة الصوت تلقائياً عند تحميل الصفحة
-    setTimeout(() => {
-      initializeNotifications()
-    }, 2000) // تأخير لضمان تحميل كامل للصفحة
+  // لا تهيئ الصوت تلقائياً؛ انتظر تفاعل المستخدم لتجنب قيود التشغيل التلقائي
 
     // تحديث تلقائي كل دقيقتين للبيانات
     const interval = setInterval(() => {
@@ -173,8 +170,8 @@ export default function AdminPage() {
       
       // إظهار تنبيه بوجود طلب جديد
   setShowNewOrderAlert(true)
-  // تشغيل صوت الإشعار والإخطار في المتصفح
-  playNotificationSound()
+  // تشغيل صوت الإشعار والإخطار في المتصفح (يتطلب تفاعل مستخدم مسبقاً)
+  safePlayNotificationSound()
       // أرسل إشعار بريد إلكتروني للإدارة (غير محظور، تنفيذ بدون انتظار)
       try {
         fetch('/api/send-order-email', {
@@ -555,7 +552,7 @@ export default function AdminPage() {
               <RealtimeOrders onNewOrder={handleNewOrder} />
             </div>
             <Button 
-              onClick={initializeNotifications} 
+              onClick={async () => { enableAudioByUserGesture(); await initializeNotifications() }} 
               variant={soundEnabled ? "default" : "destructive"} 
               size="sm"
               title="تفعيل الصوت والإشعارات"

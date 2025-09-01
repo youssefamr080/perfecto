@@ -3,7 +3,7 @@ import { Bell, Star, Eye, CheckCircle, XCircle, MessageSquare } from "lucide-rea
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { formatDistance } from "date-fns"
@@ -211,6 +211,9 @@ export function ReviewNotifications() {
                 </Button>
               )}
             </DialogTitle>
+            <DialogDescription>
+              إدارة إشعارات المراجعات الجديدة والتحديثات
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-3">
