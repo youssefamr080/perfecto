@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RealtimeOrders } from "@/components/admin/realtime-orders"
+import { ReviewsManagement } from "@/components/admin/reviews-management"
+import { ReviewNotifications } from "@/components/admin/review-notifications"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -548,6 +550,7 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex gap-2 items-center">
+            <ReviewNotifications />
             <div className="ml-3">
               <RealtimeOrders onNewOrder={handleNewOrder} />
             </div>
@@ -733,10 +736,11 @@ export default function AdminPage() {
 
         {/* Main Content */}
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 border">
             <TabsTrigger value="orders" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">الطلبات</TabsTrigger>
             <TabsTrigger value="products" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">المنتجات</TabsTrigger>
             <TabsTrigger value="users" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">المستخدمون</TabsTrigger>
+            <TabsTrigger value="reviews" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">المراجعات</TabsTrigger>
             <TabsTrigger value="analytics" className="text-gray-900 data-[state=active]:text-red-600 data-[state=active]:bg-white data-[state=active]:shadow-sm">التحليلات</TabsTrigger>
           </TabsList>
 
@@ -1111,6 +1115,11 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Reviews Tab */}
+          <TabsContent value="reviews">
+            <ReviewsManagement />
           </TabsContent>
 
           {/* Analytics Tab */}

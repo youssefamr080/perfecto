@@ -8,8 +8,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/lib/types"
 import { useCartStore } from "@/lib/stores/cart-store"
-import { useState, memo } from "react"
+import { useState, memo, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+import { getProductRating, type ProductRating } from "@/lib/utils/product-utils"
 
 interface ProductCardProps {
   product: Product
@@ -20,8 +22,19 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
   const { addItem, getItemQuantity } = useCartStore()
   const { toast } = useToast()
   const [isHovered, setIsHovered] = useState(false)
+  const [rating, setRating] = useState<ProductRating>({ average: 0, count: 0 })
 
   const cartQuantity = getItemQuantity(product.id)
+
+  // Fetch product rating using utility function
+  useEffect(() => {
+    const fetchRating = async () => {
+      const productRating = await getProductRating(product.id)
+      setRating(productRating)
+    }
+
+    fetchRating()
+  }, [product.id])
 
   const handleAddToCart = () => {
     addItem(product, 1)
@@ -97,6 +110,23 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
             </h3>
           </Link>
           <p className="text-gray-600 text-xs md:text-sm line-clamp-2 mb-2 leading-relaxed font-semibold">{product.description}</p>
+
+          {/* Star Rating */}
+          {rating.count > 0 && (
+            <div className="flex items-center gap-1 mb-2">
+              <div className="flex">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-3 h-3 ${i < Math.floor(rating.average) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-gray-600 font-medium">
+                {rating.average} ({rating.count})
+              </span>
+            </div>
+          )}
 
           {/* Price */}
           <div className="flex items-center justify-between mb-3">

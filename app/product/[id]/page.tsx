@@ -18,6 +18,9 @@ import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 import { getCachedProducts } from "@/lib/utils"
 import { ProductCard } from "@/components/product-card"
 import { useToast } from "@/hooks/use-toast"
+import { ReviewSummary } from "@/components/product/review-summary"
+import { EnhancedReviewDisplay } from "@/components/product/enhanced-review-display"
+import { EnhancedReviewForm } from "@/components/product/enhanced-review-form"
 
 export default function ProductPage() {
   const params = useParams()
@@ -31,22 +34,8 @@ export default function ProductPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [reviews, setReviews] = useState<any[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(true)
-  const [ratingInput, setRatingInput] = useState<number>(5)
-  const [commentInput, setCommentInput] = useState<string>("")
-  const [commentTouched, setCommentTouched] = useState<boolean>(false)
-  const [submittingReview, setSubmittingReview] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  // track expanded review ids for "عرض المزيد"
-  const [expandedReviews, setExpandedReviews] = useState<string[]>([])
-
-  const toggleExpanded = (id: string) => {
-    setExpandedReviews((prev) => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
-  }
-
-  const CHAR_LIMIT = 220
-
-  // quick preset comments users can pick to autofill the textarea
-  const quickComments = ['ممتاز', 'رائع جدا', 'أنصح به', 'لم يعجبني']
+  const [reviewFilter, setReviewFilter] = useState<any>({ sortBy: 'newest' })
 
   const averageRating = useMemo(() => {
     if (!reviews || reviews.length === 0) return 0
@@ -153,28 +142,83 @@ export default function ProductPage() {
 
   useEffect(() => {
     // fetch approved reviews for this product
-    const fetchReviews = async () => {
-      if (!product) return
-      setReviewsLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('product_reviews')
-          .select('id, user_id, rating, comment, created_at, users(name)')
-          .eq('product_id', product.id)
-          .eq('is_approved', true)
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-        setReviews((data as any[]) || [])
-      } catch (err) {
-        console.error('Error fetching reviews:', err)
-      } finally {
-        setReviewsLoading(false)
-      }
-    }
-
     fetchReviews()
-  }, [product])
+  }, [product, reviewFilter])
+
+  const fetchReviews = async () => {
+    if (!product) return
+    setReviewsLoading(true)
+    try {
+      let query = supabase
+        .from('product_reviews')
+        .select(`
+          id, user_id, rating, comment, created_at,
+          store_reply, store_reply_at, 
+          helpful_count, not_helpful_count,
+          is_verified_purchase, is_featured,
+          users!user_id(name, phone)
+        `)
+        .eq('product_id', product.id)
+        .eq('is_approved', true)
+
+      console.log('Review query:', query)
+
+      // Apply filters
+      if (reviewFilter.rating) {
+        query = query.eq('rating', reviewFilter.rating)
+      }
+      
+      if (reviewFilter.verified !== undefined) {
+        query = query.eq('is_verified_purchase', reviewFilter.verified)
+      }
+
+      // Apply sorting
+      switch (reviewFilter.sortBy) {
+        case 'oldest':
+          query = query.order('created_at', { ascending: true })
+          break
+        case 'highest':
+          query = query.order('rating', { ascending: false })
+          break
+        case 'lowest':
+          query = query.order('rating', { ascending: true })
+          break
+        case 'helpful':
+          query = query.order('helpful_count', { ascending: false })
+          break
+        default: // newest
+          query = query.order('created_at', { ascending: false })
+      }
+
+      const { data, error } = await query
+
+      console.log('Reviews data:', data)
+      console.log('Reviews error:', error)
+
+      if (error) throw error
+
+      // Transform data to match component expectations
+      const transformedReviews = (data || []).map(review => ({
+        ...review,
+        user: {
+          name: (review.users as any)?.name || 'مستخدم',
+          avatar: undefined
+        },
+        helpful_count: review.helpful_count || 0,
+        not_helpful_count: review.not_helpful_count || 0,
+        store_reply: review.store_reply || null,
+        store_reply_at: review.store_reply_at || null,
+        is_verified_purchase: review.is_verified_purchase || false,
+        is_featured: review.is_featured || false
+      }))
+
+      setReviews(transformedReviews)
+    } catch (err) {
+      console.error('Error fetching reviews:', err)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
 
   const handleAddToCart = () => {
     if (product) {
@@ -274,7 +318,7 @@ export default function ProductPage() {
         <div className="container mx-auto px-4 py-3 overflow-hidden">
           <div className="max-w-full truncate">
             <Breadcrumbs
-            segments={[
+              segments={[
               { href: "/", label: "الرئيسية" },
               { href: "/categories", label: "المنتجات" },
               ...(product.subcategory?.category ? [{ href: `/category/${product.subcategory.category.id}`, label: product.subcategory.category.name }] : []),
@@ -478,26 +522,19 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* Reviews Section - redesigned with polished cards and interactive stars */}
+        {/* Reviews Section */}
         <section className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">تقييمات ومراجعات العملاء</h2>
-              <div className="flex items-center gap-3 mt-2">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className="inline-block" aria-hidden role="img">
-                      <StarSVG filled={i < Math.round(averageRating)} size={22} />
-                    </span>
-                  ))}
-                </div>
-                <div className="text-sm text-gray-700">{averageRating.toFixed(1)} / 5</div>
-              </div>
-            </div>
-            <div className="text-sm text-gray-600">{reviews.length} مراجعة</div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">آراء العملاء</h2>
+          
+          {/* Review Summary and Filters */}
+          <div className="mb-8">
+            <ReviewSummary 
+              productId={product.id} 
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Reviews Display */}
             <div className="lg:col-span-2">
               {reviewsLoading ? (
                 <div className="space-y-4">
@@ -507,154 +544,95 @@ export default function ProductPage() {
               ) : reviews.length === 0 ? (
                 <div className="text-gray-600">لا توجد مراجعات حتى الآن.</div>
               ) : (
-                <div className="space-y-4">
-                  {reviews.map((r) => (
-                    <article key={r.id} className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-                      <div className="flex items-start gap-4">
-                        {/* avatar initials */}
-                        <div className="flex-shrink-0">
-                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-semibold shadow-md">{(r.users?.name || 'مستخدم').split(' ').map((s:string)=>s[0]).slice(0,2).join('')}</div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="font-semibold text-gray-900">{r.users?.name || 'مستخدم'}</div>
-                            <div className="text-sm text-gray-500">{new Date(r.created_at).toLocaleDateString('ar-EG')}</div>
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-3">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <span key={i} className="inline-block" aria-hidden>
-                                <StarSVG filled={i < Number(r.rating)} size={18} />
-                              </span>
-                            ))}
-                            <span className="text-sm text-gray-500">{r.rating}/5</span>
-                          </div>
-
-                          <p className="text-gray-700 leading-relaxed">
-                            {typeof r.comment === 'string' && r.comment.length > CHAR_LIMIT && !expandedReviews.includes(r.id)
-                              ? `${r.comment.slice(0, CHAR_LIMIT).trim()}...`
-                              : r.comment}
-                          </p>
-                          {typeof r.comment === 'string' && r.comment.length > CHAR_LIMIT && (
-                            <button type="button" onClick={() => toggleExpanded(r.id)} className="mt-3 text-sm text-red-600 font-medium">
-                              {expandedReviews.includes(r.id) ? 'عرض أقل' : 'عرض المزيد'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                <EnhancedReviewDisplay 
+                  reviews={reviews}
+                  currentUserId={currentUser?.id}
+                  onHelpfulClick={async (reviewId, helpful) => {
+                    if (!currentUser) {
+                      setShowLoginModal(true)
+                      return
+                    }
+                    
+                    try {
+                      // Handle helpful/not helpful voting
+                      const { error } = await supabase
+                        .from('review_votes')
+                        .upsert({
+                          user_id: currentUser.id,
+                          review_id: reviewId,
+                          is_helpful: helpful
+                        })
+                      
+                      if (error) throw error
+                      
+                      toast({
+                        title: "شكراً لك",
+                        description: helpful ? "تم تسجيل تصويتك كمفيد" : "تم تسجيل تصويتك كغير مفيد"
+                      })
+                      
+                      // Refresh reviews to show updated counts
+                      fetchReviews()
+                    } catch (error) {
+                      console.error('Error voting on review:', error)
+                      toast({
+                        title: "خطأ",
+                        description: "فشل في تسجيل التصويت",
+                        variant: "destructive"
+                      })
+                    }
+                  }}
+                  onReportClick={async (reviewId) => {
+                    if (!currentUser) {
+                      setShowLoginModal(true)
+                      return
+                    }
+                    
+                    try {
+                      const { error } = await supabase
+                        .from('review_reports')
+                        .insert({
+                          user_id: currentUser.id,
+                          review_id: reviewId,
+                          reason: 'inappropriate_content',
+                          description: 'تم الإبلاغ عن محتوى غير مناسب'
+                        })
+                      
+                      if (error) throw error
+                      
+                      toast({
+                        title: "تم الإبلاغ",
+                        description: "شكراً لك، سنراجع المراجعة قريباً"
+                      })
+                    } catch (error) {
+                      console.error('Error reporting review:', error)
+                      toast({
+                        title: "خطأ",
+                        description: "فشل في إرسال البلاغ",
+                        variant: "destructive"
+                      })
+                    }
+                  }}
+                />
               )}
             </div>
 
+            {/* Review Form */}
             <aside className="lg:col-span-1">
-              <div className="bg-white p-5 rounded-2xl shadow-lg border border-gray-100">
-                <h3 className="font-semibold text-lg mb-3">اكتب مراجعتك</h3>
-                {!currentUser ? (
-                  <div className="text-sm text-gray-600">يجب أن تكون مسجلاً لتترك مراجعة. <button type="button" onClick={() => setShowLoginModal(true)} className="text-red-600 font-medium underline">تسجيل الدخول</button></div>
-                ) : (
-                  <form onSubmit={async (e) => {
-                    e.preventDefault()
-                    if (!product) return
-                    // Client-side validation: rating and non-empty comment
-                    if (ratingInput < 1 || ratingInput > 5) {
-                      toast({ title: 'خطأ', description: 'التقييم يجب أن يكون بين 1 و 5', variant: 'destructive' })
-                      return
-                    }
-                    if (!commentInput || commentInput.trim().length === 0) {
-                      toast({ title: 'خطأ', description: 'التعليق لا يمكن أن يكون فارغاً', variant: 'destructive' })
-                      return
-                    }
-                    setSubmittingReview(true)
-                    try {
-                      const { data, error } = await supabase.from('product_reviews').insert([
-                        {
-                          user_id: currentUser.id,
-                          product_id: product.id,
-                          rating: ratingInput,
-                          comment: commentInput,
-                          // is_approved omitted so DB default applies
-                        }
-                      ])
-                      if (error) throw error
-                      setCommentInput('')
-                      setRatingInput(5)
-                      setCommentTouched(false)
-                      toast({ title: `شكراً ${currentUser?.name || ''}!`, description: 'شكراً على تقييمك لمنتجنا', duration: 4000 })
-                    } catch (err) {
-                      console.error('Error submitting review:', err)
-                      toast({ title: 'خطأ', description: 'فشل إرسال المراجعة', variant: 'destructive' })
-                    } finally {
-                      setSubmittingReview(false)
-                    }
-                  }}>
-                    <div className="mb-3">
-                      <label className="block text-sm text-gray-700 mb-2">التقييم</label>
-                      <div className="flex items-center gap-2">
-                        {Array.from({ length: 5 }).map((_, i) => {
-                          const idx = i + 1
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setRatingInput(idx)}
-                              aria-label={`${idx} نجوم`}
-                              className={`p-1 rounded-lg transform transition duration-150 ${ratingInput >= idx ? 'scale-105' : 'hover:scale-110'}`}
-                            >
-                              <StarSVG filled={ratingInput >= idx} size={28} />
-                            </button>
-                          )
-                        })}
-                        <span className="text-sm text-gray-500">{ratingInput}/5</span>
-                      </div>
-                    </div>
-
-                    {/* Quick comment presets */}
-                    <div className="mb-3">
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {quickComments.map((qc) => (
-                          <button
-                            key={qc}
-                            type="button"
-                            onClick={() => setCommentInput(qc)}
-                            className={`text-sm px-3 py-1 rounded-full border ${commentInput === qc ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-800 border-gray-200'}`}
-                          >
-                            {qc}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm text-gray-700 mb-2">التعليق</label>
-                      <textarea
-                        value={commentInput}
-                        onChange={(e) => {
-                          setCommentInput(e.target.value)
-                          setCommentTouched(true)
-                        }}
-                        onFocus={() => setCommentTouched(true)}
-                        placeholder="اكتب تعليقك هنا..."
-                        aria-label="تعليق"
-                        className="w-full mt-2 border border-gray-200 rounded-lg px-3 py-2 h-28 text-black placeholder-gray-500 focus:border-red-300 focus:ring-1 focus:ring-red-100"
-                      />
-                      {commentTouched && (commentInput || '').trim().length < 5 && (
-                        <p className="mt-2 text-xs text-gray-500">الحد الأدنى: 5 أحرف</p>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={submittingReview || (commentInput || '').trim().length < 5}
-                      aria-disabled={submittingReview || (commentInput || '').trim().length < 5}
-                      className={`w-full text-white ${submittingReview || (commentInput || '').trim().length < 5 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
-                    >
-                      {submittingReview ? 'جاري الإرسال...' : 'أرسل المراجعة'}
-                    </Button>
-                  </form>
-                )}
-              </div>
+              {!currentUser ? (
+                <div className="bg-white p-6 rounded-lg border border-gray-200 text-center">
+                  <h3 className="font-semibold text-lg mb-3">اكتب مراجعتك</h3>
+                  <p className="text-gray-600 mb-4">يجب أن تكون مسجلاً لتترك مراجعة</p>
+                  <Button onClick={() => setShowLoginModal(true)} className="w-full">
+                    تسجيل الدخول
+                  </Button>
+                </div>
+              ) : (
+                <EnhancedReviewForm
+                  productId={product.id}
+                  userId={currentUser.id}
+                  onReviewSubmitted={fetchReviews}
+                />
+              )}
             </aside>
           </div>
         </section>
