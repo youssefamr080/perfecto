@@ -20,7 +20,8 @@ export function EnhancedReviewForm({
   orderId,
   onReviewSubmitted 
 }: EnhancedReviewFormProps) {
-  const [rating, setRating] = useState(0)
+  // Default rating is 5 so the user starts with a full rating but can change it
+  const [rating, setRating] = useState(5)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -88,7 +89,7 @@ export function EnhancedReviewForm({
       })
 
       // Reset form
-      setRating(0)
+  setRating(5)
       setComment('')
       
       onReviewSubmitted?.()
