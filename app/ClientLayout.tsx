@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { BottomNavigation } from "@/components/navigation/bottom-nav"
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float"
 import { InstallPrompt } from "@/components/pwa/install-prompt"
+import { NotificationPrompt } from "@/components/pwa/notification-prompt"
 import { Toaster } from "@/components/ui/toaster"
 import { PerformanceOptimizer } from "@/components/performance-optimizer"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -74,6 +75,7 @@ export default function ClientLayout({
               <BottomNavigation />
               <WhatsAppFloat />
               <InstallPrompt />
+              <NotificationPrompt />
               <Toaster />
             </RealtimeProvider>
           </ErrorBoundary>

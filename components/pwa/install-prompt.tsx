@@ -9,14 +9,20 @@ export function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
+    const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())
+    const isInStandalone = (window.navigator as any).standalone === true
+    // For iOS devices, prompt manual install instructions
+    if (isIos && !isInStandalone) {
+      setShowPrompt(true)
+      return
+    }
+    // Regular PWA install prompt
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
       setShowPrompt(true)
     }
-
     window.addEventListener("beforeinstallprompt", handler)
-
     return () => {
       window.removeEventListener("beforeinstallprompt", handler)
     }
@@ -52,11 +58,19 @@ export function InstallPrompt() {
           <X className="h-5 w-5" />
         </Button>
       </div>
-      <p className="text-base text-black mb-4 leading-relaxed font-semibold">استمتع بتجربة أسرع وأسهل! ثبّت تطبيق بيرفكتو تيب على جهازك واطلب بضغطة واحدة في أي وقت.</p>
+      <p className="text-base text-black mb-4 leading-relaxed font-semibold">
+        استمتع بتجربة أسرع وأسهل على هاتفك!
+      </p>
       <div className="flex gap-2">
-        <Button onClick={handleInstall} size="lg" className="flex-1 bg-red-600 hover:bg-red-700 text-white text-lg font-bold shadow-md">
-          <Download className="h-5 w-5 mr-2" /> تثبيت التطبيق
-        </Button>
+        {deferredPrompt ? (
+          <Button onClick={handleInstall} size="lg" className="flex-1 bg-red-600 hover:bg-red-700 text-white text-lg font-bold shadow-md">
+            <Download className="h-5 w-5 mr-2" /> تثبيت التطبيق
+          </Button>
+        ) : (
+          <Button disabled size="lg" className="flex-1 bg-green-600 text-white text-lg font-bold">
+            اضغط زر المشاركة ثم اختر "Add to Home Screen"
+          </Button>
+        )}
         <Button onClick={handleDismiss} variant="outline" size="lg" className="text-black border-gray-300 bg-white hover:bg-gray-100">
           لاحقاً
         </Button>

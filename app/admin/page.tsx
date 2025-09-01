@@ -170,8 +170,10 @@ export default function AdminPage() {
       }))
       
       // إظهار تنبيه بوجود طلب جديد
-      setShowNewOrderAlert(true)
-      setTimeout(() => setShowNewOrderAlert(false), 10000)
+  setShowNewOrderAlert(true)
+  // تشغيل صوت الإشعار والإخطار في المتصفح
+  playNotificationSound()
+  setTimeout(() => setShowNewOrderAlert(false), 10000)
     }
   }
 
