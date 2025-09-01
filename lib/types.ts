@@ -60,6 +60,7 @@ export interface User {
   total_orders: number
   total_spent: number
   is_active: boolean
+  is_admin?: boolean
   birth_date?: string
   gender?: "male" | "female"
   preferred_delivery_time?: string

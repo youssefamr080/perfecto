@@ -32,126 +32,55 @@ export function ReviewNotifications() {
   const { toast } = useToast()
 
   useEffect(() => {
-    // جلب الإشعارات عند تحميل المكون
     fetchNotifications()
-    
-    // إعداد استماع فوري للمراجعات الجديدة
+
     const channel = supabase
       .channel('review-notifications')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'product_reviews'
-        },
-        handleNewReview
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'product_reviews'
-        },
-        handleReviewUpdate
+        { event: 'INSERT', schema: 'public', table: 'review_notifications' },
+        () => fetchNotifications()
       )
       .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   const fetchNotifications = async () => {
     try {
-      // في التطبيق الحقيقي، ستكون هذه مخزنة في جدول إشعارات منفصل
-      // هنا نحاكي الإشعارات بجلب المراجعات الحديثة
-      const { data, error } = await supabase
-        .from('product_reviews')
-        .select(`
-          id, rating, comment, created_at, is_approved,
-          users!user_id!inner(name),
-          products!product_id!inner(name, images)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (error) throw error
-
-      // تحويل البيانات إلى تنسيق الإشعارات
-      const mockNotifications: ReviewNotification[] = (data || []).map(review => ({
-        id: `notif-${review.id}`,
-        type: 'new_review' as const,
+      const userId = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
+      })() : ''
+      const res = await fetch('/api/reviews/notifications', {
+        headers: { 'x-user-id': userId }
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to fetch notifications')
+      const rows = json.data
+      const mapped: ReviewNotification[] = (rows || []).map((row: any) => ({
+        id: row.id,
+        type: row.type,
+        read: row.read,
+        created_at: row.created_at,
         review: {
-          id: review.id,
-          rating: review.rating,
-          comment: review.comment,
-          created_at: review.created_at,
-          user: { name: (review.users as any)?.name || 'مستخدم' },
-          product: { 
-            name: (review.products as any)?.name || 'منتج', 
-            images: (review.products as any)?.images || ['/placeholder.jpg']
-          }
-        },
-        read: review.is_approved, // نعتبر المراجعات المعتمدة كمقروءة
-        created_at: review.created_at
+          id: row.review?.id,
+          rating: row.review?.rating,
+          comment: row.review?.comment,
+          created_at: row.review?.created_at,
+          user: { name: row.review?.users?.name || 'مستخدم' },
+          product: { name: row.review?.products?.name || 'منتج', images: row.review?.products?.images || ['/placeholder.jpg'] }
+        }
       }))
-
-      setNotifications(mockNotifications)
-      setUnreadCount(mockNotifications.filter(n => !n.read).length)
+      setNotifications(mapped)
+      setUnreadCount(mapped.filter((n: ReviewNotification) => !n.read).length)
     } catch (error) {
       console.error('Error fetching notifications:', error)
     }
   }
 
-  const handleNewReview = async (payload: any) => {
-    try {
-      // جلب تفاصيل المراجعة الجديدة
-      const { data, error } = await supabase
-        .from('product_reviews')
-        .select(`
-          id, rating, comment, created_at,
-          users!user_id!inner(name),
-          products!product_id!inner(name, images)
-        `)
-        .eq('id', payload.new.id)
-        .single()
-
-      if (error) throw error
-
-      const newNotification: ReviewNotification = {
-        id: `notif-${data.id}`,
-        type: 'new_review',
-        review: {
-          id: data.id,
-          rating: data.rating,
-          comment: data.comment,
-          created_at: data.created_at,
-          user: { name: (data.users as any)?.name || 'مستخدم' },
-          product: { 
-            name: (data.products as any)?.name || 'منتج', 
-            images: (data.products as any)?.images || ['/placeholder.jpg']
-          }
-        },
-        read: false,
-        created_at: data.created_at
-      }
-
-      setNotifications(prev => [newNotification, ...prev])
-      setUnreadCount(prev => prev + 1)
-
-      // إشعار مرئي
-      toast({
-        title: "مراجعة جديدة!",
-        description: `مراجعة جديدة للمنتج ${newNotification.review.product.name}`,
-      })
-
-      // إشعار صوتي (إذا كان مفعلاً)
-      playNotificationSound()
-    } catch (error) {
-      console.error('Error handling new review:', error)
-    }
+  const handleNewReview = async (_payload?: any) => {
+    await fetchNotifications()
+    toast({ title: 'تنبيه جديد', description: 'تم تحديث إشعارات المراجعات.' })
+    playNotificationSound()
   }
 
   const handleReviewUpdate = (payload: any) => {
@@ -182,13 +111,22 @@ export function ReviewNotifications() {
   }
 
   const markAsRead = async (notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(notif =>
-        notif.id === notificationId ? { ...notif, read: true } : notif
-      )
-    )
-    
-    setUnreadCount(prev => Math.max(0, prev - 1))
+    try {
+      const userId = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
+      })() : ''
+      const res = await fetch('/api/reviews/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ id: notificationId, read: true })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
+      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      // ignore update error for now
+    }
   }
 
   const markAllAsRead = () => {
@@ -319,6 +257,9 @@ export function ReviewNotifications() {
                             src={notification.review.product.images[0]}
                             alt={notification.review.product.name}
                             className="w-8 h-8 rounded object-cover"
+                            loading="lazy"
+                            width={32}
+                            height={32}
                           />
                           <span className="text-sm font-medium truncate">
                             {notification.review.product.name}
@@ -366,6 +307,9 @@ export function ReviewNotifications() {
                   src={selectedNotification.review.product.images[0]}
                   alt={selectedNotification.review.product.name}
                   className="w-16 h-16 rounded-lg object-cover"
+                  loading="lazy"
+                  width={64}
+                  height={64}
                 />
                 <div>
                   <h3 className="font-semibold">

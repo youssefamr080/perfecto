@@ -1,8 +1,7 @@
-const CACHE_NAME = 'perfecto-v1'
-const urlsToCache = [
+const VERSION = 'v3'
+const CACHE_NAME = `perfecto-${VERSION}`
+const PRECACHE = [
   '/',
-  '/categories',
-  '/offers',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
@@ -13,7 +12,7 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        return cache.addAll(urlsToCache)
+  return cache.addAll(PRECACHE)
       })
   )
   self.skipWaiting()
@@ -21,37 +20,43 @@ self.addEventListener('install', function(event) {
 
 // Fetch event
 self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // Cache hit - return response
-        if (response) {
-          return response
-        }
+  const req = event.request
+  const url = new URL(req.url)
 
-        return fetch(event.request).then(
-          function(response) {
-            // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response
-            }
+  // Only handle same-origin GET requests
+  if (req.method !== 'GET' || url.origin !== self.location.origin) {
+    return
+  }
 
-            // IMPORTANT: Clone the response. A response is a stream
-            // and because we want the browser to consume the response
-            // as well as the cache consuming the response, we need
-            // to clone it so we have two streams.
-            var responseToCache = response.clone()
-
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache)
-              })
-
-            return response
-          }
-        )
-      }
+  // Navigation requests: network first with cache fallback to offline page (root)
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const resClone = res.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone))
+          return res
+        })
+        .catch(() => caches.match(req).then((r) => r || caches.match('/')))
     )
+    return
+  }
+
+  // Static assets and pages: stale-while-revalidate
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const resClone = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone))
+          }
+          return res
+        })
+        .catch(() => cached)
+
+      return cached || fetchPromise
+    })
   )
 })
 
@@ -68,4 +73,16 @@ self.addEventListener('activate', function(event) {
       )
     })
   )
+  self.clients.claim()
+  // أعلِم كل العملاء بوجود نسخة جديدة لتحديث واجهة التطبيق فوراً
+  self.clients.matchAll({ type: 'window' }).then((clients) => {
+    clients.forEach((client) => client.postMessage({ type: 'NEW_VERSION', version: VERSION }))
+  })
+})
+
+// قبول رسالة من العميل لتجاوز الانتظار يدوياً
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })

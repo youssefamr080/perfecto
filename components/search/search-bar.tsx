@@ -43,6 +43,8 @@ export function SearchBar({
   } = useSearchStore()
 
   const [debouncedQuery] = useDebounce(localQuery, 300)
+  const abortRef = useRef<AbortController | null>(null)
+  const [activeIndex, setActiveIndex] = useState(-1)
 
   // تحميل البيانات عند فتح البحث
   useEffect(() => {
@@ -58,7 +60,18 @@ export function SearchBar({
   useEffect(() => {
     if (debouncedQuery && showSuggestions) {
       getSuggestions(debouncedQuery)
-      search(debouncedQuery)
+      if (abortRef.current) abortRef.current.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      ;(async () => {
+        try {
+          await search(debouncedQuery)
+        } catch (_) {
+          // ignore
+        }
+      })()
+    } else if (!debouncedQuery) {
+      setActiveIndex(-1)
     }
   }, [debouncedQuery, getSuggestions, search, showSuggestions])
 
@@ -110,6 +123,38 @@ export function SearchBar({
     inputRef.current?.focus()
   }
 
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen) return
+    const total = (suggestions?.length || 0) + (results?.length || 0)
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((prev) => (prev + 1) % Math.max(total, 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((prev) => (prev - 1 + Math.max(total, 1)) % Math.max(total, 1))
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        const inSuggestions = activeIndex < (suggestions?.length || 0)
+        if (inSuggestions) {
+          const val = suggestions[activeIndex]
+          handleSuggestionClick(val)
+        } else {
+          const idx = activeIndex - (suggestions?.length || 0)
+          const prod = results[idx]
+          if (prod) {
+            router.push(`/product/${prod.id}`)
+            setIsOpen(false)
+            setLocalQuery("")
+          }
+        }
+      } else {
+        handleSearch(localQuery)
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false)
+    }
+  }
+
   return (
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
@@ -121,6 +166,7 @@ export function SearchBar({
             value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
             onFocus={() => setIsOpen(true)}
+            onKeyDown={onKeyDown}
             className="pl-12 pr-10 text-right border-red-200 focus:border-red-500 bg-white"
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 h-4 w-4" />
@@ -143,17 +189,20 @@ export function SearchBar({
         <div
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+          role="listbox"
         >
           {/* الاقتراحات */}
           {suggestions.length > 0 && (
             <div className="p-3 border-b">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">اقتراحات</h4>
               <div className="space-y-1">
-                {suggestions.map((suggestion, index) => (
+        {suggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-right p-2 hover:bg-red-50 rounded-md transition-colors flex items-center gap-2"
+          className={`w-full text-right p-2 rounded-md transition-colors flex items-center gap-2 ${activeIndex === index ? 'bg-red-50' : 'hover:bg-red-50'}`}
+          role="option"
+          aria-selected={activeIndex === index}
                   >
                     <Search className="h-4 w-4 text-gray-600" />
                     <span className="text-sm">{suggestion}</span>
@@ -222,16 +271,21 @@ export function SearchBar({
                 منتجات مطابقة
               </h4>
               <div className="space-y-2">
-                {results.slice(0, 5).map((product) => (
+                {results.slice(0, 5).map((product, i) => {
+                  const idx = (suggestions?.length || 0) + i
+                  const active = activeIndex === idx
+                  return (
                   <Link
                     key={product.id}
                     href={`/product/${product.id}`}
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 p-2 hover:bg-green-50 rounded-xl transition-colors border border-gray-100 shadow-sm"
+                    className={`flex items-center gap-3 p-2 rounded-xl transition-colors border border-gray-100 shadow-sm ${active ? 'bg-green-50' : 'hover:bg-green-50'}`}
+                    role="option"
+                    aria-selected={active}
                   >
                     <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
                       {product.images && product.images[0] ? (
-                        <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" />
+                        <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" loading="lazy" width={48} height={48} />
                       ) : (
                         <span className="text-2xl">🛒</span>
                       )}
@@ -241,7 +295,7 @@ export function SearchBar({
                       <p className="text-xs text-red-600 font-bold">{product.price} ج.م</p>
                     </div>
                   </Link>
-                ))}
+                )})}
               </div>
             </div>
           )}
@@ -277,6 +331,9 @@ export function SearchBar({
             <div className="p-6 text-center text-gray-700">
               <Search className="h-8 w-8 mx-auto mb-2 text-gray-600" />
               <p className="text-sm">ابدأ بكتابة ما تبحث عنه</p>
+              {localQuery && (
+                <p className="text-xs text-gray-500 mt-1">لا توجد نتائج… جرّب كلمات أقصر أو فئات مختلفة</p>
+              )}
             </div>
           )}
         </div>

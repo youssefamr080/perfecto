@@ -5,17 +5,28 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Admin client with elevated permissions
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // Using anon key but will bypass RLS
-  {
+// Server-only helper to get a client with the Service Role key when available.
+// Use this ONLY in server environments (API routes, edge functions). Never expose this key to the client.
+export const getServiceSupabase = () => {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    // Fallback to anon client if service role key isn't configured (e.g., local dev).
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[supabase] SUPABASE_SERVICE_ROLE_KEY not set; falling back to anon client')
+    }
+    return supabase
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
-  }
-)
+  })
+}
+
+// Deprecated: keep export for compatibility, but internally use service client when possible.
+export const supabaseAdmin = getServiceSupabase()
 
 // Client-side singleton
 let supabaseClient: ReturnType<typeof createClient> | null = null

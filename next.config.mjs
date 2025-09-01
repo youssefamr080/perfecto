@@ -7,9 +7,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: [
-      'localhost',
-      'iekthsayqhsqywlpaapc.supabase.co'
+    remotePatterns: [
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'iekthsayqhsqywlpaapc.supabase.co' },
     ],
     unoptimized: false,
     minimumCacheTTL: 60,

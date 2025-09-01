@@ -38,6 +38,7 @@ export function Header() {
 
   const { itemCount } = useCartStore()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const isAdmin = Boolean(user?.is_admin)
   const { unreadCount, fetchNotifications } = useNotificationsStore()
 
   useEffect(() => {
@@ -48,6 +49,8 @@ export function Header() {
 
   const handleLogout = () => {
     logout()
+  // إزالة كوكي الأدمن عند الخروج
+  fetch('/api/auth/admin-cookie', { method: 'DELETE' }).catch(() => {})
   }
 
   return (
@@ -74,6 +77,11 @@ export function Header() {
               <Link href="/about" className="text-gray-700 hover:text-red-600 transition-colors font-medium">
                 من نحن
               </Link>
+              {isAuthenticated && isAdmin && (
+                <Link href="/admin" className="text-red-700 hover:text-red-800 transition-colors font-semibold">
+                  الأدمن
+                </Link>
+              )}
             </nav>
 
             {/* Search Bar */}
@@ -111,7 +119,15 @@ export function Header() {
 
               {/* User Menu */}
               {isAuthenticated ? (
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={(open) => {
+                  if (open) {
+                    if (isAdmin) {
+                      fetch('/api/auth/admin-cookie', { method: 'POST', headers: { 'x-user-id': user!.id } }).catch(() => {})
+                    } else {
+                      fetch('/api/auth/admin-cookie', { method: 'DELETE' }).catch(() => {})
+                    }
+                  }
+                }}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="hover:bg-red-50">
                       <User className="h-5 w-5 text-green-800" />
@@ -124,6 +140,11 @@ export function Header() {
                       <p className="text-xs text-red-600 font-medium">{user?.loyalty_points} نقطة ولاء</p>
                     </div>
                     <DropdownMenuSeparator />
+                    {isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin">لوحة التحكم</Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild>
                       <Link href="/profile">الملف الشخصي</Link>
                     </DropdownMenuItem>
@@ -180,6 +201,11 @@ export function Header() {
                   <Link href="/about" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-gray-800" onClick={() => setIsSidebarOpen(false)}>
                     من نحن
                   </Link>
+                  {isAuthenticated && isAdmin && (
+                    <Link href="/admin" className="py-2 px-3 rounded-lg hover:bg-red-50 text-base font-bold text-red-700" onClick={() => setIsSidebarOpen(false)}>
+                      الأدمن
+                    </Link>
+                  )}
                 </nav>
                 <hr className="my-4" />
                 <div>

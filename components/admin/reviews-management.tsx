@@ -117,12 +117,19 @@ export function ReviewsManagement() {
 
   const approveReview = async (reviewId: string, approved: boolean) => {
     try {
-      const { error } = await supabase
-        .from('product_reviews')
-        .update({ is_approved: approved })
-        .eq('id', reviewId)
-
-      if (error) throw error
+      const res = await fetch('/api/reviews/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Temporary: use current user id when wiring real auth
+          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
+          })() : ''
+        },
+        body: JSON.stringify({ action: 'approve', reviewId, approved })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
       setReviews(prev => prev.map(r => 
         r.id === reviewId ? { ...r, is_approved: approved } : r
@@ -142,12 +149,18 @@ export function ReviewsManagement() {
 
   const deleteReview = async (reviewId: string) => {
     try {
-      const { error } = await supabase
-        .from('product_reviews')
-        .delete()
-        .eq('id', reviewId)
-
-      if (error) throw error
+      const res = await fetch('/api/reviews/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
+          })() : ''
+        },
+        body: JSON.stringify({ action: 'delete', reviewId })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
       setReviews(prev => prev.filter(r => r.id !== reviewId))
       toast({ title: 'تم الحذف', description: 'تم حذف المراجعة بنجاح' })
@@ -166,16 +179,18 @@ export function ReviewsManagement() {
 
     setSubmittingReply(true)
     try {
-      const { error } = await supabase
-        .from('product_reviews')
-        .update({ 
-          store_reply: replyText.trim(),
-          store_reply_at: new Date().toISOString(),
-          replied_by_admin: true
-        })
-        .eq('id', reviewId)
-
-      if (error) throw error
+      const res = await fetch('/api/reviews/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
+          })() : ''
+        },
+        body: JSON.stringify({ action: 'reply', reviewId, replyText: replyText.trim() })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
       setReviews(prev => prev.map(r => 
         r.id === reviewId ? { 

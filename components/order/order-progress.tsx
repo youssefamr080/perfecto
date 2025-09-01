@@ -4,7 +4,8 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle, Clock, Truck, Package } from "lucide-react"
 
 interface OrderProgressProps {
-  status: "pending" | "confirmed" | "preparing" | "shipping" | "delivered"
+  status: "pending" | "confirmed" | "preparing" | "shipping" | "delivered" |
+          "PENDING" | "CONFIRMED" | "PREPARING" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED"
 }
 
 const statusSteps = [
@@ -16,7 +17,23 @@ const statusSteps = [
 ]
 
 export function OrderProgress({ status }: OrderProgressProps) {
-  const currentStepIndex = statusSteps.findIndex((step) => step.key === status)
+  // تطبيع الحالة إلى المفاتيح السفلية المستخدمة في المخطط
+  const normalized = (() => {
+    if (!status) return "pending"
+    const s = String(status)
+    switch (s) {
+      case 'PENDING': return 'pending'
+      case 'CONFIRMED': return 'confirmed'
+      case 'PREPARING': return 'preparing'
+      case 'OUT_FOR_DELIVERY':
+      case 'SHIPPING':
+      case 'shipping': return 'shipping'
+      case 'DELIVERED': return 'delivered'
+      default: return s.toLowerCase()
+    }
+  })()
+
+  const currentStepIndex = statusSteps.findIndex((step) => step.key === normalized)
   const progress = ((currentStepIndex + 1) / statusSteps.length) * 100
 
   return (

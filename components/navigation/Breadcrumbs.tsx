@@ -14,8 +14,27 @@ export default function Breadcrumbs({ segments }: { segments: Segment[] }) {
   const first = segments[0]
   const last = segments[segments.length - 1]
 
+  const itemListElement = segments.map((seg, idx) => ({
+    '@type': 'ListItem',
+    position: idx + 1,
+    name: seg.label,
+    item: seg.href || undefined,
+  }))
+
   return (
     <nav aria-label="breadcrumb" className="text-sm">
+      {/* structured data for SEO */}
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement,
+          }),
+        }}
+      />
       {/* full breadcrumb for md+ */}
       <ol className="hidden md:flex items-center gap-2 text-gray-600 overflow-auto">
         {segments.map((seg, idx) => {

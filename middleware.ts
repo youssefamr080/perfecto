@@ -40,6 +40,16 @@ export function middleware(request: NextRequest) {
     return new NextResponse('Too Many Requests', { status: 429 })
   }
 
+  // منع الوصول لمسارات الأدمن إن لم يكن هناك كوكي إثبات أدمن
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const adminCookie = request.cookies.get('is_admin')?.value
+    if (adminCookie !== '1') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Security headers
   const response = NextResponse.next()
   
@@ -60,6 +70,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }

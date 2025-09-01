@@ -554,23 +554,32 @@ export default function ProductPage() {
                     }
                     
                     try {
-                      // Handle helpful/not helpful voting
-                      const { error } = await supabase
-                        .from('review_votes')
-                        .upsert({
-                          user_id: currentUser.id,
-                          review_id: reviewId,
-                          is_helpful: helpful
-                        })
-                      
-                      if (error) throw error
-                      
+                      // استخدم API統 واحد للتصويت مع التعرّف على المستخدم من الهيدر
+                      const res = await fetch('/api/reviews/vote', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'x-user-id': currentUser.id,
+                        },
+                        body: JSON.stringify({ reviewId, voteType: helpful ? 'helpful' : 'not_helpful' })
+                      })
+                      const data = await res.json()
+                      if (!res.ok || !data.success) {
+                        throw new Error(data?.error || 'Vote failed')
+                      }
+
+                      // تحديث تفاؤلي للأعداد ثم إعادة الجلب لضمان التزامن
+                      setReviews(prev => prev.map(r => r.id === reviewId ? {
+                        ...r,
+                        helpful_count: data.stats?.helpful_count ?? r.helpful_count,
+                        not_helpful_count: data.stats?.not_helpful_count ?? r.not_helpful_count,
+                      } : r))
+
                       toast({
                         title: "شكراً لك",
                         description: helpful ? "تم تسجيل تصويتك كمفيد" : "تم تسجيل تصويتك كغير مفيد"
                       })
-                      
-                      // Refresh reviews to show updated counts
+
                       fetchReviews()
                     } catch (error) {
                       console.error('Error voting on review:', error)

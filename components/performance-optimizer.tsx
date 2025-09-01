@@ -11,6 +11,18 @@ export function PerformanceOptimizer() {
           .register("/sw.js")
           .then((registration) => {
             console.log("SW registered: ", registration)
+            // الاستماع لرسائل التحديث من SW
+            navigator.serviceWorker.addEventListener('message', (event: any) => {
+              if (event?.data?.type === 'NEW_VERSION') {
+                // اطلب من SW تجاوز الانتظار ثم أعد تحميل الصفحة عندما يصبح المتحكم الجديد فعالاً
+                if (registration.waiting) {
+                  registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+                }
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                  window.location.reload()
+                })
+              }
+            })
           })
           .catch((registrationError) => {
             console.log("SW registration failed: ", registrationError)

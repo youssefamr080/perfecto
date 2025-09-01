@@ -46,25 +46,28 @@ export function EnhancedReviewDisplay({
     }
 
     try {
+      // إذا قام المكون الأب بتمرير معالج، نفوض إليه لمنع الازدواجية
+      if (onHelpfulClick) {
+        onHelpfulClick(reviewId, voteType === 'helpful')
+        return
+      }
+
       const response = await fetch('/api/reviews/vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': currentUserId,
         },
         body: JSON.stringify({
           reviewId,
           voteType,
-          userId: currentUserId
         })
       })
 
       const result = await response.json()
 
       if (result.success) {
-        // تحديث الواجهة بناءً على النتيجة
-        if (onHelpfulClick) {
-          onHelpfulClick(reviewId, voteType === 'helpful')
-        }
+        // يمكن إضافة تحديث محلي بسيط عند عدم وجود معالج أب
       } else {
         console.error('Vote failed:', result.error)
       }
