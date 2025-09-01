@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ import {
   Shield,
   Package
 } from 'lucide-react'
+import Breadcrumbs from '@/components/navigation/Breadcrumbs'
 
 const TRANSACTION_TYPES = {
   'EARNED': {
@@ -51,6 +53,7 @@ const TRANSACTION_TYPES = {
 
 export default function LoyaltyHistoryPage() {
   const { user, isAuthenticated } = useAuthStore()
+  const router = useRouter()
   const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [pointsValid, setPointsValid] = useState<boolean | null>(null)
@@ -151,18 +154,26 @@ export default function LoyaltyHistoryPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* Header + Breadcrumbs */}
         <div className="flex items-center gap-4 mb-8">
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => router.back()}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             رجوع
           </Button>
           
           <div className="flex-1">
+            <div className="mb-2">
+              <Breadcrumbs
+                segments={[
+                  { href: '/', label: 'الرئيسية' },
+                  { label: 'تاريخ نقاط الولاء' },
+                ]}
+              />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
               <Coins className="h-8 w-8 text-yellow-600" />
               تاريخ نقاط الولاء
@@ -185,7 +196,7 @@ export default function LoyaltyHistoryPage() {
             <CardContent className="p-4">
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Button
-                  onClick={() => window.location.href = '/admin'}
+                  onClick={() => router.push('/admin')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-gray-50"
@@ -197,7 +208,7 @@ export default function LoyaltyHistoryPage() {
                 <div className="h-6 w-px bg-yellow-300 hidden md:block"></div>
                 
                 <Button
-                  onClick={() => window.location.href = '/admin/loyalty'}
+                  onClick={() => router.push('/admin/loyalty')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-yellow-50 border-yellow-300 text-yellow-700"
@@ -207,7 +218,7 @@ export default function LoyaltyHistoryPage() {
                 </Button>
                 
                 <Button
-                  onClick={() => window.location.href = '/admin/orders'}
+                  onClick={() => router.push('/admin/orders')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-blue-50 border-blue-300 text-blue-700"

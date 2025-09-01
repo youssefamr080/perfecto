@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +34,7 @@ import {
   type PointsValidation
 } from '@/lib/utils/loyaltyProtection'
 import { supabase } from '@/lib/supabase'
+import Breadcrumbs from '@/components/navigation/Breadcrumbs'
 
 interface UserPointsInfo {
   id: string
@@ -58,6 +60,7 @@ interface AuditResult {
 }
 
 export default function LoyaltyAdminPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
@@ -242,8 +245,17 @@ export default function LoyaltyAdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header + Breadcrumbs */}
         <div className="text-center mb-8">
+          <div className="mb-3 text-left">
+            <Breadcrumbs
+              segments={[
+                { href: '/', label: 'الرئيسية' },
+                { href: '/admin', label: 'الإدارة' },
+                { label: 'إدارة نقاط الولاء' },
+              ]}
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
             <Shield className="h-8 w-8 text-blue-600" />
             إدارة نقاط الولاء
@@ -257,7 +269,7 @@ export default function LoyaltyAdminPage() {
             <CardContent className="p-4">
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Button
-                  onClick={() => window.location.href = '/admin'}
+                  onClick={() => router.push('/admin')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-gray-50"
@@ -269,7 +281,7 @@ export default function LoyaltyAdminPage() {
                 <div className="h-6 w-px bg-blue-300 hidden md:block"></div>
                 
                 <Button
-                  onClick={() => window.location.href = '/admin/orders'}
+                  onClick={() => router.push('/admin/orders')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-blue-50 border-blue-300 text-blue-700"
@@ -279,7 +291,7 @@ export default function LoyaltyAdminPage() {
                 </Button>
                 
                 <Button
-                  onClick={() => window.location.href = '/loyalty/history'}
+                  onClick={() => router.push('/loyalty/history')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-green-50 border-green-300 text-green-700"

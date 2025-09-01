@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import Breadcrumbs from '@/components/navigation/Breadcrumbs'
 import { 
   Package, 
   AlertTriangle, 
@@ -77,6 +79,7 @@ export default function OrderManagementPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [cancelLoading, setCancelLoading] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     loadOrders()
@@ -242,6 +245,15 @@ export default function OrderManagementPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="mb-3 text-left">
+            <Breadcrumbs
+              segments={[
+                { href: '/', label: 'الرئيسية' },
+                { href: '/admin', label: 'الإدارة' },
+                { label: 'إدارة الطلبات' },
+              ]}
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
             <Package className="h-8 w-8 text-blue-600" />
             إدارة الطلبات
@@ -255,7 +267,7 @@ export default function OrderManagementPage() {
             <CardContent className="p-4">
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Button
-                  onClick={() => window.location.href = '/admin'}
+                  onClick={() => router.push('/admin')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-gray-50"
@@ -267,7 +279,7 @@ export default function OrderManagementPage() {
                 <div className="h-6 w-px bg-blue-300 hidden md:block"></div>
                 
                 <Button
-                  onClick={() => window.location.href = '/admin/loyalty'}
+                  onClick={() => router.push('/admin/loyalty')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-yellow-50 border-yellow-300 text-yellow-700"
@@ -277,7 +289,7 @@ export default function OrderManagementPage() {
                 </Button>
                 
                 <Button
-                  onClick={() => window.location.href = '/loyalty/history'}
+                  onClick={() => router.push('/loyalty/history')}
                   variant="outline"
                   size="sm"
                   className="bg-white hover:bg-green-50 border-green-300 text-green-700"
