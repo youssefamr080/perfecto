@@ -74,7 +74,7 @@ export default function Breadcrumbs({ segments }: { segments: Segment[] }) {
               )}
 
               {!isLast && (
-                <ChevronRight className="h-4 w-4 text-gray-400 mx-2 flex-shrink-0" aria-hidden />
+                <ChevronRight className="h-4 w-4 text-gray-500 mx-2 flex-shrink-0" aria-hidden />
               )}
             </li>
           )
@@ -93,11 +93,11 @@ export default function Breadcrumbs({ segments }: { segments: Segment[] }) {
           </li>
         )}
 
-        <ChevronRight className="h-4 w-4 text-gray-400 mx-1" aria-hidden />
+  <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
 
         <li className="truncate text-gray-500">…</li>
 
-        <ChevronRight className="h-4 w-4 text-gray-400 mx-1" aria-hidden />
+  <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
 
         {last && (
           <li className="truncate max-w-[50%]">

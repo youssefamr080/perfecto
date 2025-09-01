@@ -205,7 +205,7 @@ export function SearchBar({
           aria-selected={activeIndex === index}
                   >
                     <Search className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">{suggestion}</span>
+                    <span className="text-sm text-gray-900">{suggestion}</span>
                   </button>
                 ))}
               </div>
@@ -330,7 +330,7 @@ export function SearchBar({
           {!suggestions.length && !recentSearches.length && !categories.length && !popularProducts.length && (
             <div className="p-6 text-center text-gray-700">
               <Search className="h-8 w-8 mx-auto mb-2 text-gray-600" />
-              <p className="text-sm">ابدأ بكتابة ما تبحث عنه</p>
+              <p className="text-sm text-gray-900">ابدأ بكتابة ما تبحث عنه</p>
               {localQuery && (
                 <p className="text-xs text-gray-500 mt-1">لا توجد نتائج… جرّب كلمات أقصر أو فئات مختلفة</p>
               )}

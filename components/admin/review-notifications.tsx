@@ -218,8 +218,8 @@ export function ReviewNotifications() {
 
           <div className="flex-1 overflow-y-auto space-y-3">
             {notifications.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <div className="text-center py-8 text-gray-600">
+                <Bell className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                 <p>لا توجد إشعارات</p>
               </div>
             ) : (
@@ -325,12 +325,12 @@ export function ReviewNotifications() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">التقييم</label>
+                <label className="block text-sm font-medium mb-2 text-gray-900">التقييم</label>
                 {renderStars(selectedNotification.review.rating)}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">التعليق</label>
+                <label className="block text-sm font-medium mb-2 text-gray-900">التعليق</label>
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <p className="text-gray-800">
                     {selectedNotification.review.comment}
@@ -339,7 +339,7 @@ export function ReviewNotifications() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">التاريخ</label>
+                <label className="block text-sm font-medium mb-2 text-gray-900">التاريخ</label>
                 <p className="text-gray-600 text-sm">
                   {new Date(selectedNotification.review.created_at).toLocaleString('ar-EG')}
                 </p>

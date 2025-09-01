@@ -140,7 +140,7 @@ export default function LoyaltyHistoryPage() {
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">
           <CardContent className="text-center py-12">
-            <Coins className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <Coins className="h-16 w-16 text-gray-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">مطلوب تسجيل الدخول</h2>
             <p className="text-gray-600">يرجى تسجيل الدخول لمراجعة تاريخ نقاط الولاء</p>
           </CardContent>
@@ -383,7 +383,7 @@ export default function LoyaltyHistoryPage() {
         ) : (
           <Card>
             <CardContent className="text-center py-12">
-              <Gift className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <Gift className="h-16 w-16 text-gray-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد معاملات</h3>
               <p className="text-gray-600 mb-6">لم تقم بأي معاملات نقاط ولاء حتى الآن</p>
               <Button asChild>

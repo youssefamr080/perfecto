@@ -143,7 +143,7 @@ export function ReviewsStats() {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={`${size} ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+          className={`${size} ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`}
         />
       ))}
       <span className="text-sm text-gray-600 mr-1">{rating}/5</span>
@@ -187,7 +187,7 @@ export function ReviewsStats() {
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-4 h-4 ${i < Math.floor(stats.averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-4 h-4 ${i < Math.floor(stats.averageRating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`}
                       />
                     ))}
                   </div>

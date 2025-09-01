@@ -556,12 +556,13 @@ export default function AdminPage() {
               variant={soundEnabled ? "default" : "destructive"} 
               size="sm"
               title="تفعيل الصوت والإشعارات"
+              className={soundEnabled ? "bg-green-600 hover:bg-green-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"}
             >
               <Volume2 className="h-4 w-4 mr-2" />
               {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
             </Button>
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button onClick={fetchData} variant="outline" size="sm" className="text-gray-900 border-gray-300 hover:bg-gray-50">
+              <RefreshCw className="h-4 w-4 mr-2 text-gray-700" />
               تحديث
             </Button>
           </div>
@@ -747,7 +748,7 @@ export default function AdminPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-gray-900 font-bold">إدارة الطلبات</CardTitle>
-                  <Button onClick={() => exportData('orders')} size="sm">
+                  <Button onClick={() => exportData('orders')} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                     <Download className="h-4 w-4 mr-2" />
                     تصدير
                   </Button>
@@ -883,12 +884,12 @@ export default function AdminPage() {
                                     
                                     <div className="border-t pt-4">
                                       <div className="bg-green-50 p-4 rounded border space-y-2">
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex justify-between text-sm text-gray-800">
                                           <span>المجموع الفرعي:</span>
                                           <span>{(order.subtotal || 0).toFixed(2)} ج.م</span>
                                         </div>
                                         {order.shipping_fee > 0 && (
-                                          <div className="flex justify-between text-sm">
+                                          <div className="flex justify-between text-sm text-gray-800">
                                             <span>رسوم الشحن:</span>
                                             <span>{(order.shipping_fee || 0).toFixed(2)} ج.م</span>
                                           </div>
@@ -900,13 +901,13 @@ export default function AdminPage() {
                                           </div>
                                         )}
                                         {order.tax_amount > 0 && (
-                                          <div className="flex justify-between text-sm">
+                                          <div className="flex justify-between text-sm text-gray-800">
                                             <span>الضرائب:</span>
                                             <span>{(order.tax_amount || 0).toFixed(2)} ج.م</span>
                                           </div>
                                         )}
                                         <hr className="my-2" />
-                                        <div className="flex justify-between text-lg font-bold">
+                                        <div className="flex justify-between text-lg font-bold text-gray-900">
                                           <span>💰 المجموع الإجمالي:</span>
                                           <span className="text-green-600">{(order.final_amount || 0).toFixed(2)} ج.م</span>
                                         </div>
@@ -971,7 +972,7 @@ export default function AdminPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-gray-900 font-bold">إدارة المنتجات</CardTitle>
                   <div className="flex gap-2">
-                    <Button onClick={() => exportData('products')} size="sm" variant="outline">
+                    <Button onClick={() => exportData('products')} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                       <Download className="h-4 w-4 mr-2" />
                       تصدير
                     </Button>
@@ -1057,7 +1058,7 @@ export default function AdminPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-gray-900 font-bold">إدارة المستخدمين</CardTitle>
-                  <Button onClick={() => exportData('users')} size="sm">
+                  <Button onClick={() => exportData('users')} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                     <Download className="h-4 w-4 mr-2" />
                     تصدير
                   </Button>

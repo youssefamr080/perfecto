@@ -255,7 +255,7 @@ export function ReviewsManagement() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">إدارة المراجعات</h2>
+        <h2 className="text-2xl font-bold text-gray-900">إدارة المراجعات</h2>
         <Button onClick={fetchReviews} variant="outline">
           تحديث
         </Button>
@@ -325,8 +325,8 @@ export function ReviewsManagement() {
             {filteredReviews.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">لا توجد مراجعات في هذا القسم</p>
+                  <MessageSquare className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-700">لا توجد مراجعات في هذا القسم</p>
                 </CardContent>
               </Card>
             ) : (
@@ -451,19 +451,19 @@ export function ReviewsManagement() {
                   className="w-16 h-16 rounded-lg object-cover"
                 />
                 <div>
-                  <h3 className="font-semibold text-lg">{selectedReview.product.name}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900">{selectedReview.product.name}</h3>
                   <p className="text-gray-600">{selectedReview.user.name}</p>
                   <p className="text-sm text-gray-500">{selectedReview.user.phone}</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">التقييم</label>
+                <label className="block text-sm font-medium mb-2 text-gray-900">التقييم</label>
                 {renderStars(selectedReview.rating)}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">التعليق</label>
+                <label className="block text-sm font-medium mb-2 text-gray-900">التعليق</label>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-gray-800">{selectedReview.comment}</p>
                 </div>

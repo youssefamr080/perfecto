@@ -485,7 +485,7 @@ export default function OrderManagementPage() {
         {filteredOrders.length === 0 && !loading && (
           <Card>
             <CardContent className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <Package className="h-16 w-16 text-gray-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد طلبات</h3>
               <p className="text-gray-600">لم يتم العثور على طلبات تطابق معايير البحث</p>
             </CardContent>
