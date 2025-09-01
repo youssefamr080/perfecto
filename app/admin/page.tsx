@@ -173,6 +173,16 @@ export default function AdminPage() {
   setShowNewOrderAlert(true)
   // تشغيل صوت الإشعار والإخطار في المتصفح
   playNotificationSound()
+      // أرسل إشعار بريد إلكتروني للإدارة (غير محظور، تنفيذ بدون انتظار)
+      try {
+        fetch('/api/send-order-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: newOrder })
+        }).catch(err => console.warn('Failed to request send-order-email', err))
+      } catch (e) {
+        console.warn('send-order-email call failed', e)
+      }
   setTimeout(() => setShowNewOrderAlert(false), 10000)
     }
   }
