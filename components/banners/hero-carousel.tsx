@@ -33,7 +33,7 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-start p-8">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">منتجات الألبان الطازجة</h2>
-            <p className="text-white mb-4">أفضل أنواع الجبن، الزبادي، الحليب وأكثر</p>
+            <p className="text-white mb-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">أفضل أنواع الجبن، الزبادي، الحليب وأكثر</p>
             <Link href="/category/e4ad8949-e0a5-4ae8-85a7-bba348f44a49">
               <Button className="bg-white text-green-700 font-bold">تسوق الألبان</Button>
             </Link>
@@ -51,7 +51,7 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-start p-8">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">لحوم ومصنعات عالية الجودة</h2>
-            <p className="text-white mb-4">لحوم طازجة، برجر، سوسيس وأكثر</p>
+            <p className="text-white mb-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">لحوم طازجة، برجر، سوسيس وأكثر</p>
             <Link href="/category/48bea0ba-08ac-44e7-9790-46d8a574ae55">
               <Button className="bg-white text-green-700 font-bold">تسوق اللحوم</Button>
             </Link>
@@ -69,7 +69,7 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-start p-8">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">منتجات متنوعة</h2>
-            <p className="text-white mb-4">كل ما تحتاجه من منتجات غذائية أخرى</p>
+            <p className="text-white mb-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">كل ما تحتاجه من منتجات غذائية أخرى</p>
             <Link href="/category/e035e289-e068-42ba-89ed-1d1cbc409c75">
               <Button className="bg-white text-green-700 font-bold">تسوق الآن</Button>
             </Link>
@@ -87,7 +87,7 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-start p-8">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">توصيل مجاني</h2>
-            <p className="text-white mb-4">للطلبات فوق 300 جنيه</p>
+            <p className="text-white mb-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">للطلبات فوق 300 جنيه</p>
             <Link href="/categories">
               <Button className="bg-white text-green-700 font-bold">تسوق الآن</Button>
             </Link>
@@ -105,7 +105,7 @@ export function HeroCarousel() {
           />
           <div className="absolute inset-0 bg-black/40 flex flex-col justify-center items-start p-8">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">خصومات وعروض حصرية</h2>
-            <p className="text-white mb-4">استمتع بأفضل الأسعار والعروض على منتجاتنا</p>
+            <p className="text-white mb-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">استمتع بأفضل الأسعار والعروض على منتجاتنا</p>
             <Link href="/offers">
               <Button className="bg-white text-red-700 font-bold">شاهد العروض</Button>
             </Link>

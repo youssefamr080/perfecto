@@ -53,7 +53,7 @@ export function BottomNavigation() {
                   </Badge>
                 )}
               </div>
-              <span className="text-xs mt-1">{label}</span>
+              <span className="text-xs mt-1 text-gray-800">{label}</span>
             </Link>
           )
         })}

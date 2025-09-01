@@ -14,7 +14,7 @@ export default function NotFound() {
           <Link href="/" className="px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm">
             العودة للرئيسية
           </Link>
-          <Link href="/categories" className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700">
+          <Link href="/categories" className="px-4 py-2 border border-gray-200 rounded-lg text-gray-800 bg-white hover:bg-gray-50">
             تصفح المنتجات
           </Link>
         </div>

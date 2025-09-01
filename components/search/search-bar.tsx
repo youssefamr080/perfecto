@@ -188,7 +188,7 @@ export function SearchBar({
       {isOpen && showSuggestions && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-2 bg-white text-gray-900 border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
           role="listbox"
         >
           {/* الاقتراحات */}

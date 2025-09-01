@@ -591,7 +591,7 @@ export default function AdminPage() {
                 </p>
                 <Button 
                   onClick={() => router.push('/admin/loyalty')}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white"
+                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-gray-900"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   انتقال إلى إدارة النقاط

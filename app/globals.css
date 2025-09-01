@@ -189,3 +189,31 @@ body {
 .bg-gray-100 .text-gray-500 {
   color: #374151 !important; /* gray-700 */
 }
+
+/* اجعل النص الافتراضي داكناً داخل الحاويات الفاتحة لضمان التباين حتى مع تفضيل النظام الداكن */
+.bg-white,
+.bg-gray-50,
+.bg-gray-100,
+.bg-slate-50 {
+  color: #111827; /* gray-900 */
+}
+
+/* منع النص الأبيض فوق خلفيات فاتحة (حارس عام ضد التباين المنخفض)
+   يُطبّق فقط إذا لم يكن لدى العنصر خلفية مخصصة عبر bg-* */
+.bg-white .text-white:not([class*="bg-"]),
+.bg-gray-50 .text-white:not([class*="bg-"]),
+.bg-gray-100 .text-white:not([class*="bg-"]),
+.bg-slate-50 .text-white:not([class*="bg-"]) {
+  color: #111827 !important; /* gray-900 */
+}
+
+/* في الخلفيات الفاتحة جداً، خفّض النصوص الفاتحة للغاية إلى درجات داكنة آمنة */
+.bg-white .text-gray-100:not([class*="bg-"]),
+.bg-gray-50 .text-gray-100:not([class*="bg-"]),
+.bg-gray-100 .text-gray-100:not([class*="bg-"]),
+.bg-slate-50 .text-gray-100:not([class*="bg-"]),
+.bg-white .text-slate-50:not([class*="bg-"]),
+.bg-gray-50 .text-slate-50:not([class*="bg-"]),
+.bg-gray-100 .text-slate-50:not([class*="bg-"]) {
+  color: #1f2937 !important; /* gray-800 */
+}

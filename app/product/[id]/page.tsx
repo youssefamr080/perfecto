@@ -312,7 +312,7 @@ export default function ProductPage() {
       : [`/placeholder.svg?height=500&width=500&text=${encodeURIComponent(product.name)}`]
 
   return (
-    <div className="min-h-screen bg-white">
+  <div className="min-h-screen bg-white text-gray-900">
       {/* Breadcrumb - reusable component */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3 overflow-hidden">
@@ -350,8 +350,8 @@ export default function ProductPage() {
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {!product.is_available && <Badge className="bg-red-500 text-white">غير متوفر</Badge>}
                 {discountPercentage > 0 && <Badge className="bg-red-500 text-white">خصم {discountPercentage}%</Badge>}
-                {product.is_featured && (
-                  <Badge className="bg-yellow-500 text-white flex items-center gap-1">
+                  {product.is_featured && (
+                    <Badge className="bg-yellow-500 text-gray-900 flex items-center gap-1">
                     <Star className="h-3 w-3" />
                     مميز
                   </Badge>

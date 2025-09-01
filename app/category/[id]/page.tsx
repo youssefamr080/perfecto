@@ -110,7 +110,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
             <p className="text-green-100 text-lg mb-4 max-w-2xl mx-auto">
               {category.description || "اكتشف مجموعتنا المتنوعة من المنتجات الطبيعية عالية الجودة"}
             </p>
-            <Badge className="bg-white/20 text-white text-sm px-4 py-2">{totalProducts} منتج متاح</Badge>
+            <Badge className="bg-white/80 text-gray-900 text-sm px-4 py-2">{totalProducts} منتج متاح</Badge>
           </div>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
                   </span>
                 </div>
                 <h3 className="font-semibold text-sm text-gray-800">{subcategory.name}</h3>
-                <p className="text-xs text-black mt-1">{subcategory.products.length} منتج</p>
+                <p className="text-xs text-gray-900 mt-1">{subcategory.products.length} منتج</p>
               </a>
             ))}
           </div>
