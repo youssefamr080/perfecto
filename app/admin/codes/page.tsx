@@ -574,7 +574,7 @@ export default function AdminCodesPage() {
                 size="sm"
                 onClick={fetchData}
                 disabled={loading}
-                className="bg-transparent text-white border-white hover:bg-white hover:text-red-600 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                className="bg-transparent text-white border-white hover:bg-white hover:text-red-600"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 تحديث البيانات

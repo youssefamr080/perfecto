@@ -84,7 +84,7 @@ const OrdersPage = () => {
     const statusInfo = statusMap[status as keyof typeof statusMap] || { label: status, color: "bg-gray-500" }
 
     return (
-  <Badge className={`${statusInfo.color} text-gray-900 flex items-center gap-1`}>
+      <Badge className={`${statusInfo.color} text-white flex items-center gap-1`}>
         {getStatusIcon(status)}
         {statusInfo.label}
       </Badge>

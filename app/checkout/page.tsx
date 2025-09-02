@@ -541,7 +541,7 @@ export default function CheckoutPage() {
                             className={`px-3 py-1 text-xs rounded-lg font-medium transition-colors ${
                               points <= (user.loyalty_points || 0) && points <= maxUsablePoints
                                 ? pointsToUse === points
-                                  ? 'bg-yellow-500 text-gray-900'
+                                  ? 'bg-yellow-500 text-white'
                                   : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}

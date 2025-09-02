@@ -62,7 +62,7 @@ export default function HomePage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-  <div className="min-h-screen bg-white text-gray-900">
+      <div className="min-h-screen bg-white">
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-6">
           <HeroCarousel />
@@ -216,7 +216,7 @@ export default function HomePage() {
             </div>
 
             <Link href="/offers">
-              <Button size="sm" className="bg-yellow-500 text-gray-900 hover:bg-yellow-600">تسوق العروض</Button>
+              <Button size="sm" className="bg-yellow-500 text-white hover:bg-yellow-600">تسوق العروض</Button>
             </Link>
           </div>
 
@@ -236,7 +236,7 @@ export default function HomePage() {
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">المنتجات المميزة</h2>
                 <p className="text-gray-600">أفضل منتجاتنا المختارة خصيصاً لك</p>
               </div>
-              <Badge className="bg-yellow-500 text-gray-900 animate-pulse">
+              <Badge className="bg-yellow-500 text-white animate-pulse">
                 <Star className="h-4 w-4 mr-1" />
                 مميز
               </Badge>
