@@ -18,6 +18,7 @@ import type { Product, Category } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useProductsStore } from "@/lib/stores/products-store"
 import { HeroCarousel } from "@/components/banners/hero-carousel"
+import { cacheManager } from "@/lib/utils/cache-manager"
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -32,19 +33,34 @@ export default function HomePage() {
 
   const fetchData = async () => {
     try {
-      // جلب المنتجات المميزة من المخزن
+      // جلب المنتجات المميزة من المخزن (مع كاش محسن)
       await fetchFeaturedProducts()
 
-      // Fetch categories
-      const { data: categoriesData } = await supabase.from("categories").select("*").limit(6)
-      setCategories(categoriesData || [])
+      // التحقق من كاش الفئات أولاً
+      const cachedCategories = cacheManager.get<Category[]>('homepage_categories')
+      const cachedSubcategories = cacheManager.get<Category[]>('homepage_subcategories')
+      
+      if (cachedCategories && cachedSubcategories) {
+        setCategories(cachedCategories)
+        setSubcategories(cachedSubcategories)
+        return
+      }
 
-      // Fetch subcategories for discovery (show after featured products)
-      const { data: subcategoriesData } = await supabase
-        .from("subcategories")
-        .select("*")
-        .limit(12)
-      setSubcategories(subcategoriesData || [])
+      // جلب البيانات من قاعدة البيانات
+      const [categoriesRes, subcategoriesRes] = await Promise.all([
+        supabase.from("categories").select("*").limit(6),
+        supabase.from("subcategories").select("*").limit(12)
+      ])
+      
+      const categoriesData = categoriesRes.data || []
+      const subcategoriesData = subcategoriesRes.data || []
+      
+      setCategories(categoriesData)
+      setSubcategories(subcategoriesData)
+      
+      // حفظ في الكاش لمدة ساعة
+      cacheManager.set('homepage_categories', categoriesData, 60 * 60 * 1000)
+      cacheManager.set('homepage_subcategories', subcategoriesData, 60 * 60 * 1000)
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {

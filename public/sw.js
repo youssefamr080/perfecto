@@ -1,5 +1,6 @@
-const VERSION = 'v4'
+const VERSION = 'v5'
 const CACHE_NAME = `perfecto-${VERSION}`
+const IMAGE_CACHE_NAME = `perfecto-images-${VERSION}`
 const PRECACHE = [
   '/',
   '/manifest.json',
@@ -12,7 +13,7 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-  return cache.addAll(PRECACHE)
+        return cache.addAll(PRECACHE)
       })
   )
   self.skipWaiting()
@@ -28,13 +29,35 @@ self.addEventListener('fetch', function(event) {
     return
   }
 
+  // Handle images with long-term caching
+  if (req.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE_NAME).then(cache => {
+        return cache.match(req).then(cached => {
+          if (cached) {
+            return cached
+          }
+          return fetch(req).then(response => {
+            if (response && response.status === 200) {
+              cache.put(req, response.clone())
+            }
+            return response
+          })
+        })
+      })
+    )
+    return
+  }
+
   // Navigation requests: network first with cache fallback to offline page (root)
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const resClone = res.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone))
+          if (res && res.status === 200) {
+            const resClone = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone))
+          }
           return res
         })
         .catch(() => caches.match(req).then((r) => r || caches.match('/')))
@@ -66,7 +89,7 @@ self.addEventListener('activate', function(event) {
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== IMAGE_CACHE_NAME) {
             return caches.delete(cacheName)
           }
         })

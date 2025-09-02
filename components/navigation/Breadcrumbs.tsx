@@ -83,22 +83,59 @@ export default function Breadcrumbs({ segments }: { segments: Segment[] }) {
 
       {/* compact breadcrumb for small screens */}
       <ol className="flex md:hidden items-center gap-2 text-gray-600">
-        {first && (
-          <li className="truncate max-w-[40%]">
-            {first.href ? (
-              <Link href={first.href} className="truncate text-gray-600 hover:text-green-600" title={first.label}>{first.label}</Link>
-            ) : (
-              <span className="truncate text-gray-600" title={first.label}>{first.label}</span>
-            )}
-          </li>
+        {/* Show only if we have more than 2 segments */}
+        {segments.length > 2 && first && (
+          <>
+            <li className="truncate max-w-[30%]">
+              {first.href ? (
+                <Link href={first.href} className="truncate text-gray-600 hover:text-green-600" title={first.label}>{first.label}</Link>
+              ) : (
+                <span className="truncate text-gray-600" title={first.label}>{first.label}</span>
+              )}
+            </li>
+            <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
+            <li className="truncate text-gray-500">…</li>
+            <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
+          </>
         )}
 
-  <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
+        {/* Show previous segment if we have more than 1 segment */}
+        {segments.length > 1 && segments.length > 2 && (
+          <>
+            <li className="truncate max-w-[35%]">
+              {segments[segments.length - 2].href ? (
+                <Link 
+                  href={segments[segments.length - 2].href!} 
+                  className="truncate text-gray-600 hover:text-green-600" 
+                  title={segments[segments.length - 2].label}
+                >
+                  {segments[segments.length - 2].label}
+                </Link>
+              ) : (
+                <span className="truncate text-gray-600" title={segments[segments.length - 2].label}>
+                  {segments[segments.length - 2].label}
+                </span>
+              )}
+            </li>
+            <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
+          </>
+        )}
 
-        <li className="truncate text-gray-500">…</li>
+        {/* Show first and last for 2 segments only */}
+        {segments.length === 2 && first && (
+          <>
+            <li className="truncate max-w-[40%]">
+              {first.href ? (
+                <Link href={first.href} className="truncate text-gray-600 hover:text-green-600" title={first.label}>{first.label}</Link>
+              ) : (
+                <span className="truncate text-gray-600" title={first.label}>{first.label}</span>
+              )}
+            </li>
+            <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
+          </>
+        )}
 
-  <ChevronRight className="h-4 w-4 text-gray-500 mx-1" aria-hidden />
-
+        {/* Always show the current page */}
         {last && (
           <li className="truncate max-w-[50%]">
             {last.href ? (

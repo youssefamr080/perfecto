@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { supabase } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
+import { cacheManager } from "@/lib/utils/cache-manager"
 
 interface ProductsStore {
   // البيانات
@@ -40,7 +41,18 @@ export const useProductsStore = create<ProductsStore>()(
         const state = get()
         const now = Date.now()
         
-        // التحقق من الكاش
+        // التحقق من الكاش المحسن أولاً
+        const cacheKey = `products_page_${page}_limit_${limit}`
+        const cachedProducts = cacheManager.get<Product[]>(cacheKey)
+        
+        if (cachedProducts && cachedProducts.length > 0) {
+          if (page === 1) {
+            set({ products: cachedProducts, isLoading: false })
+          }
+          return cachedProducts
+        }
+        
+        // التحقق من الكاش المحلي
         if (
           state.products.length > 0 && 
           state.lastUpdated && 
@@ -63,6 +75,9 @@ export const useProductsStore = create<ProductsStore>()(
           if (error) throw error
 
           const products = data || []
+          
+          // حفظ في الكاش المحسن
+          cacheManager.set(cacheKey, products, CACHE_DURATION)
 
           if (page === 1) {
             set({
@@ -92,7 +107,14 @@ export const useProductsStore = create<ProductsStore>()(
         const state = get()
         const now = Date.now()
         
-        // التحقق من الكاش
+        // التحقق من الكاش المحسن أولاً
+        const cachedFeatured = cacheManager.get<Product[]>('featured_products')
+        if (cachedFeatured && cachedFeatured.length > 0) {
+          set({ featuredProducts: cachedFeatured, isLoading: false })
+          return
+        }
+        
+        // التحقق من الكاش المحلي
         if (
           state.featuredProducts.length > 0 && 
           state.lastUpdated && 
@@ -100,6 +122,8 @@ export const useProductsStore = create<ProductsStore>()(
         ) {
           return
         }
+
+        set({ isLoading: true })
 
         try {
           const { data, error } = await supabase
@@ -112,19 +136,28 @@ export const useProductsStore = create<ProductsStore>()(
 
           if (error) throw error
 
+          const featuredProducts = data || []
+          
+          // حفظ في الكاش المحسن
+          cacheManager.set('featured_products', featuredProducts, CACHE_DURATION)
+
           set({
-            featuredProducts: data || [],
-            lastUpdated: now
+            featuredProducts,
+            lastUpdated: now,
+            isLoading: false
           })
         } catch (error) {
           set({ 
-            error: error instanceof Error ? error.message : "خطأ في جلب المنتجات المميزة"
+            error: error instanceof Error ? error.message : "خطأ في جلب المنتجات المميزة",
+            isLoading: false
           })
         }
       },
 
       // تحديث المنتجات
       refreshProducts: async () => {
+        // مسح كل الكاش قبل التحديث
+        cacheManager.clear()
         set({ lastUpdated: null })
         await get().fetchProducts()
         await get().fetchFeaturedProducts()
@@ -132,6 +165,8 @@ export const useProductsStore = create<ProductsStore>()(
 
       // مسح الكاش
       clearCache: () => {
+        // مسح الكاش المحسن أيضاً
+        cacheManager.clear()
         set({
           products: [],
           featuredProducts: [],

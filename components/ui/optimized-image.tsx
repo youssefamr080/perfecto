@@ -1,7 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { cacheManager } from "@/lib/utils/cache-manager"
 
 interface OptimizedImageProps {
   src: string
@@ -30,6 +31,54 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [imageError, setImageError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [cachedSrc, setCachedSrc] = useState<string>(src)
+
+  // محاولة استرجاع الصورة من الكاش
+  useEffect(() => {
+    const loadCachedImage = async () => {
+      if (!src.startsWith('http')) {
+        setCachedSrc(src)
+        return
+      }
+
+      try {
+        const cached = await cacheManager.getImage(src)
+        if (cached) {
+          setCachedSrc(cached)
+        } else {
+          setCachedSrc(src)
+        }
+      } catch (error) {
+        console.warn('Failed to load cached image:', error)
+        setCachedSrc(src)
+      }
+    }
+
+    loadCachedImage()
+  }, [src])
+
+  // حفظ الصورة في الكاش بعد التحميل
+  const handleImageLoad = async () => {
+    setIsLoading(false)
+    
+    // حفظ الصورة في الكاش إذا كانت من رابط خارجي
+    if (src.startsWith('http')) {
+      try {
+        const response = await fetch(src)
+        if (response.ok) {
+          const blob = await response.blob()
+          cacheManager.setImage(src, blob)
+        }
+      } catch (error) {
+        console.warn('Failed to cache image:', error)
+      }
+    }
+  }
+
+  const handleImageError = () => {
+    setImageError(true)
+    setIsLoading(false)
+  }
 
   // Default placeholder for missing images
   const fallbackSrc = `/placeholder.svg?height=${height || 400}&width=${width || 400}&text=${encodeURIComponent(alt)}`
@@ -43,7 +92,7 @@ export function OptimizedImage({
       )}
       
       <Image
-        src={imageError ? fallbackSrc : src}
+        src={imageError ? fallbackSrc : cachedSrc}
         alt={alt}
         width={width}
         height={height}
@@ -55,12 +104,10 @@ export function OptimizedImage({
         className={`transition-opacity duration-300 ${
           isLoading ? "opacity-0" : "opacity-100"
         } ${className}`}
-        onLoad={() => setIsLoading(false)}
-        onError={() => {
-          setImageError(true)
-          setIsLoading(false)
-        }}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
         quality={85}
+        loading={priority ? "eager" : "lazy"}
       />
     </div>
   )

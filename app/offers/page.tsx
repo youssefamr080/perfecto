@@ -7,23 +7,27 @@ import { supabase } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
 import { ProductCard } from "@/components/product-card"
 import { Percent } from "lucide-react"
+import { cacheManager } from "@/lib/utils/cache-manager"
 
 export default function OffersPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const cacheKey = "offers_products_cache"
-    const cacheExpiryKey = "offers_products_cache_expiry"
-    const now = Date.now()
-    const expiry = localStorage.getItem(cacheExpiryKey)
-    const cached = localStorage.getItem(cacheKey)
-    if (cached && expiry && now < Number(expiry)) {
-      setProducts(JSON.parse(cached))
-      setLoading(false)
-    } else {
-      fetchProducts()
+    const loadOffers = async () => {
+      // التحقق من الكاش أولاً
+      const cached = cacheManager.get<Product[]>('offers_products')
+      if (cached) {
+        setProducts(cached)
+        setLoading(false)
+        return
+      }
+
+      // جلب البيانات من قاعدة البيانات
+      await fetchProducts()
     }
+
+    loadOffers()
   }, [])
 
   const fetchProducts = async () => {
@@ -35,10 +39,12 @@ export default function OffersPage() {
         .not("original_price", "is", null)
         .order("created_at", { ascending: false })
       if (error) throw error
-      setProducts(data || [])
-      // cache for 30 minutes
-      localStorage.setItem("offers_products_cache", JSON.stringify(data || []))
-      localStorage.setItem("offers_products_cache_expiry", (Date.now() + 30 * 60 * 1000).toString())
+      
+      const offersData = data || []
+      setProducts(offersData)
+      
+      // حفظ في الكاش لمدة 30 دقيقة
+      cacheManager.set('offers_products', offersData, 30 * 60 * 1000)
     } catch (error) {
       console.error("Error fetching discounted products:", error)
     } finally {

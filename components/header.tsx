@@ -19,6 +19,7 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { SearchBar } from "@/components/search/search-bar"
 import { useNotificationsStore } from "@/lib/stores/notifications-store"
 import { LoginModal } from "./auth/login-modal"
+import { cacheManager } from "@/lib/utils/cache-manager"
 
 export function Header() {
   const router = useRouter()
@@ -27,16 +28,51 @@ export function Header() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [subcategories, setSubcategories] = useState<SubCategory[]>([])
+  const [dataLoaded, setDataLoaded] = useState(false)
 
-  // جلب الأقسام والفئات الفرعية عند فتح السايدبار
+  // جلب الأقسام والفئات الفرعية عند فتح السايدبار (مع كاش)
   useEffect(() => {
-    if (isSidebarOpen) {
-      import("@/lib/supabase").then(({ supabase }) => {
-        supabase.from("categories").select("*").then(({ data }) => setCategories(data || []))
-        supabase.from("subcategories").select("*").then(({ data }) => setSubcategories(data || []))
-      })
+    if (isSidebarOpen && !dataLoaded) {
+      const loadCategoriesData = async () => {
+        // التحقق من الكاش أولاً
+        const cachedCategories = cacheManager.get<Category[]>('header_categories')
+        const cachedSubcategories = cacheManager.get<SubCategory[]>('header_subcategories')
+        
+        if (cachedCategories && cachedSubcategories) {
+          setCategories(cachedCategories)
+          setSubcategories(cachedSubcategories)
+          setDataLoaded(true)
+          return
+        }
+
+        // جلب البيانات من قاعدة البيانات
+        try {
+          const { supabase } = await import("@/lib/supabase")
+          
+          const [categoriesRes, subcategoriesRes] = await Promise.all([
+            supabase.from("categories").select("*").order("name"),
+            supabase.from("subcategories").select("*").order("name")
+          ])
+          
+          const categoriesData = categoriesRes.data || []
+          const subcategoriesData = subcategoriesRes.data || []
+          
+          setCategories(categoriesData)
+          setSubcategories(subcategoriesData)
+          
+          // حفظ في الكاش لمدة ساعة
+          cacheManager.set('header_categories', categoriesData, 60 * 60 * 1000)
+          cacheManager.set('header_subcategories', subcategoriesData, 60 * 60 * 1000)
+          
+          setDataLoaded(true)
+        } catch (error) {
+          console.error('Failed to load categories:', error)
+        }
+      }
+
+      loadCategoriesData()
     }
-  }, [isSidebarOpen])
+  }, [isSidebarOpen, dataLoaded])
 
   const { itemCount } = useCartStore()
   const { user, isAuthenticated, logout } = useAuthStore()
