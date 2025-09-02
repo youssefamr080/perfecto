@@ -560,7 +560,7 @@ export default function AdminPage() {
             >
               <Volume2 className="h-4 w-4 mr-2" />
               {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
-            </Button>
+            </Button>         
             <Button onClick={fetchData} variant="outline" size="sm" className="text-gray-900 border-gray-300 hover:bg-gray-50">
               <RefreshCw className="h-4 w-4 mr-2 text-gray-700" />
               تحديث

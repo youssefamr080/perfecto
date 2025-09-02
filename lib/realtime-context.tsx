@@ -73,6 +73,27 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               console.error('❌ فشل في تشغيل الصوت:', soundError)
             }
           }
+
+          // إرسال إيميل للمدير
+          try {
+            const emailResponse = await fetch('/api/send-order-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ order: latestOrder })
+            })
+            
+            if (emailResponse.ok) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('✅ تم إرسال إيميل الطلب بنجاح')
+              }
+            } else {
+              console.error('❌ فشل في إرسال إيميل الطلب:', await emailResponse.text())
+            }
+          } catch (emailError) {
+            console.error('❌ خطأ في إرسال إيميل الطلب:', emailError)
+          }
           
           toast({
             title: "🛒 طلب جديد وصل!",
@@ -160,6 +181,28 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               } catch (error) {
                 if (process.env.NODE_ENV === 'development') {
                   console.error('❌ فشل صوت Realtime:', error)
+                }
+              }
+
+              // إرسال إيميل سريع بالبيانات الأولية (إذا كانت متوفرة)
+              if (payload.new) {
+                try {
+                  const quickEmailResponse = await fetch('/api/send-order-email', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ order: payload.new })
+                  })
+                  
+                  if (process.env.NODE_ENV === 'development' && quickEmailResponse.ok) {
+                    console.log('✅ تم إرسال إيميل سريع من Realtime')
+                  }
+                } catch (emailError) {
+                  // تجاهل الأخطاء في الإيميل السريع - سيتم إرسال إيميل كامل لاحقاً
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('⚠️ فشل إيميل Realtime، سيتم المحاولة مرة أخرى')
+                  }
                 }
               }
               
