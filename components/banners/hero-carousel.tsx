@@ -115,7 +115,7 @@ export function HeroCarousel() {
               <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white bg-transparent font-semibold drop-shadow-[0_3px_6px_rgba(0,0,0,0.9)] leading-relaxed">
                 كل ما تحتاجه من منتجات غذائية أخرى
               </p>
-              <Link href="/categories">
+              <Link href="/category/e035e289-e068-42ba-89ed-1d1cbc409c75">
                 <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold text-sm md:text-lg px-5 md:px-7 py-2.5 md:py-3.5 rounded-full shadow-2xl hover:scale-[1.04] transition-all duration-300 border-2 border-white/30 hover:border-white/50 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]">
                   🛍️ تسوق الآن
                 </Button>
