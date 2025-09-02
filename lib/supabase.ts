@@ -11,9 +11,7 @@ export const getServiceSupabase = () => {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
     // Fallback to anon client if service role key isn't configured (e.g., local dev).
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[supabase] SUPABASE_SERVICE_ROLE_KEY not set; falling back to anon client')
-    }
+    // Suppress warning in development to reduce console noise
     return supabase
   }
 

@@ -57,19 +57,21 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         
         // إذا لم يكن هذا أول تحميل
         if (lastOrderId !== null) {
-          console.log('🎯 تم اكتشاف طلب جديد:', latestOrder)
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🎯 تم اكتشاف طلب جديد:', latestOrder.id)
+          }
           
           // إضافة الطلب الجديد
           setNewOrders(prev => [latestOrder, ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
           setHasUnreadOrders(true)
           
           // تشغيل الصوت والإشعار فوراً
-          console.log('🔊 بدء تشغيل صوت الإشعار...')
           try {
             await safePlayNotificationSound()
-            console.log('✅ تم تشغيل صوت الإشعار بنجاح')
           } catch (soundError) {
-            console.error('❌ فشل في تشغيل الصوت:', soundError)
+            if (process.env.NODE_ENV === 'development') {
+              console.error('❌ فشل في تشغيل الصوت:', soundError)
+            }
           }
           
           toast({
@@ -120,7 +122,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         // تهيئة الصوت
         await initializeSound()
         
-        console.log('تم تهيئة نظام الإشعارات')
+        if (process.env.NODE_ENV === 'development') {
+          console.log('تم تهيئة نظام الإشعارات')
+        }
       } catch (error) {
         console.error('فشل في تهيئة الإشعارات:', error)
       }
@@ -146,15 +150,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               table: 'orders' 
             }, 
             async (payload) => {
-              console.log('🔥 Realtime: طلب جديد مباشر:', payload)
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🔥 Realtime: طلب جديد مباشر:', payload.new?.id)
+              }
               
               // تشغيل الصوت فوراً
-              console.log('🔊 تشغيل صوت فوري من Realtime...')
               try {
                 await safePlayNotificationSound()
-                console.log('✅ تم تشغيل الصوت من Realtime')
               } catch (error) {
-                console.error('❌ فشل صوت Realtime:', error)
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('❌ فشل صوت Realtime:', error)
+                }
               }
               
               // تشغيل فحص الطلبات للحصول على البيانات الكاملة
@@ -164,7 +170,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             }
           )
           .subscribe((status) => {
-            console.log('حالة Realtime:', status)
+            if (process.env.NODE_ENV === 'development') {
+              console.log('حالة Realtime:', status)
+            }
             setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'disconnected')
           })
       } catch (error) {

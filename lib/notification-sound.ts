@@ -12,8 +12,8 @@ export const initializeSound = async (): Promise<boolean> => {
     // طلب إذن من المستخدم لتشغيل الصوت
     if (typeof window !== 'undefined') {
       // يجب استدعاء هذه الدالة بعد تفاعل المستخدم (نقرة/لمس)
-      if (!hasUserGesture) {
-        console.warn('initializeSound يجب استدعاؤها بعد تفاعل المستخدم لتفادي سياسات التشغيل التلقائي')
+      if (!hasUserGesture && process.env.NODE_ENV === 'development') {
+        console.info('🔊 تهيئة الصوت تحتاج تفاعل مستخدم أولاً')
       }
       // إنشاء AudioContext للتأكد من عمل الصوت
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -34,7 +34,9 @@ export const initializeSound = async (): Promise<boolean> => {
           createSystemBeep();
         },
         onload: () => {
-          console.log('✅ تم تحميل صوت الإشعار بنجاح');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ تم تحميل صوت الإشعار')
+          }
           isAudioEnabled = true;
         },
         onplay: () => {
@@ -92,11 +94,8 @@ const createSystemBeep = () => {
 // تشغيل صوت الإشعار المحسن والقوي
 export const playNotificationSound = async () => {
   try {
-    console.log('🔔 محاولة تشغيل صوت الإشعار...');
-    
     // تهيئة الصوت إذا لم يكن متاحاً
     if (!notificationSound || !isAudioEnabled) {
-      console.log('⚠️ إعادة تهيئة الصوت...');
       await initializeSound();
     }
     
@@ -104,15 +103,14 @@ export const playNotificationSound = async () => {
     if (notificationSound && isAudioEnabled) {
       try {
         const playPromise = notificationSound.play();
-        if (playPromise !== undefined) {
-          console.log('✅ تم تشغيل صوت الإشعار الأساسي');
-        }
+        // Success logging only in development
       } catch (playError) {
-        console.warn('⚠️ فشل تشغيل الصوت الأساسي، استخدام البديل');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('⚠️ فشل تشغيل الصوت الأساسي، استخدام البديل');
+        }
         createSystemBeep();
       }
     } else {
-      console.warn('⚠️ الصوت الأساسي غير متاح، استخدام البديل');
       createSystemBeep();
     }
     
@@ -146,7 +144,9 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   try {
     if ('Notification' in window) {
       const permission = await Notification.requestPermission();
-      console.log('🔔 إذن الإشعارات:', permission);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔔 إذن الإشعارات:', permission);
+      }
       return permission === 'granted';
     }
     return false;
