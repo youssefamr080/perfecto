@@ -33,213 +33,178 @@ export function Footer() {
   ]
 
   return (
-    <footer className="bg-gradient-to-b from-red-700 via-red-800 to-red-900 text-white relative overflow-hidden">
-      {/* تأثير بصري خلفي (مخفي على الموبايل للوضوح) */}
-      <div className="absolute inset-0 opacity-10 hidden md:block">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-48 h-48 bg-yellow-300 rounded-full blur-3xl"></div>
+    <footer className="bg-gradient-to-br from-slate-900 via-gray-900 to-black text-gray-100 relative overflow-hidden">
+      {/* تأثير بصري خلفي أنيق */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-blue-400 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 right-20 w-32 h-32 bg-purple-400 rounded-full blur-2xl"></div>
+        <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-pink-400 rounded-full blur-2xl"></div>
       </div>
       
-      <div className="container mx-auto px-4 py-8 lg:px-6 lg:py-16 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 lg:gap-12">
-          {/* معلومات الشركة - محسنة للموبايل */}
-          <div className="space-y-4 lg:col-span-1 text-center lg:text-right">
+      <div className="container mx-auto px-4 py-8 lg:py-12 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          
+          {/* معلومات الشركة */}
+          <div className="space-y-4 text-center lg:text-right">
             <div className="space-y-3">
-              <h3 className="text-2xl lg:text-3xl font-black text-white flex items-center justify-center lg:justify-start gap-2">
-                <div className="p-2 lg:p-3 bg-gradient-to-br from-white/20 to-white/10 rounded-lg lg:rounded-xl backdrop-blur-sm border border-white/20">
-                  <ShoppingBag className="h-5 w-5 lg:h-9 lg:w-9 text-white" />
+              <h3 className="text-xl lg:text-2xl font-bold text-gray-100 flex items-center justify-center lg:justify-start gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg">
+                  <ShoppingBag className="h-5 w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
-                <span className="bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
                   بيرفكتو تيب
                 </span>
               </h3>
-              <div className="w-16 lg:w-20 h-1 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-200 rounded-full shadow-lg mx-auto lg:mx-0"></div>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm p-3 lg:p-4 rounded-lg lg:rounded-xl border border-white/10">
-              <p className="text-base lg:text-lg leading-relaxed font-medium text-red-50">
+            
+            {/* في الهاتف: تقييم العملاء تحت الشعار مباشرة */}
+            <div className="md:hidden flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-sm rounded-lg p-3 border border-amber-500/30">
+              <div className="flex items-center gap-1">
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+              </div>
+              <span className="text-sm text-amber-200 font-medium">
+                +1000 عميل راضي
+              </span>
+            </div>
+            
+            <div className="bg-white/5 backdrop-blur-sm p-4 rounded-lg border border-white/10">
+              <p className="text-sm lg:text-base leading-relaxed text-gray-200">
                 أجود المنتجات الطبيعية 100% بدون مواد حافظة. نوفر لك أفضل اللحوم والأجبان والألبان الطازجة.
               </p>
             </div>
-            <div className="flex items-center justify-center lg:justify-start gap-2 bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 lg:p-4 border border-white/20 shadow-lg">
+            
+            {/* في الشاشات الكبيرة: تقييم العملاء */}
+            <div className="hidden md:flex items-center justify-center lg:justify-start gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 backdrop-blur-sm rounded-lg p-3 border border-amber-500/30">
               <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 lg:h-6 lg:w-6 text-yellow-400 fill-current drop-shadow-lg" />
-                <Star className="h-4 w-4 lg:h-6 lg:w-6 text-yellow-400 fill-current drop-shadow-lg" />
-                <Star className="h-4 w-4 lg:h-6 lg:w-6 text-yellow-400 fill-current drop-shadow-lg" />
-                <Star className="h-4 w-4 lg:h-6 lg:w-6 text-yellow-400 fill-current drop-shadow-lg" />
-                <Star className="h-4 w-4 lg:h-6 lg:w-6 text-yellow-400 fill-current drop-shadow-lg" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
+                <Star className="h-4 w-4 text-amber-400 fill-current" />
               </div>
-              <span className="text-sm lg:text-lg text-white font-black bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
-                +1000 عميل
+              <span className="text-sm text-amber-200 font-medium">
+                +1000 عميل راضي
               </span>
             </div>
           </div>
 
-          {/* روابط سريعة - محسنة للموبايل */}
-          <div className="space-y-4 text-center lg:text-right">
-            <div className="space-y-2">
-              <h4 className="text-xl lg:text-2xl font-black text-white flex items-center justify-center lg:justify-start gap-2">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
-                روابط سريعة
-              </h4>
-              <div className="w-12 lg:w-16 h-1 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-200 rounded-full shadow-lg mx-auto lg:mx-0"></div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2.5 lg:gap-4">
-              {quickLinks.map((link) => (
-                <Link 
-                  key={link.href}
-                  href={link.href}
-                  className="text-red-50 hover:text-yellow-300 transition-all duration-300 text-base lg:text-lg flex items-center justify-center lg:justify-start gap-2.5 lg:gap-3 group hover:translate-x-1 bg-white/5 hover:bg-white/10 px-3 py-3 lg:px-3 lg:py-3 rounded-lg border border-transparent hover:border-yellow-400/30 min-h-[48px]"
-                >
-                  <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full group-hover:from-yellow-300 group-hover:to-yellow-400 transition-all duration-300 shadow-lg"></div>
-                  <span className="font-semibold text-center lg:text-right leading-none">{link.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* خدمات العملاء - محسنة للموبايل */}
-          <div className="space-y-4 text-center lg:text-right">
-            <div className="space-y-2">
-              <h4 className="text-xl lg:text-2xl font-black text-white flex items-center justify-center lg:justify-start gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                حسابي
-              </h4>
-              <div className="w-12 lg:w-16 h-1 bg-gradient-to-r from-green-400 via-green-300 to-green-200 rounded-full shadow-lg mx-auto lg:mx-0"></div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2.5 lg:gap-4">
-              {customerLinks.map((link) => (
-                <Link 
-                  key={link.href}
-                  href={link.href}
-                  className="text-red-50 hover:text-green-300 transition-all duration-300 text-base lg:text-lg flex items-center justify-center lg:justify-start gap-2.5 lg:gap-3 group hover:translate-x-1 bg-white/5 hover:bg-white/10 px-3 py-3 lg:px-3 lg:py-3 rounded-lg border border-transparent hover:border-green-400/30 min-h-[48px]"
-                >
-                  <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 bg-gradient-to-r from-green-400 to-green-500 rounded-full group-hover:from-green-300 group-hover:to-green-400 transition-all duration-300 shadow-lg"></div>
-                  <span className="font-semibold text-center lg:text-right leading-none">{link.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* معلومات الاتصال - محسنة للموبايل */}
-          <div className="space-y-4 lg:space-y-6">
+          {/* تواصل معنا */}
+          <div className="space-y-4">
             <div className="space-y-2 text-center lg:text-right">
-              <h4 className="text-xl lg:text-2xl font-black text-white flex items-center justify-center lg:justify-start gap-2">
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                تواصل معنا
+              <h4 className="text-lg lg:text-xl font-bold text-red-500 flex items-center justify-center lg:justify-start gap-2">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" aria-hidden="true"></span>
+                <span className="text-red-500">تواصل معنا</span>
               </h4>
-              <div className="w-12 lg:w-16 h-1 bg-gradient-to-r from-blue-400 via-blue-300 to-blue-200 rounded-full shadow-lg mx-auto lg:mx-0"></div>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
               <a 
                 href="tel:01034207175"
-                className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-red-50 hover:text-yellow-300 transition-all duration-300 group hover:scale-[1.02] transform bg-white/5 hover:bg-white/10 p-3 lg:p-4 rounded-xl border border-white/10 hover:border-green-400/50 min-h-[56px]"
+                className="flex items-center gap-2 lg:gap-3 text-gray-200 hover:text-emerald-300 transition-all duration-300 group bg-white/5 hover:bg-emerald-500/20 p-3 rounded-lg border border-white/10 hover:border-emerald-400/50"
                 aria-label="اتصل بنا"
               >
-                <div className="p-3 lg:p-4 bg-gradient-to-br from-green-400 via-green-500 to-green-600 rounded-xl lg:rounded-2xl shadow-xl group-hover:shadow-green-500/40 group-hover:from-green-300 group-hover:to-green-500 transition-all duration-300 border-2 border-white/20">
-                  <Phone className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg shadow-lg group-hover:shadow-emerald-500/40 transition-all duration-300">
+                  <Phone className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-center lg:text-right">
-                  <div className="text-sm lg:text-base text-green-200 font-bold">اتصل</div>
-                </div>
+                <span className="text-sm font-medium">اتصل بنا</span>
               </a>
 
               <a 
                 href="https://wa.me/2001034207175"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-red-50 hover:text-green-300 transition-all duration-300 group hover:scale-[1.02] transform bg-white/5 hover:bg-white/10 p-3 lg:p-4 rounded-xl border border-white/10 hover:border-green-400/50 min-h-[56px]"
+                className="flex items-center gap-2 lg:gap-3 text-gray-200 hover:text-green-300 transition-all duration-300 group bg-white/5 hover:bg-green-500/20 p-3 rounded-lg border border-white/10 hover:border-green-400/50"
                 aria-label="تواصل عبر واتساب"
               >
-                <div className="p-3 lg:p-4 bg-gradient-to-br from-green-400 via-green-500 to-green-600 rounded-xl lg:rounded-2xl shadow-xl group-hover:shadow-green-500/40 group-hover:from-green-300 group-hover:to-green-500 transition-all duration-300 border-2 border-white/20">
-                  <MessageCircle className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-lg group-hover:shadow-green-500/40 transition-all duration-300">
+                  <MessageCircle className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-center lg:text-right">
-                  <div className="text-sm lg:text-base text-green-200 font-bold">واتساب</div>
-                </div>
+                <span className="text-sm font-medium">واتساب</span>
               </a>
 
               <a 
                 href="https://www.facebook.com/profile.php?id=61570486528410"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-red-50 hover:text-blue-300 transition-all duration-300 group hover:scale-[1.02] transform bg-white/5 hover:bg-white/10 p-3 lg:p-4 rounded-xl border border-white/10 hover:border-blue-400/50 min-h-[56px]"
+                className="flex items-center gap-2 lg:gap-3 text-gray-200 hover:text-blue-300 transition-all duration-300 group bg-white/5 hover:bg-blue-500/20 p-3 rounded-lg border border-white/10 hover:border-blue-400/50"
                 aria-label="صفحة فيسبوك"
               >
-                <div className="p-3 lg:p-4 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-xl lg:rounded-2xl shadow-xl group-hover:shadow-blue-500/40 group-hover:from-blue-300 group-hover:to-blue-500 transition-all duration-300 border-2 border-white/20">
-                  <Facebook className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg group-hover:shadow-blue-500/40 transition-all duration-300">
+                  <Facebook className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-center lg:text-right">
-                  <div className="text-sm lg:text-base text-blue-200 font-bold">فيسبوك</div>
-                </div>
+                <span className="text-sm font-medium">فيسبوك</span>
               </a>
 
               <a 
                 href="https://maps.app.goo.gl/YLuv2rENmiWZUqwA6"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col lg:flex-row items-center gap-2 lg:gap-4 text-red-50 hover:text-purple-300 transition-all duration-300 group hover:scale-[1.02] transform bg-white/5 hover:bg-white/10 p-3 lg:p-4 rounded-xl border border-white/10 hover:border-purple-400/50 min-h-[56px]"
+                className="flex items-center gap-2 lg:gap-3 text-gray-200 hover:text-purple-300 transition-all duration-300 group bg-white/5 hover:bg-purple-500/20 p-3 rounded-lg border border-white/10 hover:border-purple-400/50"
                 aria-label="موقعنا على الخريطة"
               >
-                <div className="p-3 lg:p-4 bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 rounded-xl lg:rounded-2xl shadow-xl group-hover:shadow-purple-500/40 group-hover:from-purple-300 group-hover:to-purple-500 transition-all duration-300 border-2 border-white/20">
-                  <MapPin className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg shadow-lg group-hover:shadow-purple-500/40 transition-all duration-300">
+                  <MapPin className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-center lg:text-right">
-                  <div className="text-sm lg:text-base text-purple-200 font-bold">موقعنا</div>
-                </div>
+                <span className="text-sm font-medium">موقعنا</span>
               </a>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* القسم السفلي المحسن للموبايل */}
-      <div className="bg-gradient-to-r from-red-900 via-red-950 to-red-900 py-5 lg:py-8 relative overflow-hidden">
-        {/* تأثير بصري */}
-        <div className="absolute inset-0 bg-black/15"></div>
-        <div className="container mx-auto px-4 lg:px-6 relative z-10">
-          <div className="flex flex-col items-center justify-center text-center gap-4 lg:gap-6">
-            
-            <div>
-              <p className="text-white text-base lg:text-lg font-bold mb-1.5">
-                © {currentYear} بيرفكتو تيب. جميع الحقوق محفوظة.
-              </p>
-              <p className="text-red-100 text-sm lg:text-base flex items-center justify-center gap-2">
-                صُنع بـ <Heart className="h-4 w-4 lg:h-5 lg:w-5 text-red-400 animate-pulse" aria-hidden /> في مصر 🇪🇬
-              </p>
+          {/* خدمات العملاء */}
+          <div className="space-y-4 text-center lg:text-right">
+            <div className="space-y-2">
+              <h4 className="text-lg lg:text-xl font-bold text-red-500 flex items-center justify-center lg:justify-start gap-2">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" aria-hidden="true"></span>
+                <span className="text-red-500">حسابي</span>
+              </h4>
             </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-8">
-              <Link 
-                href="/privacy" 
-                className="text-white hover:text-yellow-300 text-sm lg:text-base transition-all duration-300 font-semibold hover:underline decoration-yellow-300 underline-offset-4"
-              >
-                سياسة الخصوصية
-              </Link>
-              <span className="text-red-300 text-base lg:text-lg hidden sm:inline px-1">•</span>
-              <Link 
-                href="/terms" 
-                className="text-white hover:text-yellow-300 text-sm lg:text-base transition-all duration-300 font-semibold hover:underline decoration-yellow-300 underline-offset-4"
-              >
-                الشروط والأحكام
-              </Link>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+              {customerLinks.map((link) => (
+                <Link 
+                  key={link.href}
+                  href={link.href}
+                  className="text-gray-200 hover:text-cyan-300 transition-all duration-300 text-sm flex items-center justify-center lg:justify-start gap-2 group bg-white/5 hover:bg-cyan-500/20 px-3 py-2 rounded-lg border border-white/10 hover:border-cyan-400/50"
+                >
+                  <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full group-hover:from-cyan-300 group-hover:to-blue-400 transition-all duration-300"></div>
+                  <span className="font-medium">{link.label}</span>
+                </Link>
+              ))}
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* زر العودة لأعلى المحسن للموبايل */}
-    <div className="md:hidden fixed bottom-24 left-3 z-50">
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className="bg-gradient-to-br from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white p-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 transform hover:shadow-red-500/40 font-bold border-2 border-white/20"
-          aria-label="العودة لأعلى"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-          </svg>
-        </button>
+      {/* القسم السفلي المحسن */}
+      <div className="bg-black/50 py-4 border-t border-white/10">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between text-center gap-3">
+            <p className="text-gray-300 text-sm">
+              © {currentYear} بيرفكتو تيب. جميع الحقوق محفوظة.
+            </p>
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/privacy" 
+                className="text-gray-300 hover:text-gray-100 text-sm transition-all duration-300 hover:underline"
+              >
+                سياسة الخصوصية
+              </Link>
+              <Link 
+                href="/terms" 
+                className="text-gray-300 hover:text-gray-100 text-sm transition-all duration-300 hover:underline"
+              >
+                الشروط والأحكام
+              </Link>
+              <div className="flex items-center gap-1 text-gray-300 text-sm">
+                صُنع بـ <Heart className="h-3 w-3 text-red-400" /> في مصر 🇪🇬
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
 
     </footer>
   )
