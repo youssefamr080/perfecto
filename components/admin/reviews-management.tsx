@@ -45,25 +45,61 @@ export function ReviewsManagement() {
   const fetchReviews = async (status: 'all' | 'pending' | 'approved' = 'all') => {
     try {
       const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
-        try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state || {} } catch { return {} }
+        try { 
+          const s = JSON.parse(localStorage.getItem('auth-storage') as string); 
+          return s?.state || {} 
+        } catch { 
+          return {} 
+        }
       })() : {}
       const adminId = (authStorage as any)?.user?.id || ''
       const token = (authStorage as any)?.session?.access_token || ''
 
+      if (!adminId) {
+        toast({ 
+          title: 'Authentication Error', 
+          description: 'Admin ID not found. Please log in again.', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
       const res = await fetch(`/api/reviews/admin?status=${status}`, {
         headers: {
           ...(token ? { authorization: `Bearer ${token}` } : {}),
-          'x-user-id': adminId
-        }
+          'x-user-id': adminId,
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
       })
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        let errorMessage = `Server error (${res.status})`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorMessage
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage)
+      }
+
       const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to load reviews')
+      }
 
       setReviews(json.reviews || [])
       setStats(json.stats || { total: 0, pending: 0, approved: 0, averageRating: 0, totalProducts: 0 })
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Error fetching reviews:', error)
-      toast({ title: 'خطأ', description: 'فشل في تحميل المراجعات', variant: 'destructive' })
+      toast({ 
+        title: 'خطأ', 
+        description: error.message || 'فشل في تحميل المراجعات', 
+        variant: 'destructive' 
+      })
     } finally {
       setLoading(false)
     }
@@ -71,98 +107,265 @@ export function ReviewsManagement() {
 
   const approveReview = async (reviewId: string, approved: boolean) => {
     try {
+      const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { 
+          const s = JSON.parse(localStorage.getItem('auth-storage') as string); 
+          return s?.state || {} 
+        } catch { 
+          return {} 
+        }
+      })() : {}
+      const adminId = (authStorage as any)?.user?.id || ''
+      const token = (authStorage as any)?.session?.access_token || ''
+
+      if (!adminId) {
+        toast({ 
+          title: 'Authentication Error', 
+          description: 'Admin session expired. Please log in again.', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
+      // Validate reviewId format
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Invalid review ID format', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
       const res = await fetch('/api/reviews/admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Temporary: use current user id when wiring real auth
-          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
-            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
-          })() : ''
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          'x-user-id': adminId
         },
         body: JSON.stringify({ action: 'approve', reviewId, approved })
       })
-      const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
+      if (!res.ok) {
+        const errorText = await res.text()
+        let errorMessage = `Server error (${res.status})`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorMessage
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage)
+      }
+
+      const json = await res.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to update review')
+      }
+
+      // Optimistic update
       setReviews(prev => prev.map(r => 
         r.id === reviewId ? { ...r, is_approved: approved } : r
       ))
       
-  toast({
+      toast({
         title: approved ? 'تم الموافقة' : 'تم الرفض',
         description: approved ? 'تم الموافقة على المراجعة' : 'تم رفض المراجعة'
       })
-  // refresh list and stats from server
-  fetchReviews(filter)
-    } catch (error) {
+      
+      // Refresh stats from server
+      fetchReviews(filter)
+      
+    } catch (error: any) {
       console.error('Error updating review:', error)
-      toast({ title: 'خطأ', description: 'فشل في تحديث المراجعة', variant: 'destructive' })
+      toast({ 
+        title: 'خطأ', 
+        description: error.message || 'فشل في تحديث المراجعة', 
+        variant: 'destructive' 
+      })
     }
   }
 
   const deleteReview = async (reviewId: string) => {
     try {
+      const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { 
+          const s = JSON.parse(localStorage.getItem('auth-storage') as string); 
+          return s?.state || {} 
+        } catch { 
+          return {} 
+        }
+      })() : {}
+      const adminId = (authStorage as any)?.user?.id || ''
+      const token = (authStorage as any)?.session?.access_token || ''
+
+      if (!adminId) {
+        toast({ 
+          title: 'Authentication Error', 
+          description: 'Admin session expired. Please log in again.', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
+      // Validate reviewId format
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Invalid review ID format', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
       const res = await fetch('/api/reviews/admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
-            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
-          })() : ''
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          'x-user-id': adminId
         },
         body: JSON.stringify({ action: 'delete', reviewId })
       })
-      const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
+      if (!res.ok) {
+        const errorText = await res.text()
+        let errorMessage = `Server error (${res.status})`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorMessage
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage)
+      }
+
+      const json = await res.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to delete review')
+      }
+
+      // Optimistic update
       setReviews(prev => prev.filter(r => r.id !== reviewId))
-  toast({ title: 'تم الحذف', description: 'تم حذف المراجعة بنجاح' })
-  // refresh list and stats from server
-  fetchReviews(filter)
-    } catch (error) {
+      
+      toast({ 
+        title: 'تم الحذف', 
+        description: 'تم حذف المراجعة بنجاح' 
+      })
+      
+      // Refresh stats from server
+      fetchReviews(filter)
+      
+    } catch (error: any) {
       console.error('Error deleting review:', error)
-      toast({ title: 'خطأ', description: 'فشل في حذف المراجعة', variant: 'destructive' })
+      toast({ 
+        title: 'خطأ', 
+        description: error.message || 'فشل في حذف المراجعة', 
+        variant: 'destructive' 
+      })
     }
   }
 
   const submitReply = async (reviewId: string) => {
-    if (!replyText.trim()) {
-      toast({ title: 'خطأ', description: 'يرجى كتابة رد', variant: 'destructive' })
+    const text = replyText.trim()
+    if (!text) {
+      toast({ 
+        title: 'خطأ', 
+        description: 'يرجى كتابة رد', 
+        variant: 'destructive' 
+      })
+      return
+    }
+
+    if (text.length > 1000) {
+      toast({ 
+        title: 'خطأ', 
+        description: 'الرد طويل جداً (الحد الأقصى 1000 حرف)', 
+        variant: 'destructive' 
+      })
       return
     }
 
     setSubmittingReply(true)
     try {
+      const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { 
+          const s = JSON.parse(localStorage.getItem('auth-storage') as string); 
+          return s?.state || {} 
+        } catch { 
+          return {} 
+        }
+      })() : {}
+      const adminId = (authStorage as any)?.user?.id || ''
+      const token = (authStorage as any)?.session?.access_token || ''
+
+      if (!adminId) {
+        toast({ 
+          title: 'Authentication Error', 
+          description: 'Admin session expired. Please log in again.', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
+      // Validate reviewId format
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Invalid review ID format', 
+          variant: 'destructive' 
+        })
+        return
+      }
+
       const res = await fetch('/api/reviews/admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
-            try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state?.user?.id || '' } catch { return '' }
-          })() : ''
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          'x-user-id': adminId
         },
-        body: JSON.stringify({ action: 'reply', reviewId, replyText: replyText.trim() })
+        body: JSON.stringify({ action: 'reply', reviewId, replyText: text })
       })
-      const json = await res.json()
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
+      if (!res.ok) {
+        const errorText = await res.text()
+        let errorMessage = `Server error (${res.status})`
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorMessage
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage)
+      }
+
+      const json = await res.json()
+      if (!json.success) {
+        throw new Error(json.error || 'Failed to submit reply')
+      }
+
+      // Optimistic update
       setReviews(prev => prev.map(r => 
         r.id === reviewId ? { 
           ...r, 
-          store_reply: replyText.trim(),
+          store_reply: text,
           store_reply_at: new Date().toISOString(),
           replied_by_admin: true
         } : r
       ))
       
       setReplyText('')
-      toast({ title: 'تم الرد', description: 'تم إرسال رد المتجر بنجاح' })
+      toast({ 
+        title: 'تم الرد', 
+        description: 'تم إرسال رد المتجر بنجاح' 
+      })
       
       if (selectedReview?.id === reviewId) {
         setSelectedReview({
           ...selectedReview,
-          store_reply: replyText.trim(),
+          store_reply: text,
           store_reply_at: new Date().toISOString(),
           replied_by_admin: true
         })

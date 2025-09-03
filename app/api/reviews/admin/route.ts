@@ -2,16 +2,97 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 
+// Cache for admin verification (in production use Redis)
+const adminCache = new Map<string, { isAdmin: boolean; expiresAt: number }>()
+const ADMIN_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Enhanced admin verification with caching
+async function verifyAdmin(userId: string, supabase: any): Promise<boolean> {
+  if (!userId) return false
+  
+  const cached = adminCache.get(userId)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.isAdmin
+  }
+  
+  try {
+    const { data: adminUser, error } = await supabase
+      .from('users')
+      .select('id, is_admin')
+      .eq('id', userId)
+      .eq('is_admin', true)
+      .single()
+    
+    const isAdmin = !error && !!adminUser
+    adminCache.set(userId, { 
+      isAdmin, 
+      expiresAt: Date.now() + ADMIN_CACHE_TTL 
+    })
+    
+    return isAdmin
+  } catch {
+    return false
+  }
+}
+
+// Rate limiting for admin actions
+const adminRateLimit = new Map<string, { count: number; resetAt: number }>()
+const ADMIN_RATE_LIMIT = 50 // 50 actions per minute
+const ADMIN_RATE_WINDOW = 60 * 1000
+
+const checkAdminRateLimit = (adminId: string): boolean => {
+  const now = Date.now()
+  const key = `admin:${adminId}`
+  const entry = adminRateLimit.get(key)
+  
+  if (!entry || now > entry.resetAt) {
+    adminRateLimit.set(key, { count: 1, resetAt: now + ADMIN_RATE_WINDOW })
+    return true
+  }
+  
+  if (entry.count < ADMIN_RATE_LIMIT) {
+    entry.count++
+    return true
+  }
+  
+  return false
+}
+
 function forbid() {
   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now()
+  
   try {
-  const adminId = req.headers.get('x-user-id') || undefined
-  if (!adminId) return forbid()
+    const adminId = req.headers.get('x-user-id') || undefined
+    if (!adminId) return forbid()
 
-    const body = await req.json()
+    const supabase = getServiceSupabase()
+    
+    // Verify admin with caching
+    const isAdmin = await verifyAdmin(adminId, supabase)
+    if (!isAdmin) return forbid()
+    
+    // Rate limiting
+    if (!checkAdminRateLimit(adminId)) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Too many admin actions. Please slow down.' 
+      }, { status: 429 })
+    }
+
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid JSON payload' 
+      }, { status: 400 })
+    }
+
     const { action, reviewId, approved, replyText } = body as {
       action: 'approve' | 'delete' | 'reply'
       reviewId: string
@@ -20,67 +101,118 @@ export async function POST(req: NextRequest) {
     }
 
     if (!action || !reviewId) {
-      return NextResponse.json({ success: false, error: 'Missing parameters' }, { status: 400 })
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing required fields' 
+      }, { status: 400 })
     }
 
-    const supabase = getServiceSupabase()
-
-    // Verify admin against DB
-    const { data: adminUser, error: adminErr } = await supabase
-      .from('users')
-      .select('id, is_admin')
-      .eq('id', adminId)
-      .eq('is_admin', true)
-      .single()
-    if (adminErr || !adminUser) return forbid()
+    // Validate reviewId format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid review ID format' 
+      }, { status: 400 })
+    }
 
     if (action === 'approve') {
       const { error } = await supabase
         .from('product_reviews')
-        .update({ is_approved: !!approved })
+        .update({ 
+          is_approved: !!approved,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', reviewId)
 
       if (error) {
-        console.error('Approve error', error)
-        return NextResponse.json({ success: false, error: 'Failed to update review' }, { status: 500 })
+        console.error('Approve error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to update review' 
+        }, { status: 500 })
       }
 
+      const duration = Date.now() - startTime
+      console.log(`Review ${approved ? 'approved' : 'rejected'} in ${duration}ms by admin ${adminId}`)
+      
       return NextResponse.json({ success: true })
     }
 
     if (action === 'delete') {
-      const { error } = await supabase.from('product_reviews').delete().eq('id', reviewId)
+      const { error } = await supabase
+        .from('product_reviews')
+        .delete()
+        .eq('id', reviewId)
+        
       if (error) {
-        console.error('Delete error', error)
-        return NextResponse.json({ success: false, error: 'Failed to delete review' }, { status: 500 })
+        console.error('Delete error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to delete review' 
+        }, { status: 500 })
       }
+      
+      const duration = Date.now() - startTime
+      console.log(`Review deleted in ${duration}ms by admin ${adminId}`)
+      
       return NextResponse.json({ success: true })
     }
 
     if (action === 'reply') {
       const text = (replyText || '').trim()
       if (!text) {
-        return NextResponse.json({ success: false, error: 'Empty reply' }, { status: 400 })
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Reply text is required' 
+        }, { status: 400 })
       }
+      
+      if (text.length > 1000) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Reply too long (max 1000 chars)' 
+        }, { status: 400 })
+      }
+      
       const { error } = await supabase
         .from('product_reviews')
         .update({
           store_reply: text,
           store_reply_at: new Date().toISOString(),
           replied_by_admin: true,
+          updated_at: new Date().toISOString()
         })
         .eq('id', reviewId)
+        
       if (error) {
-        console.error('Reply error', error)
-        return NextResponse.json({ success: false, error: 'Failed to add reply' }, { status: 500 })
+        console.error('Reply error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to add reply' 
+        }, { status: 500 })
       }
+      
+      const duration = Date.now() - startTime
+      console.log(`Reply added in ${duration}ms by admin ${adminId}`)
+      
       return NextResponse.json({ success: true })
     }
 
-    return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 })
-  } catch (e) {
-    console.error('Admin review POST error', e)
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Invalid action. Must be approve, delete, or reply' 
+    }, { status: 400 })
+    
+  } catch (e: any) {
+    const duration = Date.now() - startTime
+    console.error('Admin review POST error:', { 
+      error: e?.message, 
+      duration 
+    })
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error' 
+    }, { status: 500 })
   }
 }
 
