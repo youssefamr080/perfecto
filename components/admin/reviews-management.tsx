@@ -39,79 +39,33 @@ export function ReviewsManagement() {
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchReviews()
-    fetchStats()
+    fetchReviews('all')
   }, [])
 
-  const fetchReviews = async () => {
+  const fetchReviews = async (status: 'all' | 'pending' | 'approved' = 'all') => {
     try {
-      const { data, error } = await supabase
-        .from('product_reviews')
-        .select(`
-          id, rating, comment, is_approved, created_at, user_id, product_id,
-          store_reply, store_reply_at, replied_by_admin
-        `)
-        .order('created_at', { ascending: false })
+      const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
+        try { const s = JSON.parse(localStorage.getItem('auth-storage') as string); return s?.state || {} } catch { return {} }
+      })() : {}
+      const adminId = (authStorage as any)?.user?.id || ''
+      const token = (authStorage as any)?.session?.access_token || ''
 
-      if (error) throw error
+      const res = await fetch(`/api/reviews/admin?status=${status}`, {
+        headers: {
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          'x-user-id': adminId
+        }
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
 
-      // Fetch user and product data separately
-      const reviewsWithDetails = await Promise.all(
-        (data || []).map(async (review) => {
-          const [userData, productData] = await Promise.all([
-            supabase.from('users').select('name, phone').eq('id', review.user_id).single(),
-            supabase.from('products').select('name, images').eq('id', review.product_id).single()
-          ])
-
-          return {
-            ...review,
-            user: userData.data || { name: 'غير معروف', phone: '' },
-            product: productData.data || { name: 'منتج محذوف', images: ['/placeholder.jpg'] }
-          }
-        })
-      )
-
-      setReviews(reviewsWithDetails)
+      setReviews(json.reviews || [])
+      setStats(json.stats || { total: 0, pending: 0, approved: 0, averageRating: 0, totalProducts: 0 })
     } catch (error) {
       console.error('Error fetching reviews:', error)
       toast({ title: 'خطأ', description: 'فشل في تحميل المراجعات', variant: 'destructive' })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchStats = async () => {
-    try {
-      // Get review stats
-      const { data: reviewData, error: reviewError } = await supabase
-        .from('product_reviews')
-        .select('rating, is_approved')
-
-      if (reviewError) throw reviewError
-
-      const total = reviewData?.length || 0
-      const approved = reviewData?.filter(r => r.is_approved).length || 0
-      const pending = total - approved
-      const averageRating = total > 0 
-        ? reviewData.reduce((sum, r) => sum + r.rating, 0) / total 
-        : 0
-
-      // Get products with reviews count
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('id')
-
-      if (productError) throw productError
-
-      setStats({
-        total,
-        pending,
-        approved,
-        averageRating: Math.round(averageRating * 10) / 10,
-        totalProducts: productData?.length || 0
-      })
-    } catch (error) {
-      console.error('Error fetching stats:', error)
     }
   }
 
@@ -135,12 +89,12 @@ export function ReviewsManagement() {
         r.id === reviewId ? { ...r, is_approved: approved } : r
       ))
       
-      toast({
+  toast({
         title: approved ? 'تم الموافقة' : 'تم الرفض',
         description: approved ? 'تم الموافقة على المراجعة' : 'تم رفض المراجعة'
       })
-      
-      fetchStats()
+  // refresh list and stats from server
+  fetchReviews(filter)
     } catch (error) {
       console.error('Error updating review:', error)
       toast({ title: 'خطأ', description: 'فشل في تحديث المراجعة', variant: 'destructive' })
@@ -163,8 +117,9 @@ export function ReviewsManagement() {
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
 
       setReviews(prev => prev.filter(r => r.id !== reviewId))
-      toast({ title: 'تم الحذف', description: 'تم حذف المراجعة بنجاح' })
-      fetchStats()
+  toast({ title: 'تم الحذف', description: 'تم حذف المراجعة بنجاح' })
+  // refresh list and stats from server
+  fetchReviews(filter)
     } catch (error) {
       console.error('Error deleting review:', error)
       toast({ title: 'خطأ', description: 'فشل في حذف المراجعة', variant: 'destructive' })
@@ -256,7 +211,7 @@ export function ReviewsManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">إدارة المراجعات</h2>
-        <Button onClick={fetchReviews} variant="outline">
+  <Button onClick={() => fetchReviews(filter)} variant="outline">
           تحديث
         </Button>
       </div>
@@ -313,7 +268,7 @@ export function ReviewsManagement() {
       </div>
 
       {/* Filter Tabs */}
-      <Tabs value={filter} onValueChange={(value: any) => setFilter(value)}>
+  <Tabs value={filter} onValueChange={(value: any) => { setFilter(value); fetchReviews(value) }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all">الكل ({reviews.length})</TabsTrigger>
           <TabsTrigger value="pending">في الانتظار ({stats.pending})</TabsTrigger>

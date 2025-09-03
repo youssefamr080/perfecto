@@ -70,18 +70,23 @@ export function EnhancedReviewForm({
     setSubmitting(true)
 
     try {
-      // Submit review
-      const { error } = await supabase
-        .from('product_reviews')
-        .insert({
-          user_id: userId,
-          product_id: productId,
-          rating,
-          comment: comment.trim(),
-          is_approved: false // Requires admin approval
-        })
-
-      if (error) throw error
+      // Prefer server API (handles auth and uses service key), avoids client 401
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+          // Trusted header as fallback for dev with service key
+          'x-user-id': userId,
+        },
+        body: JSON.stringify({ productId, rating, comment: comment.trim() })
+      })
+      const payload = await res.json()
+      if (!res.ok || !payload.success) {
+        throw new Error(payload?.error || 'Failed to submit review')
+      }
 
       toast({
         title: "تم إرسال المراجعة",
@@ -97,7 +102,7 @@ export function EnhancedReviewForm({
       console.error('Error submitting review:', error)
       toast({
         title: "خطأ",
-        description: "فشل في إرسال المراجعة، يرجى المحاولة مرة أخرى",
+        description: error instanceof Error ? error.message : "فشل في إرسال المراجعة، يرجى المحاولة مرة أخرى",
         variant: "destructive"
       })
     } finally {

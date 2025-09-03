@@ -9,7 +9,7 @@ import { Plus, Minus, Star, Share2, ArrowRight, Truck, Gift, Leaf } from "lucide
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import type { Product } from "@/lib/types"
+import type { Product, Category, SubCategory } from "@/lib/types"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/lib/stores/auth-store"
@@ -87,17 +87,19 @@ export default function ProductPage() {
         if (!productData) throw new Error("المنتج غير موجود")
 
         // Get the subcategory and category
-        let subcategoryData = null
+        let subcategoryData: (SubCategory & { category?: Category }) | null = null
         if (productData.subcategory_id) {
-          const { data: subcategory, error: subcategoryError } = await supabase
+          const { data: subcategoryRaw, error: subcategoryError } = await supabase
             .from("subcategories")
             .select("*")
             .eq("id", productData.subcategory_id)
             .single()
 
+          const subcategory = (subcategoryRaw as unknown as SubCategory | null)
+
           if (!subcategoryError && subcategory) {
             // Get the category
-            const { data: category, error: categoryError } = await supabase
+            const { data: categoryRaw, error: categoryError } = await supabase
               .from("categories")
               .select("*")
               .eq("id", subcategory.category_id)
@@ -105,17 +107,17 @@ export default function ProductPage() {
 
             subcategoryData = {
               ...subcategory,
-              category: categoryError ? undefined : category,
+              category: categoryError ? undefined : (categoryRaw as unknown as Category | undefined),
             }
           }
         }
 
         const fullProduct = {
           ...productData,
-          subcategory: subcategoryData,
-        }
+          subcategory: subcategoryData || undefined,
+        } as Product
 
-        setProduct(fullProduct)
+        setProduct(fullProduct as Product)
 
         // المنتجات المشابهة من الكاش
         if (productData.subcategory_id) {
@@ -190,7 +192,22 @@ export default function ProductPage() {
           query = query.order('created_at', { ascending: false })
       }
 
-      const { data, error } = await query
+      type ReviewRow = {
+        id: string
+        user_id: string
+        rating: number
+        comment: string
+        created_at: string
+        store_reply?: string | null
+        store_reply_at?: string | null
+        helpful_count?: number | null
+        not_helpful_count?: number | null
+        is_verified_purchase?: boolean | null
+        is_featured?: boolean | null
+        users?: { name?: string | null; phone?: string | null } | null
+      }
+
+  const { data, error } = await (query as any)
 
       console.log('Reviews data:', data)
       console.log('Reviews error:', error)
@@ -198,7 +215,7 @@ export default function ProductPage() {
       if (error) throw error
 
       // Transform data to match component expectations
-      const transformedReviews = (data || []).map(review => ({
+  const transformedReviews = (data || []).map((review: ReviewRow) => ({
         ...review,
         user: {
           name: (review.users as any)?.name || 'مستخدم',
@@ -604,12 +621,14 @@ export default function ProductPage() {
                     try {
                       const { error } = await supabase
                         .from('review_reports')
-                        .insert({
-                          user_id: currentUser.id,
-                          review_id: reviewId,
-                          reason: 'inappropriate_content',
-                          description: 'تم الإبلاغ عن محتوى غير مناسب'
-                        })
+                        .insert([
+                          {
+                            user_id: currentUser.id,
+                            review_id: reviewId,
+                            reason: 'inappropriate_content',
+                            description: 'تم الإبلاغ عن محتوى غير مناسب'
+                          } as any
+                        ] as any)
                       
                       if (error) throw error
                       

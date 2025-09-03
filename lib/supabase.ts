@@ -3,7 +3,27 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Ensure a single browser client instance (avoids multiple GoTrueClient warnings)
+// HMR in Next.js can evaluate modules multiple times; cache on globalThis
+type SBClient = ReturnType<typeof createClient>
+declare const globalThis: {
+  __SB?: SBClient
+} & typeof global
+
+function createBrowserClient(): SBClient {
+  return createClient(supabaseUrl, supabaseAnonKey)
+}
+
+let browserClient: SBClient
+if (typeof window !== "undefined") {
+  browserClient = globalThis.__SB ?? createBrowserClient()
+  globalThis.__SB = browserClient
+} else {
+  // On the server we can safely create a new anon client per request scope
+  browserClient = createBrowserClient()
+}
+
+export const supabase = browserClient
 
 // Server-only helper to get a client with the Service Role key when available.
 // Use this ONLY in server environments (API routes, edge functions). Never expose this key to the client.
@@ -26,12 +46,5 @@ export const getServiceSupabase = () => {
 // Deprecated: keep export for compatibility, but internally use service client when possible.
 export const supabaseAdmin = getServiceSupabase()
 
-// Client-side singleton
-let supabaseClient: ReturnType<typeof createClient> | null = null
-
-export const getSupabaseClient = () => {
-  if (!supabaseClient) {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-  }
-  return supabaseClient
-}
+// Client-side accessor (returns the singleton above)
+export const getSupabaseClient = () => supabase
