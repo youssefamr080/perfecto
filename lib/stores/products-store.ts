@@ -132,7 +132,7 @@ export const useProductsStore = create<ProductsStore>()(
             .eq("is_available", true)
             .eq("is_featured", true)
             .order("created_at", { ascending: false })
-            .limit(8)
+            .limit(12)
 
           if (error) throw error
 

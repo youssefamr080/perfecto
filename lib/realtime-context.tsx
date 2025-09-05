@@ -52,17 +52,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (latestOrder && latestOrder.id !== lastOrderId) {
-        setLastOrderId(latestOrder.id)
+      if (latestOrder && (latestOrder as Order).id !== lastOrderId) {
+        setLastOrderId((latestOrder as Order).id)
         
         // إذا لم يكن هذا أول تحميل
         if (lastOrderId !== null) {
           if (process.env.NODE_ENV === 'development') {
-            console.log('🎯 تم اكتشاف طلب جديد:', latestOrder.id)
+            console.log('🎯 تم اكتشاف طلب جديد:', (latestOrder as Order).id)
           }
           
           // إضافة الطلب الجديد
-          setNewOrders(prev => [latestOrder, ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
+          setNewOrders(prev => [(latestOrder as Order), ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
           setHasUnreadOrders(true)
           
           // تشغيل الصوت والإشعار فوراً
@@ -97,7 +97,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           
           toast({
             title: "🛒 طلب جديد وصل!",
-            description: `من ${latestOrder.user?.name || 'عميل'} - بقيمة ${latestOrder.final_amount} ج.م`,
+            description: `من ${(latestOrder as Order).user?.name || 'عميل'} - بقيمة ${(latestOrder as Order).final_amount} ج.م`,
             variant: "default",
           })
         }

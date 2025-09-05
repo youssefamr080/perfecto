@@ -19,6 +19,8 @@ import { supabase } from "@/lib/supabase"
 import { useProductsStore } from "@/lib/stores/products-store"
 import { HeroCarousel } from "@/components/banners/hero-carousel"
 import { cacheManager } from "@/lib/utils/cache-manager"
+import { RecentlyOrderedProducts } from "@/components/recently-ordered-products"
+import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -30,6 +32,8 @@ export default function HomePage() {
     fetchFeaturedProducts, 
     isLoading: productsLoading 
   } = useProductsStore()
+
+  const { user, isAuthenticated, checkAuth } = useAuthStore()
 
   const fetchData = async () => {
     try {
@@ -69,6 +73,8 @@ export default function HomePage() {
   }
 
   useEffect(() => {
+    // التحقق من المصادقة عند تحميل الصفحة
+    checkAuth()
     fetchData()
   }, [])
 
@@ -122,6 +128,12 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Recently Ordered Products Section */}
+        <RecentlyOrderedProducts 
+          userId={user?.id} 
+          isLoggedIn={isAuthenticated} 
+        />
 
         {/* Categories Section */}
         <section className="container mx-auto px-4 py-8">

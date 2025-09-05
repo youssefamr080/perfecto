@@ -32,6 +32,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     })
   }
 
+  const isFormValid = () => {
+    return (
+      formData.phone.length === 11 &&
+      /^[0-9]+$/.test(formData.phone) &&
+      formData.name.trim().length >= 2 &&
+      formData.address.trim().length >= 10
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -69,20 +78,20 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-sm border-2 border-red-100">
-        <DialogHeader className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-t-lg -mx-6 -mt-6 mb-4">
-          <DialogTitle className="text-center text-2xl font-bold text-red-700">مرحباً بك في بيرفكتو تيب</DialogTitle>
-          <DialogDescription className="text-center text-gray-700 mt-2 font-medium">
-            سجل دخولك للاستمتاع بتجربة تسوق مميزة
+      <DialogContent className="w-full h-[100dvh] max-w-none m-0 p-0 bg-white overflow-auto border-0 rounded-none sm:rounded-lg sm:h-auto sm:max-w-md sm:m-4">
+        <div className="sticky top-0 bg-red-600 text-white p-4 z-10">
+          <DialogTitle className="text-center text-xl font-bold">تسجيل الدخول</DialogTitle>
+          <DialogDescription className="text-center text-red-100 mt-1 text-sm">
+            أدخل بياناتك للمتابعة
           </DialogDescription>
-        </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-2 rounded-lg">
+        <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-6">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
                 <Phone className="h-4 w-4 text-red-600" />
-                رقم الهاتف <span className="text-red-500">*</span>
+                رقم الهاتف *
               </Label>
               <Input
                 id="phone"
@@ -92,16 +101,20 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="01xxxxxxxxx"
-                className="text-right border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
+                className="text-right border-gray-300 focus:border-red-500 focus:ring-red-500 h-12 text-lg"
                 dir="ltr"
+                pattern="[0-9]{11}"
+                maxLength={11}
               />
-              <p className="text-xs text-gray-600 mt-1">يجب أن يكون 11 رقم على الأقل</p>
+              {formData.phone && formData.phone.length < 11 && (
+                <p className="text-xs text-red-500 mt-1">يجب أن يكون 11 رقم</p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="name" className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
                 <User className="h-4 w-4 text-red-600" />
-                الاسم الكامل <span className="text-red-500">*</span>
+                الاسم الكامل *
               </Label>
               <Input
                 id="name"
@@ -111,15 +124,18 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="أدخل اسمك الكامل"
-                className="text-right border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
+                className="text-right border-gray-300 focus:border-red-500 focus:ring-red-500 h-12 text-lg"
+                minLength={2}
               />
-              <p className="text-xs text-gray-600 mt-1">حرفين على الأقل</p>
+              {formData.name && formData.name.length < 2 && (
+                <p className="text-xs text-red-500 mt-1">حرفين على الأقل</p>
+              )}
             </div>
 
             <div>
-              <Label htmlFor="address" className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Label htmlFor="address" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
                 <MapPin className="h-4 w-4 text-red-600" />
-                العنوان بالتفصيل <span className="text-red-500">*</span>
+                العنوان *
               </Label>
               <Textarea
                 id="address"
@@ -127,36 +143,32 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 required
                 value={formData.address}
                 onChange={handleInputChange}
-                placeholder="أدخل عنوانك بالتفصيل (المنطقة، الشارع، رقم المبنى، الدور، الشقة)"
-                className="text-right min-h-[80px] border-red-300 focus:border-red-500 focus:ring-red-500 bg-white text-gray-900 font-medium"
+                placeholder="المنطقة، الشارع، رقم المبنى"
+                className="text-right min-h-[80px] border-gray-300 focus:border-red-500 focus:ring-red-500 text-lg resize-none"
+                minLength={10}
                 rows={3}
               />
-              <p className="text-xs text-gray-600 mt-1">10 أحرف على الأقل للعنوان المفصل</p>
+              {formData.address && formData.address.length < 10 && (
+                <p className="text-xs text-red-500 mt-1">10 أحرف على الأقل</p>
+              )}
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-lg py-6 shadow-sm"
-            disabled={isLoading || !formData.phone || !formData.name || !formData.address}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                جاري تسجيل الدخول...
-              </>
-            ) : (
-              "تسجيل الدخول"
-            )}
-          </Button>
-
-          <div className="text-center space-y-2 bg-gray-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-700 font-medium">بالمتابعة، أنت توافق على شروط الاستخدام وسياسة الخصوصية</p>
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
-              <span className="flex items-center gap-1">🛡️ دفع آمن</span>
-              <span className="flex items-center gap-1">🚚 توصيل مجاني</span>
-              <span className="flex items-center gap-1">🎁 نقاط ولاء</span>
-            </div>
+          <div className="sticky bottom-0 bg-white pt-4 pb-4">
+            <Button
+              type="submit"
+              className="w-full bg-red-600 hover:bg-red-700 text-lg py-4 font-semibold"
+              disabled={isLoading || !isFormValid()}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  جاري التسجيل...
+                </>
+              ) : (
+                "تسجيل الدخول"
+              )}
+            </Button>
           </div>
         </form>
       </DialogContent>
