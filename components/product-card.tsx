@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Plus, Minus, Star, ShoppingCart } from "lucide-react"
+import { Star, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,7 @@ import type { Product } from "@/lib/types"
 import { useCartStore } from "@/lib/stores/cart-store"
 import { useState, memo, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
+// import { supabase } from "@/lib/supabase"
 import { getProductRating, type ProductRating } from "@/lib/utils/product-utils"
 
 interface ProductCardProps {
@@ -18,14 +18,14 @@ interface ProductCardProps {
   showQuickActions?: boolean
 }
 
-function ProductCardComponent({ product, showQuickActions = true }: ProductCardProps) {
-  const { addItem, getItemQuantity } = useCartStore()
+function ProductCardComponent({ product }: ProductCardProps) {
+  const { addItem } = useCartStore()
   const { toast } = useToast()
-  const [isHovered, setIsHovered] = useState(false)
+  // hover state removed to avoid unused variable warning; UI keeps subtle transitions
   const [rating, setRating] = useState<ProductRating>({ average: 0, count: 0 })
   const [imgLoaded, setImgLoaded] = useState(false)
 
-  const cartQuantity = getItemQuantity(product.id)
+  // const cartQuantity = getItemQuantity(product.id)
 
   // Fetch product rating using utility function
   useEffect(() => {
@@ -60,9 +60,7 @@ function ProductCardComponent({ product, showQuickActions = true }: ProductCardP
     <Card
       itemScope
       itemType="https://schema.org/Product"
-      className="group rounded-3xl hover:shadow-elevated transition-all duration-300 border border-gray-100 hover:border-red-100 shadow-soft hover:shadow-lg bg-white overflow-hidden relative font-extrabold text-black focus-within:ring-2 focus-within:ring-red-100"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+  className="group rounded-3xl hover:shadow-elevated transition-all duration-300 border border-gray-100 hover:border-red-100 shadow-soft hover:shadow-lg bg-white overflow-hidden relative font-extrabold text-black focus-within:ring-2 focus-within:ring-red-100"
     >
       <div className="relative">
         {/* Product Image */}

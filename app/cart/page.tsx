@@ -19,7 +19,7 @@ export default function CartPage() {
   const subtotal = total
   const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
   const finalTotal = subtotal + shippingFee
-  const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal)
+  // Remaining for free shipping handled by FreeShippingProgress
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
     updateQuantity(productId, quantity)

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
 import type { Notification } from "@/lib/types"
 import { Bell, Package, Gift, Megaphone, Check, Trash2 } from "lucide-react"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
 export default function NotificationsPage() {
   const { user, isAuthenticated } = useAuthStore()
@@ -29,7 +31,8 @@ export default function NotificationsPage() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
+  const db = supabase as unknown as SupabaseClient<Database>
+  const { data, error } = await db
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
@@ -47,7 +50,15 @@ export default function NotificationsPage() {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId)
+  const db = supabase as unknown as SupabaseClient<Database>
+  interface EqBuilder { eq: (c: string, v: string | boolean) => EqBuilder & { error?: unknown } }
+  interface UpdateBuilder { update: (v: { is_read: boolean }) => EqBuilder }
+  interface FromFn { from: (t: string) => UpdateBuilder }
+  const res = await (db as unknown as FromFn)
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", notificationId)
+  const error = (res as { error?: unknown }).error
 
       if (error) throw error
 
@@ -61,7 +72,8 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase.from("notifications").delete().eq("id", notificationId)
+  const db = supabase as unknown as SupabaseClient<Database>
+  const { error } = await db.from("notifications").delete().eq("id", notificationId)
 
       if (error) throw error
 
@@ -75,13 +87,18 @@ export default function NotificationsPage() {
     if (!user) return
 
     try {
-      const { error } = await supabase
+      const db = supabase as unknown as SupabaseClient<Database>
+      interface EqBuilder2 { eq: (c: string, v: string | boolean) => EqBuilder2 & { error?: unknown } }
+      interface UpdateBuilder2 { update: (v: { is_read: boolean }) => EqBuilder2 }
+      interface FromFn2 { from: (t: string) => UpdateBuilder2 }
+      const res2 = await (db as unknown as FromFn2)
         .from("notifications")
         .update({ is_read: true })
         .eq("user_id", user.id)
         .eq("is_read", false)
+  const bulkError = (res2 as { error?: unknown }).error
 
-      if (error) throw error
+  if (bulkError) throw bulkError
 
       setNotifications((prev) => prev.map((notif) => ({ ...notif, is_read: true })))
     } catch (error) {

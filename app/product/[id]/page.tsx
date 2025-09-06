@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState, useCallback } from "react"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Plus, Minus, Star, Share2, ArrowRight, Truck, Gift, Leaf } from "lucide-react"
+import { Plus, Minus, Star, Share2, Truck, Gift, Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -24,58 +24,95 @@ import { EnhancedReviewForm } from "@/components/product/enhanced-review-form"
 
 export default function ProductPage() {
   const params = useParams()
-  const router = useRouter()
-  const { items, addItem, updateQuantity, getItemQuantity } = useCartStore()
+  const { addItem, updateQuantity, getItemQuantity } = useCartStore()
   const { toast } = useToast()
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(true)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [reviews, setReviews] = useState<any[]>([])
+  type ReviewRow = {
+    id: string
+    user_id: string
+    rating: number
+    comment: string
+    created_at: string
+    store_reply?: string | null
+    store_reply_at?: string | null
+    helpful_count?: number | null
+    not_helpful_count?: number | null
+    is_verified_purchase?: boolean | null
+    is_featured?: boolean | null
+    users?: { name?: string | null; phone?: string | null } | null
+  }
+  // Matches EnhancedReviewDisplay's expected shape
+  type DisplayReview = {
+    id: string
+    rating: number
+    comment: string
+    created_at: string
+    user: { name: string; avatar?: string }
+    helpful_count?: number
+    not_helpful_count?: number
+    isHelpful?: boolean
+    store_reply?: string
+    store_reply_at?: string
+    is_verified_purchase?: boolean
+    flagged_count?: number
+    is_featured?: boolean
+  }
+  const [reviews, setReviews] = useState<DisplayReview[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(true)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [reviewFilter, setReviewFilter] = useState<any>({ sortBy: 'newest' })
+  const [reviewFilter] = useState<{ sortBy: 'newest' | 'oldest' | 'highest' | 'lowest' | 'helpful'; rating?: number; verified?: boolean }>({ sortBy: 'newest' })
 
-  const averageRating = useMemo(() => {
-    if (!reviews || reviews.length === 0) return 0
-    const sum = reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0)
-    return +(sum / reviews.length)
-  }, [reviews])
+  // Average rating is computed inside ReviewSummary; keep local calculation removed to avoid duplication
   // Use the local auth store to determine whether the user is logged in.
   // We rely on `lib/stores/auth-store.ts` (Zustand persist) rather than
   // calling `supabase.auth.getUser()` here to avoid race conditions where
   // the persisted store may not be rehydrated yet. The store is the
   // single source of truth for UI-level auth state in this app.
-  const { user: currentUser, isAuthenticated } = useAuthStore()
+  const { user: currentUser } = useAuthStore()
 
   const cartQuantity = product ? getItemQuantity(product.id) : 0
 
-  // SVG star component with gradient fill for a premium look
-  const StarSVG = ({ filled, size = 20 }: { filled: boolean; size?: number }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="inline-block"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="starGrad" x1="0" x2="1">
-          <stop offset="0%" stopColor="#FFD54A" />
-          <stop offset="100%" stopColor="#FFB300" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 2.5l2.755 5.583 6.165.896-4.46 4.347 1.052 6.135L12 17.77l-5.512 2.69L7.54 13.33 3.08 8.983l6.165-.896L12 2.5z"
-        fill={filled ? 'url(#starGrad)' : 'none'}
-        stroke={filled ? 'none' : '#e5e7eb'}
-        strokeWidth={1.2}
-      />
-    </svg>
-  )
+  // (StarSVG removed; ReviewSummary handles rating visuals)
+
+  // Locally typed Supabase client for targeted tables to avoid never types
+  type LocalDB = {
+    public: {
+      Tables: {
+        review_reports: {
+          Row: {
+            id: string
+            user_id: string
+            review_id: string
+            reason: string
+            description: string | null
+            created_at: string
+          }
+          Insert: {
+            user_id: string
+            review_id: string
+            reason: string
+            description?: string | null
+          }
+          Update: {
+            user_id?: string
+            review_id?: string
+            reason?: string
+            description?: string | null
+          }
+          Relationships: []
+        }
+      }
+  Views: Record<string, never>
+  Functions: Record<string, never>
+  Enums: Record<string, never>
+  CompositeTypes: Record<string, never>
+    }
+  }
+  const db = supabase as unknown as SupabaseClient<LocalDB>
 
   useEffect(() => {
     async function fetchProduct() {
@@ -142,12 +179,7 @@ export default function ProductPage() {
   // consistent and avoids prompting the user to log in again due to
   // rehydration timing issues.
 
-  useEffect(() => {
-    // fetch approved reviews for this product
-    fetchReviews()
-  }, [product, reviewFilter])
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     if (!product) return
     setReviewsLoading(true)
     try {
@@ -190,24 +222,9 @@ export default function ProductPage() {
           break
         default: // newest
           query = query.order('created_at', { ascending: false })
-      }
+  }
 
-      type ReviewRow = {
-        id: string
-        user_id: string
-        rating: number
-        comment: string
-        created_at: string
-        store_reply?: string | null
-        store_reply_at?: string | null
-        helpful_count?: number | null
-        not_helpful_count?: number | null
-        is_verified_purchase?: boolean | null
-        is_featured?: boolean | null
-        users?: { name?: string | null; phone?: string | null } | null
-      }
-
-  const { data, error } = await (query as any)
+  const { data, error } = await query
 
       console.log('Reviews data:', data)
       console.log('Reviews error:', error)
@@ -215,18 +232,18 @@ export default function ProductPage() {
       if (error) throw error
 
       // Transform data to match component expectations
-  const transformedReviews = (data || []).map((review: ReviewRow) => ({
+      const transformedReviews: DisplayReview[] = (data || []).map((review: ReviewRow) => ({
         ...review,
         user: {
-          name: (review.users as any)?.name || 'مستخدم',
+          name: review.users?.name || 'مستخدم',
           avatar: undefined
         },
         helpful_count: review.helpful_count || 0,
         not_helpful_count: review.not_helpful_count || 0,
-        store_reply: review.store_reply || null,
-        store_reply_at: review.store_reply_at || null,
-        is_verified_purchase: review.is_verified_purchase || false,
-        is_featured: review.is_featured || false
+        store_reply: review.store_reply || undefined,
+        store_reply_at: review.store_reply_at || undefined,
+        is_verified_purchase: !!review.is_verified_purchase,
+        is_featured: !!review.is_featured
       }))
 
       setReviews(transformedReviews)
@@ -235,7 +252,12 @@ export default function ProductPage() {
     } finally {
       setReviewsLoading(false)
     }
-  }
+  }, [product, reviewFilter.rating, reviewFilter.sortBy, reviewFilter.verified])
+
+  useEffect(() => {
+    // fetch approved reviews for this product
+    fetchReviews()
+  }, [fetchReviews])
 
   const handleAddToCart = () => {
     if (product) {
@@ -619,7 +641,7 @@ export default function ProductPage() {
                     }
                     
                     try {
-                      const { error } = await supabase
+                      const { error } = await db
                         .from('review_reports')
                         .insert([
                           {
@@ -627,8 +649,8 @@ export default function ProductPage() {
                             review_id: reviewId,
                             reason: 'inappropriate_content',
                             description: 'تم الإبلاغ عن محتوى غير مناسب'
-                          } as any
-                        ] as any)
+                          }
+                        ])
                       
                       if (error) throw error
                       

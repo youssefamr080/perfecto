@@ -22,13 +22,13 @@ interface SearchState {
   }
   setQuery: (query: string) => void
   search: (query: string) => Promise<void>
-  searchWithFilters: (query: string, filters?: any) => Promise<void>
+  searchWithFilters: (query: string, filters?: Partial<{ subcategoryId: string; minPrice: number; maxPrice: number; isFeatured: boolean; inStock: boolean }>) => Promise<void>
   loadCategories: () => Promise<void>
   clearResults: () => void
   getSuggestions: (query: string) => void
   loadPopularProducts: () => Promise<void>
   clearRecentSearches: () => void
-  setFilters: (filters: any) => void
+  setFilters: (filters: Partial<{ categoryId?: string; subcategoryId?: string; minPrice?: number; maxPrice?: number; isFeatured?: boolean; inStock?: boolean }>) => void
   clearFilters: () => void
 }
 
@@ -47,7 +47,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 
   setQuery: (query: string) => set({ query }),
 
-  setFilters: (filters: any) => set({ filters }),
+  setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
 
   clearFilters: () => set({ filters: {} }),
 
@@ -105,7 +105,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   // البحث مع الفلاتر المتقدمة
-  searchWithFilters: async (query: string, filters: any = {}) => {
+  searchWithFilters: async (query: string, filters = {}) => {
     set({ isLoading: true, query })
 
     try {

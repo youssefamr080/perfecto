@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
 import { Progress } from "@/components/ui/progress"
 import { Star, TrendingUp, Users, MessageSquare, Award } from "lucide-react"
 import { supabase } from "@/lib/supabase"
@@ -43,15 +44,17 @@ export function ReviewsStats() {
   const fetchStats = async () => {
     try {
       // Get all reviews
-      const { data: reviews, error: reviewsError } = await supabase
+  type ReviewRow = { rating: number; is_approved: boolean; created_at: string; product_id: string }
+  const { data: reviews, error: reviewsError } = await supabase
         .from('product_reviews')
         .select('rating, is_approved, created_at, product_id')
 
       if (reviewsError) throw reviewsError
 
-      const total = reviews?.length || 0
-      const approved = reviews?.filter(r => r.is_approved) || []
-      const pending = reviews?.filter(r => !r.is_approved).length || 0
+  const typedReviews = (reviews as ReviewRow[] | null) || []
+  const total = typedReviews.length
+  const approved = typedReviews.filter(r => r.is_approved)
+  const pending = typedReviews.filter(r => !r.is_approved).length || 0
 
       // Average rating calculation
       const avgRating = approved.length > 0 
@@ -66,7 +69,7 @@ export function ReviewsStats() {
 
       // Recent reviews (last 7 days)
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      const recent = reviews?.filter(r => new Date(r.created_at) > sevenDaysAgo).length || 0
+  const recent = typedReviews.filter(r => new Date(r.created_at) > sevenDaysAgo).length || 0
 
       // Monthly growth
       const now = new Date()
@@ -74,8 +77,8 @@ export function ReviewsStats() {
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
 
-      const thisMonth = reviews?.filter(r => new Date(r.created_at) >= thisMonthStart).length || 0
-      const lastMonth = reviews?.filter(r => {
+  const thisMonth = typedReviews.filter(r => new Date(r.created_at) >= thisMonthStart).length || 0
+  const lastMonth = typedReviews.filter(r => {
         const date = new Date(r.created_at)
         return date >= lastMonthStart && date <= lastMonthEnd
       }).length || 0
@@ -104,20 +107,21 @@ export function ReviewsStats() {
         .slice(0, 5)
         .map(p => p.id)
 
-      let topRatedProducts: any[] = []
+      type ProductRow = { id: string; name: string; images: string[] | null }
+      let topRatedProducts: Array<{ id: string; name: string; averageRating: number; reviewCount: number; image: string }> = []
       if (topProductIds.length > 0) {
         const { data: products } = await supabase
           .from('products')
           .select('id, name, images')
           .in('id', topProductIds)
 
-        topRatedProducts = products?.map(product => {
+        topRatedProducts = (products as ProductRow[] | null)?.map(product => {
           const rating = productRatings[product.id]
           return {
             ...product,
             averageRating: rating.ratings.reduce((sum, r) => sum + r, 0) / rating.ratings.length,
             reviewCount: rating.count,
-            image: product.images[0] || '/placeholder.jpg'
+            image: (product.images?.[0] as string | undefined) || '/placeholder.jpg'
           }
         }).sort((a, b) => b.averageRating - a.averageRating) || []
       }
@@ -278,9 +282,11 @@ export function ReviewsStats() {
                     <div className="flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">
                       {index + 1}
                     </div>
-                    <img
+                    <Image
                       src={product.image}
                       alt={product.name}
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded-lg object-cover"
                     />
                     <div className="flex-1 min-w-0">

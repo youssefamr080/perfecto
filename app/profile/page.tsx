@@ -57,7 +57,7 @@ const ProfilePage: React.FC = () => {
         title: "تم التحديث بنجاح",
         description: "تم تحديث بياناتك الشخصية",
       })
-    } catch (error) {
+  } catch {
       toast({
         title: "خطأ في التحديث",
         description: "حدث خطأ أثناء تحديث البيانات",

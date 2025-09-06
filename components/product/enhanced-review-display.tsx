@@ -1,5 +1,6 @@
 "use client"
 import { getSupabaseClient } from "@/lib/supabase"
+import Image from "next/image"
 import { Star, ThumbsUp, ThumbsDown, Flag, User, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -60,7 +61,7 @@ export function EnhancedReviewDisplay({
       
       // إذا لم نحصل على token، جرّب الحصول على المستخدم مباشرة
       if (!token) {
-        const { data: user, error: userError } = await supabaseClient.auth.getUser()
+  const { data: user } = await supabaseClient.auth.getUser()
         
         if (!user.user) {
           alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.')
@@ -165,7 +166,7 @@ export function EnhancedReviewDisplay({
               <div className="mb-3">
                 <div className="bg-blue-50 border-r-4 border-blue-500 p-2 sm:p-3 rounded">
                   <div className="flex items-center gap-2 mb-2">
-                    <img src="/logo.png" alt="المتجر" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full" />
+                    <Image src="/logo.png" alt="المتجر" width={20} height={20} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full" />
                     <span className="text-xs sm:text-sm font-semibold text-blue-800">رد المتجر</span>
                     <span className="text-xs text-blue-600">
                       {review.store_reply_at && formatDistance(new Date(review.store_reply_at), new Date(), { 

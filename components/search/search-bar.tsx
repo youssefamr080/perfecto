@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { useSearchStore } from "@/lib/stores/search-store"
 import { useDebounce } from "use-debounce"
 import Link from "next/link"
+import Image from "next/image"
 
 interface SearchBarProps {
   className?: string
@@ -64,9 +65,9 @@ export function SearchBar({
       const controller = new AbortController()
       abortRef.current = controller
       ;(async () => {
-        try {
-          await search(debouncedQuery)
-        } catch (_) {
+  try {
+    await search(debouncedQuery)
+  } catch {
           // ignore
         }
       })()
@@ -285,7 +286,7 @@ export function SearchBar({
                   >
                     <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
                       {product.images && product.images[0] ? (
-                        <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full" loading="lazy" width={48} height={48} />
+                        <Image src={product.images[0]} alt={product.name} width={48} height={48} className="object-cover w-full h-full" />
                       ) : (
                         <span className="text-2xl">🛒</span>
                       )}

@@ -8,7 +8,8 @@ const RATE_LIMIT = 5 // 5 reviews per 10 minutes per user
 const RATE_WINDOW = 10 * 60 * 1000 // 10 minutes
 
 // Input validation schemas
-const validateReviewInput = (input: any) => {
+type ReviewInput = { productId?: unknown; rating?: unknown; comment?: unknown }
+const validateReviewInput = (input: ReviewInput) => {
   const { productId, rating, comment } = input || {}
   
   if (!productId || typeof productId !== 'string' || productId.length < 10) {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   
   try {
     // Parse and validate input
-    let body: any
+  let body: unknown
     try {
       body = await req.json()
     } catch {
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    const validation = validateReviewInput(body)
+  const validation = validateReviewInput(body as ReviewInput)
     if (!validation.valid) {
       return NextResponse.json({ 
         success: false, 
@@ -183,8 +184,8 @@ export async function POST(req: NextRequest) {
           comment: comment,
           is_approved: false,
           updated_at: new Date().toISOString()
-        } as any
-      ] as any, { onConflict: 'user_id,product_id' })
+        }
+      ], { onConflict: 'user_id,product_id' })
       .select('id, rating, comment, created_at, updated_at')
 
     if (error) {
@@ -205,11 +206,12 @@ export async function POST(req: NextRequest) {
       review: upserted?.[0] || null,
       message: 'Review submitted successfully. It will be visible after approval.'
     })
-  } catch (e: any) {
+  } catch (e: unknown) {
     const duration = Date.now() - startTime
+    const err = e as { message?: unknown, stack?: unknown }
     console.error('Review submission error:', { 
-      error: e?.message, 
-      stack: e?.stack, 
+      error: err?.message, 
+      stack: err?.stack, 
       duration 
     })
     return NextResponse.json({ 

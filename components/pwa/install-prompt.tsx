@@ -4,8 +4,14 @@ import { useState, useEffect } from "react"
 import { Download, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+type BeforeInstallPromptEvent = Event & {
+  readonly platforms: string[]
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
   const DISMISS_KEY = 'pwa_install_dismissed_until'
 
@@ -18,8 +24,9 @@ export function InstallPrompt() {
       }
     } catch {}
 
-    const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())
-    const isInStandalone = (window.navigator as any).standalone === true
+  const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())
+  type NavigatorWithStandalone = Navigator & { standalone?: boolean }
+  const isInStandalone = (navigator as NavigatorWithStandalone).standalone === true
     // For iOS devices, prompt manual install instructions
     if (isIos && !isInStandalone) {
       setShowPrompt(true)
@@ -28,7 +35,7 @@ export function InstallPrompt() {
     // Regular PWA install prompt
     const handler = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e)
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowPrompt(true)
     }
     window.addEventListener("beforeinstallprompt", handler)

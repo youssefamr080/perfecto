@@ -71,12 +71,7 @@ export default function LoyaltyAdminPage() {
   const [showHistory, setShowHistory] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    loadUsersWithPoints()
-  }, [])
-
-  // جلب المستخدمين الذين لديهم نقاط
-  const loadUsersWithPoints = async () => {
+  const loadUsersWithPoints = React.useCallback(async () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -90,11 +85,25 @@ export default function LoyaltyAdminPage() {
 
       if (error) throw error
 
-      const usersWithStats = data?.map(user => ({
-        ...user,
+      type UserWithOrders = {
+        id: string
+        name: string | null
+        phone: string | null
+        loyalty_points: number
+        created_at: string
+        orders?: Array<{ created_at: string }> | null
+      }
+
+      const rows = (data as UserWithOrders[] | null) ?? []
+      const usersWithStats: UserPointsInfo[] = rows.map((user) => ({
+        id: user.id,
+        name: user.name ?? '',
+        phone: user.phone ?? '',
+        loyalty_points: user.loyalty_points,
+        created_at: user.created_at,
         total_orders: user.orders?.length || 0,
-        last_order_date: user.orders?.[0]?.created_at
-      })) || []
+        last_order_date: user.orders?.[0]?.created_at,
+      }))
 
       setUsers(usersWithStats)
     } catch (error) {
@@ -107,7 +116,12 @@ export default function LoyaltyAdminPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    loadUsersWithPoints()
+  }, [loadUsersWithPoints])
+
 
   // تدقيق شامل لجميع النقاط
   const performFullAudit = async () => {
@@ -159,11 +173,18 @@ export default function LoyaltyAdminPage() {
       // التحقق من صحة النقاط
       const validation = await validateUserPoints(searchUserId.trim())
       
-      setSelectedUser({
-        ...userData,
-        total_orders: 0, // سيتم تحديثه لاحقاً
-        validation
-      })
+      type RawUser = { id: string; name?: string | null; phone?: string | null; loyalty_points?: number | null; created_at: string }
+      const raw = userData as RawUser
+      const baseUser: UserPointsInfo = {
+        id: raw.id,
+        name: raw.name ?? '',
+        phone: raw.phone ?? '',
+        loyalty_points: raw.loyalty_points ?? 0,
+        created_at: raw.created_at,
+        total_orders: 0,
+        validation: validation ?? undefined,
+      }
+      setSelectedUser(baseUser)
 
       // جلب تاريخ المعاملات
       const history = await getUserLoyaltyHistory(searchUserId.trim())
@@ -211,6 +232,8 @@ export default function LoyaltyAdminPage() {
   }
 
   // إلغاء طلب
+  // Unused admin action retained for future use; keeping for parity with orders page
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const cancelOrder = async (orderId: string) => {
     if (!confirm('هل أنت متأكد من إلغاء هذا الطلب؟ سيتم خصم نقاط عقوبة من المستخدم.')) {
       return

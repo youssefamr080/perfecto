@@ -12,7 +12,7 @@ export function PerformanceOptimizer() {
           .then((registration) => {
             console.log("SW registered: ", registration)
             // الاستماع لرسائل التحديث من SW
-            navigator.serviceWorker.addEventListener('message', (event: any) => {
+            navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
               if (event?.data?.type === 'NEW_VERSION') {
                 // اطلب من SW تجاوز الانتظار ثم أعد تحميل الصفحة عندما يصبح المتحكم الجديد فعالاً
                 if (registration.waiting) {

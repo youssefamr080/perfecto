@@ -3,21 +3,18 @@ import { Star, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 
 interface EnhancedReviewFormProps {
   productId: string
   userId: string
-  orderId?: string
   onReviewSubmitted?: () => void
 }
 
 export function EnhancedReviewForm({ 
   productId, 
   userId, 
-  orderId,
   onReviewSubmitted 
 }: EnhancedReviewFormProps) {
   // Default rating is 5 so the user starts with a full rating but can change it

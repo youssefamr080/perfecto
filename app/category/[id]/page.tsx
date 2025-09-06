@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase"
 import type { Category, SubCategory, Product } from "@/lib/types"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 import Image from "next/image"
 import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
@@ -18,8 +20,9 @@ async function getAllCategories(): Promise<Category[]> {
 async function getCategoryWithProducts(
   id: string,
 ): Promise<(Category & { subcategories: (SubCategory & { products: Product[] })[] }) | null> {
+  const db = supabase as unknown as SupabaseClient<Database>
   // Get the category
-  const { data: category, error: categoryError } = await supabase.from("categories").select("*").eq("id", id).single()
+  const { data: categoryRow, error: categoryError } = await db.from("categories").select("*").eq("id", id).single()
 
   if (categoryError) {
     console.error("Error fetching category:", categoryError)
@@ -27,7 +30,7 @@ async function getCategoryWithProducts(
   }
 
   // Get subcategories for this category
-  const { data: subcategories, error: subcategoriesError } = await supabase
+  const { data: subcategoriesRows, error: subcategoriesError } = await db
     .from("subcategories")
     .select("*")
     .eq("category_id", id)
@@ -36,13 +39,13 @@ async function getCategoryWithProducts(
 
   if (subcategoriesError) {
     console.error("Error fetching subcategories:", subcategoriesError)
-    return { ...category, subcategories: [] }
+  return { ...(categoryRow as unknown as Category), subcategories: [] }
   }
 
   // Get products for each subcategory
   const subcategoriesWithProducts = await Promise.all(
-    (subcategories || []).map(async (subcategory) => {
-      const { data: products, error: productsError } = await supabase
+    ((subcategoriesRows || []) as unknown as SubCategory[]).map(async (subcategory: SubCategory) => {
+      const { data: productsRows, error: productsError } = await db
         .from("products")
         .select("*")
         .eq("subcategory_id", subcategory.id)
@@ -51,15 +54,15 @@ async function getCategoryWithProducts(
 
       if (productsError) {
         console.error("Error fetching products:", productsError)
-        return { ...subcategory, products: [] }
+        return { ...subcategory, products: [] as Product[] }
       }
 
-      return { ...subcategory, products: products || [] }
+      return { ...subcategory, products: (productsRows as unknown as Product[]) || [] }
     }),
   )
 
   return {
-    ...category,
+    ...(categoryRow as unknown as Category),
     subcategories: subcategoriesWithProducts,
   }
 }

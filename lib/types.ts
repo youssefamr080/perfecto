@@ -38,7 +38,7 @@ export interface Product {
   max_order_quantity: number
   subcategory_id: string
   tags: string[]
-  nutritional_info?: any
+  nutritional_info?: Record<string, unknown> | null
   created_at: string
   updated_at: string
   subcategory?: SubCategory
@@ -151,6 +151,6 @@ export interface Notification {
   message: string
   type: "ORDER_UPDATE" | "PROMOTION" | "LOYALTY_POINTS" | "GENERAL"
   is_read: boolean
-  data?: any
+  data?: Record<string, unknown> | null
   created_at: string
 }

@@ -1,0 +1,15 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript"
+  ],
+  "overrides": [
+    {
+      "files": ["app/admin/page.tsx"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "warn",
+        "react-hooks/exhaustive-deps": "warn"
+      }
+    }
+  ]
+}

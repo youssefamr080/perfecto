@@ -22,7 +22,7 @@ export async function getProductRating(productId: string): Promise<ProductRating
       return { average: 0, count: 0 }
     }
 
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
+  const sum = (reviews as Array<{ rating: number }>).reduce((acc, review) => acc + review.rating, 0)
     const average = sum / reviews.length
 
     return {
@@ -40,7 +40,7 @@ export async function getProductRating(productId: string): Promise<ProductRating
  */
 export async function getProductRatings(productIds: string[]): Promise<Map<string, ProductRating>> {
   try {
-    const { data: reviews, error } = await supabase
+  const { data: reviews, error } = await supabase
       .from('product_reviews')
       .select('product_id, rating')
       .in('product_id', productIds)
@@ -55,9 +55,9 @@ export async function getProductRatings(productIds: string[]): Promise<Map<strin
       ratingsMap.set(id, { average: 0, count: 0 })
     })
 
-    if (reviews && reviews.length > 0) {
+    if (reviews && (reviews as Array<{ product_id: string; rating: number }>).length > 0) {
       // Group reviews by product_id
-      const groupedReviews = reviews.reduce((acc, review) => {
+      const groupedReviews = (reviews as Array<{ product_id: string; rating: number }>).reduce((acc, review) => {
         if (!acc[review.product_id]) {
           acc[review.product_id] = []
         }

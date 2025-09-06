@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Product } from '@/lib/types'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Autoplay } from 'swiper/modules'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, User, Plus } from 'lucide-react'
+import { User, Plus } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCartStore } from '@/lib/stores/cart-store'
@@ -29,15 +29,7 @@ export function RecentlyOrderedProducts({ userId, isLoggedIn }: RecentlyOrderedP
   const { addItem } = useCartStore()
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (isLoggedIn && userId) {
-      fetchRecentlyOrderedProducts()
-    } else {
-      setLoading(false)
-    }
-  }, [userId, isLoggedIn])
-
-  const fetchRecentlyOrderedProducts = async () => {
+  const fetchRecentlyOrderedProducts = useCallback(async () => {
     if (!userId) return
     
     try {
@@ -62,7 +54,8 @@ export function RecentlyOrderedProducts({ userId, isLoggedIn }: RecentlyOrderedP
       }
 
       // استخراج معرفات الطلبات
-      const orderIds = userOrders.map((order: any) => order.id)
+  type OrderIdRow = { id: string }
+  const orderIds = (userOrders as OrderIdRow[]).map((order) => order.id)
 
       // جلب المنتجات من هذه الطلبات
       const { data: orderItems, error: itemsError } = await supabase
@@ -83,9 +76,10 @@ export function RecentlyOrderedProducts({ userId, isLoggedIn }: RecentlyOrderedP
         // استخراج المنتجات الفريدة
         const uniqueProducts = new Map<string, Product>()
         
-        orderItems.forEach((item: any) => {
+        type OrderItemRow = { product_id: string; product: Product | null }
+        ;(orderItems as OrderItemRow[]).forEach((item) => {
           if (item.product && !uniqueProducts.has(item.product_id)) {
-            uniqueProducts.set(item.product_id, item.product as Product)
+            uniqueProducts.set(item.product_id, item.product)
           }
         })
 
@@ -98,7 +92,15 @@ export function RecentlyOrderedProducts({ userId, isLoggedIn }: RecentlyOrderedP
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    if (isLoggedIn && userId) {
+      fetchRecentlyOrderedProducts()
+    } else {
+      setLoading(false)
+    }
+  }, [userId, isLoggedIn, fetchRecentlyOrderedProducts])
 
   const handleAddToCart = (product: Product) => {
     if (!product.is_available || product.stock_quantity < 1) {

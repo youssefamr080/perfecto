@@ -10,7 +10,7 @@ interface CacheItem<T> {
 }
 
 class CacheManager {
-  private memoryCache = new Map<string, CacheItem<any>>()
+  private memoryCache = new Map<string, CacheItem<unknown>>()
   private readonly DEFAULT_CACHE_DURATION = 30 * 60 * 1000 // 30 minutes
   private readonly IMAGE_CACHE_DURATION = 60 * 60 * 1000 // 1 hour
   private readonly LONG_CACHE_DURATION = 2 * 60 * 60 * 1000 // 2 hours
@@ -22,7 +22,7 @@ class CacheManager {
     const expiresAt = Date.now() + (duration || this.DEFAULT_CACHE_DURATION)
     
     // Memory cache
-    this.memoryCache.set(key, {
+  this.memoryCache.set(key, {
       data,
       timestamp: Date.now(),
       expiresAt
@@ -36,8 +36,8 @@ class CacheManager {
           timestamp: Date.now(),
           expiresAt
         }))
-      } catch (error) {
-        console.warn('Failed to save to localStorage:', error)
+  } catch {
+  console.warn('Failed to save to localStorage')
       }
     }
   }
@@ -51,7 +51,7 @@ class CacheManager {
     // Check memory cache first
     const memoryItem = this.memoryCache.get(key)
     if (memoryItem && now < memoryItem.expiresAt) {
-      return memoryItem.data
+      return memoryItem.data as T
     }
 
     // Check localStorage cache
@@ -59,18 +59,18 @@ class CacheManager {
       try {
         const stored = localStorage.getItem(`cache_${key}`)
         if (stored) {
-          const item: CacheItem<T> = JSON.parse(stored)
+          const item = JSON.parse(stored) as CacheItem<unknown>
           if (now < item.expiresAt) {
             // Restore to memory cache
             this.memoryCache.set(key, item)
-            return item.data
+            return item.data as T
           } else {
             // Remove expired item
             localStorage.removeItem(`cache_${key}`)
           }
         }
-      } catch (error) {
-        console.warn('Failed to read from localStorage:', error)
+  } catch {
+  console.warn('Failed to read from localStorage')
       }
     }
 
@@ -130,7 +130,7 @@ class CacheManager {
               localStorage.removeItem(key)
             }
           }
-        } catch (error) {
+  } catch {
           localStorage.removeItem(key)
         }
       })
@@ -145,8 +145,8 @@ class CacheManager {
       caches.open('images-cache').then(cache => {
         const response = new Response(blob)
         cache.put(url, response)
-      }).catch(error => {
-        console.warn('Failed to cache image:', error)
+      }).catch(() => {
+        console.warn('Failed to cache image')
       })
     }
   }
@@ -163,8 +163,8 @@ class CacheManager {
           const blob = await response.blob()
           return URL.createObjectURL(blob)
         }
-      } catch (error) {
-        console.warn('Failed to get cached image:', error)
+      } catch {
+        console.warn('Failed to get cached image')
       }
     }
     return null

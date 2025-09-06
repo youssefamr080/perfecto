@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Order } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
 export default function OrderConfirmationPage() {
   const params = useParams()
@@ -18,12 +20,14 @@ export default function OrderConfirmationPage() {
   useEffect(() => {
     async function fetchOrder() {
       if (!params.id) return
+  const db = supabase as unknown as SupabaseClient<Database>
 
       // Get the order
-      const { data: orderData, error: orderError } = await supabase
+      const orderId = Array.isArray(params.id) ? params.id[0] : params.id
+      const { data: orderData, error: orderError } = await db
         .from("orders")
         .select("*")
-        .eq("id", params.id)
+        .eq("id", orderId)
         .single()
 
       if (orderError) {
@@ -33,24 +37,24 @@ export default function OrderConfirmationPage() {
       }
 
       // Get the user
-      const { data: userData } = await supabase.from("users").select("*").eq("id", orderData.user_id).single()
+  const { data: userData } = await db.from("users").select("*").eq("id", (orderData as Database['public']['Tables']['orders']['Row']).user_id as string).single()
 
       // Get order items
-      const { data: orderItems } = await supabase.from("order_items").select("*").eq("order_id", orderData.id)
+  const { data: orderItems } = await db.from("order_items").select("*").eq("order_id", (orderData as Database['public']['Tables']['orders']['Row']).id)
 
       // Get products for order items
-      const productIds = orderItems?.map((item) => item.product_id) || []
-      const { data: products } = await supabase.from("products").select("*").in("id", productIds)
+  const productIds = (orderItems as Array<{ product_id: string }> | null)?.map((item) => item.product_id) || []
+  const { data: products } = await db.from("products").select("*").in("id", productIds)
 
       // Combine the data
       const orderWithDetails = {
-        ...orderData,
-        user: userData,
-        order_items: orderItems?.map((item) => ({
+        ...(orderData as unknown as Order),
+        user: userData as unknown,
+        order_items: (orderItems as Array<{ product_id: string; [k: string]: unknown }> | null)?.map((item) => ({
           ...item,
-          product: products?.find((product) => product.id === item.product_id),
+          product: (products as Array<{ id: string }> | null)?.find((product) => product.id === item.product_id),
         })),
-      }
+      } as unknown as Order
 
       setOrder(orderWithDetails)
       setLoading(false)

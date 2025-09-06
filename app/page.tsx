@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Swiper, SwiperSlide } from "swiper/react"
 import { Pagination } from "swiper/modules"
 import "swiper/css"
@@ -14,7 +15,7 @@ import { ProductCard } from "@/components/product-card"
 import { PullToRefresh } from "@/components/ui/pull-to-refresh"
 import { ProductGridSkeleton } from "@/components/loading/product-skeleton"
 import { CategoryGridSkeleton } from "@/components/loading/category-skeleton"
-import type { Product, Category } from "@/lib/types"
+import type { Category } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 import { useProductsStore } from "@/lib/stores/products-store"
 import { HeroCarousel } from "@/components/banners/hero-carousel"
@@ -35,7 +36,7 @@ export default function HomePage() {
 
   const { user, isAuthenticated, checkAuth } = useAuthStore()
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // جلب المنتجات المميزة من المخزن (مع كاش محسن)
       await fetchFeaturedProducts()
@@ -70,13 +71,13 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetchFeaturedProducts])
 
   useEffect(() => {
     // التحقق من المصادقة عند تحميل الصفحة
     checkAuth()
     fetchData()
-  }, [])
+  }, [checkAuth, fetchData])
 
   const handleRefresh = async () => {
     await fetchData()

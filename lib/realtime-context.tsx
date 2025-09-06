@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from './supabase'
-import { safePlayNotificationSound, requestNotificationPermission, initializeSound, enableAudioByUserGesture } from './notification-sound'
+import { safePlayNotificationSound, requestNotificationPermission, initializeSound } from './notification-sound'
 import { useToast } from '@/hooks/use-toast'
 import { Order } from './types'
 
@@ -91,8 +91,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             } else {
               console.error('❌ فشل في إرسال إيميل الطلب:', await emailResponse.text())
             }
-          } catch (emailError) {
-            console.error('❌ خطأ في إرسال إيميل الطلب:', emailError)
+          } catch {
+            console.error('❌ خطأ في إرسال إيميل الطلب')
           }
           
           toast({
@@ -156,7 +156,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   // محاولة اتصال Realtime (كنظام إضافي)
   useEffect(() => {
-    let channel: any = null
+  let channel: ReturnType<typeof supabase.channel> | null = null
 
     const setupRealtime = () => {
       try {
@@ -198,7 +198,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                   if (process.env.NODE_ENV === 'development' && quickEmailResponse.ok) {
                     console.log('✅ تم إرسال إيميل سريع من Realtime')
                   }
-                } catch (emailError) {
+                } catch {
                   // تجاهل الأخطاء في الإيميل السريع - سيتم إرسال إيميل كامل لاحقاً
                   if (process.env.NODE_ENV === 'development') {
                     console.log('⚠️ فشل إيميل Realtime، سيتم المحاولة مرة أخرى')
@@ -212,7 +212,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
               }, 500) // تأخير صغير للتأكد من حفظ البيانات
             }
           )
-          .subscribe((status) => {
+          .subscribe((status: string) => {
             if (process.env.NODE_ENV === 'development') {
               console.log('حالة Realtime:', status)
             }

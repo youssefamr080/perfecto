@@ -1,6 +1,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { supabase } from "@/lib/supabase"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 import type { User } from "@/lib/types"
 
 interface AuthState {
@@ -17,6 +19,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+  // Locally typed Supabase client for safe writes
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...((): Record<string, unknown> => ({}))(),
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -55,7 +60,8 @@ export const useAuthStore = create<AuthState>()(
 
           // البحث عن المستخدم الموجود برقم الهاتف
           console.log("🔍 البحث عن المستخدم...")
-          const { data: existingUser, error: searchError } = await supabase
+          const db = supabase as unknown as SupabaseClient<Database>
+          const { data: existingUser, error: searchError } = await db
             .from("users")
             .select("*")
             .eq("phone", cleanedPhone)
@@ -78,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
           if (existingUser) {
             console.log("👤 مستخدم موجود، تحديث البيانات...")
             // المستخدم موجود - تسجيل دخول مع تحديث البيانات
-            const { data: updatedUser, error: updateError } = await supabase
+            const { data: updatedUser, error: updateError } = await db
               .from("users")
               .update({
                 name: name.trim(),
@@ -101,22 +107,24 @@ export const useAuthStore = create<AuthState>()(
               return { success: false, message: `فشل في تحديث البيانات: ${updateError.message}` }
             }
 
-            userData = updatedUser
+            userData = mapDbUserToUser(updatedUser as Database['public']['Tables']['users']['Row'])
             console.log("✅ تسجيل دخول لمستخدم موجود:", userData)
           } else {
             console.log("👤 مستخدم جديد، إنشاء حساب...")
             // المستخدم جديد - إنشاء حساب جديد
-            const newUser = {
+            const newUser: Database['public']['Tables']['users']['Insert'] = {
               phone: cleanedPhone,
               name: name.trim(),
               address: address.trim(),
               loyalty_points: 0,
+              total_orders: 0,
+              total_spent: 0,
               is_active: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }
 
-            const { data: createdUser, error: createError } = await supabase
+            const { data: createdUser, error: createError } = await db
               .from("users")
               .insert([newUser])
               .select()
@@ -134,7 +142,7 @@ export const useAuthStore = create<AuthState>()(
               return { success: false, message: `فشل في إنشاء الحساب: ${createError.message}` }
             }
 
-            userData = createdUser
+            userData = mapDbUserToUser(createdUser as Database['public']['Tables']['users']['Row'])
             console.log("✅ تم إنشاء مستخدم جديد:", userData)
           }
 
@@ -159,7 +167,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (userData: Partial<User>) => {
+  register: async () => {
         // هذه الدالة لم تعد ضرورية لأن التسجيل يتم عبر login
         return true
       },
@@ -179,7 +187,8 @@ export const useAuthStore = create<AuthState>()(
           const { user } = get()
           if (!user) return false
 
-          const { data: updatedUser, error } = await supabase
+          const db = supabase as unknown as SupabaseClient<Database>
+          const { data: updatedUser, error } = await db
             .from("users")
             .update({
               ...userData,
@@ -194,7 +203,7 @@ export const useAuthStore = create<AuthState>()(
             return false
           }
 
-          set({ user: updatedUser })
+          set({ user: mapDbUserToUser(updatedUser as Database['public']['Tables']['users']['Row']) })
           return true
         } catch (error) {
           console.error("خطأ في تحديث الملف الشخصي:", error)
@@ -229,7 +238,7 @@ export const useAuthStore = create<AuthState>()(
 
           // تحديث بيانات المستخدم
           set({
-            user: currentUser,
+            user: mapDbUserToUser(currentUser as Database['public']['Tables']['users']['Row']),
             isAuthenticated: true
           })
         } catch (error) {
@@ -251,3 +260,31 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// Helper: map DB user row (nullable fields) to strict app User type with safe defaults
+function mapDbUserToUser(row: Database['public']['Tables']['users']['Row']): User {
+  return {
+    id: row.id,
+    phone: row.phone,
+    name: row.name ?? "",
+    email: row.email ?? undefined,
+    address: row.address ?? "",
+    city: row.city ?? undefined,
+    area: row.area ?? undefined,
+    building_number: row.building_number ?? undefined,
+    floor_number: row.floor_number ?? undefined,
+    apartment_number: row.apartment_number ?? undefined,
+    landmark: row.landmark ?? undefined,
+    loyalty_points: row.loyalty_points ?? 0,
+    total_orders: row.total_orders ?? 0,
+    total_spent: row.total_spent ?? 0,
+    is_active: row.is_active ?? true,
+    is_admin: row.is_admin ?? undefined,
+    birth_date: row.birth_date ?? undefined,
+    gender: row.gender ?? undefined,
+    preferred_delivery_time: row.preferred_delivery_time ?? undefined,
+    notes: row.notes ?? undefined,
+    created_at: row.created_at ?? new Date().toISOString(),
+    updated_at: row.updated_at ?? new Date().toISOString(),
+  }
+}

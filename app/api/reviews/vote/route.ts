@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     
     // User validation for service path
     if (actor === 'service') {
-      const { data: authUser, error: authUserError } = await adminClient.auth.admin.getUserById(userId)
+  const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
       if (!authUser?.user) {
         // In development, be more permissive
         if (process.env.NODE_ENV === 'development') {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
             // Create user in development mode
             try {
               await adminClient.from('users').insert({ id: userId }).single()
-            } catch (insertError) {
+            } catch {
               return NextResponse.json(
                 { success: false, error: 'Invalid user: could not validate or create user' },
                 { status: 401 }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Ensure user exists in public.users
-        const { error: publicUserErr } = await adminClient
+  const { error: publicUserErr } = await adminClient
           .from('users')
           .select('id')
           .eq('id', userId)
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (userScopedClient) {
       // Extract user ID from token
-      const { data: gotUser, error: getUserErr } = await userScopedClient.auth.getUser()
+  const { data: gotUser } = await userScopedClient.auth.getUser()
       if (gotUser?.user?.id) {
         effectiveUserId = gotUser.user.id
       } else {
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
               { status: 401 }
             )
           }
-        } catch (jwtErr) {
+  } catch {
           return NextResponse.json(
             { success: false, error: 'Invalid user token: JWT decode failed' },
             { status: 401 }
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing vote
-    const dbClient = actor === 'service' ? adminClient : (userScopedClient as any)
+  const dbClient = actor === 'service' ? adminClient : (userScopedClient as ReturnType<typeof createClient>)
     const { data: existingVote, error: fetchError } = await dbClient
       .from('review_votes')
       .select('*')
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get updated review stats
-    let updatedReview: any = null
+  let updatedReview: { helpful_count: number; not_helpful_count: number } | null = null
     if (actor === 'service') {
       const { data } = await adminClient
         .from('product_reviews')

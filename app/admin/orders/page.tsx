@@ -2,31 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import Breadcrumbs from '@/components/navigation/Breadcrumbs'
-import { 
-  Package, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Search,
-  RefreshCw,
-  Clock,
-  Truck,
-  Ban,
-  DollarSign,
-  User,
-  Calendar,
-  ArrowLeft,
-  Shield,
-  BarChart3
-} from 'lucide-react'
+import { Package, CheckCircle, XCircle, RefreshCw, Clock, Truck, ArrowLeft, Shield, BarChart3, User, DollarSign, Calendar, Ban } from 'lucide-react'
 import { handleOrderCancellation } from '@/lib/utils/loyaltyProtection'
 import { supabase } from '@/lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface Order {
   id: string
@@ -72,20 +57,36 @@ const STATUS_ICONS = {
 }
 
 export default function OrderManagementPage() {
+  // Local DB typing to avoid "never" on updates
+  type OrdersDB = {
+    public: {
+      Tables: {
+        orders: {
+          Row: { id: string; status: string; updated_at?: string }
+          Insert: Partial<OrdersDB['public']['Tables']['orders']['Row']>
+          Update: Partial<OrdersDB['public']['Tables']['orders']['Row']>
+          Relationships: []
+        }
+      }
+      Views: Record<string, never>
+      Functions: Record<string, never>
+      Enums: Record<string, never>
+      CompositeTypes: Record<string, never>
+    }
+  }
+  const db = supabase as unknown as SupabaseClient<OrdersDB>
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  // Future: selection sidebar; currently unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [cancelLoading, setCancelLoading] = useState<string | null>(null)
   const { toast } = useToast()
   const router = useRouter()
 
-  useEffect(() => {
-    loadOrders()
-  }, [])
-
-  const loadOrders = async () => {
+  const loadOrders = React.useCallback(async () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -110,7 +111,11 @@ export default function OrderManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const cancelOrder = async (order: Order) => {
     const confirmMessage = `هل أنت متأكد من إلغاء الطلب ${order.order_number}؟
@@ -154,7 +159,7 @@ export default function OrderManagementPage() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from('orders')
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', orderId)
@@ -235,7 +240,7 @@ export default function OrderManagementPage() {
 
       // بعد يوم: عرض التاريخ فقط
       return d.toLocaleDateString('ar-EG')
-    } catch (e) {
+  } catch {
       return dateStr
     }
   }

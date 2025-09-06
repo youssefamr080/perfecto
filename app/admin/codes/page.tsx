@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { 
   Copy, 
   Gift, 
@@ -15,17 +14,16 @@ import {
   Clock,
   Phone,
   MessageSquare,
-  Share2,
   Award,
   Trash2,
   Edit2,
   Users,
   RefreshCw,
-  Database,
   AlertCircle
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface Ambassador {
   id: string
@@ -58,7 +56,7 @@ interface CodeUsage {
   code: string
   ambassador_name: string
   used_at: string
-  customer_info?: string
+  customer_info: string | null
 }
 
 interface SystemStats {
@@ -71,7 +69,72 @@ interface SystemStats {
   codes_usage_rate: number
 }
 
+// Narrow local Supabase types for this page
+type AdminDB = {
+  public: {
+    Tables: {
+      ambassadors: {
+        Row: {
+          id: string
+          name: string
+          phone: string
+          created_at: string
+          is_active: boolean
+        }
+        Insert: Partial<AdminDB['public']['Tables']['ambassadors']['Row']>
+        Update: Partial<Pick<AdminDB['public']['Tables']['ambassadors']['Row'], 'is_active'>>
+        Relationships: []
+      }
+      ambassador_codes: {
+        Row: {
+          id: string
+          code: string
+          is_used: boolean
+          expires_at: string
+          created_at: string
+          ambassador_id?: string
+        }
+        Insert: Partial<AdminDB['public']['Tables']['ambassador_codes']['Row']>
+        Update: Partial<Pick<AdminDB['public']['Tables']['ambassador_codes']['Row'], 'is_used'>>
+        Relationships: []
+      }
+      code_usages: {
+        Row: {
+          id: string
+          code_id: string
+          used_at: string
+          customer_info: string | null
+        }
+        Insert: {
+          code_id: string
+          customer_info?: string | null
+        }
+        Update: Partial<AdminDB['public']['Tables']['code_usages']['Insert']>
+        Relationships: []
+      }
+    }
+    Functions: {
+      use_ambassador_code: {
+        Args: { p_code: string; p_customer_info: string | null }
+        Returns: { success: boolean; message?: string | null }
+      }
+      create_ambassador_with_codes: {
+        Args: { p_name: string; p_phone: string }
+        Returns: unknown
+      }
+      get_ambassador_system_stats: {
+        Args: Record<string, never>
+        Returns: SystemStats
+      }
+    }
+    Views: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
+  }
+}
+
 export default function AdminCodesPage() {
+  const db = supabase as unknown as SupabaseClient<AdminDB>
   const [ambassadors, setAmbassadors] = useState<Ambassador[]>([])
   const [codeUsages, setCodeUsages] = useState<CodeUsage[]>([])
   const [systemStats, setSystemStats] = useState<SystemStats>({
@@ -88,35 +151,33 @@ export default function AdminCodesPage() {
   const [customerInfo, setCustomerInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchAmbassador, setSearchAmbassador] = useState('')
-  const [codeValidationResult, setCodeValidationResult] = useState<any>(null)
-
-  // تحميل البيانات من قاعدة البيانات
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      await Promise.all([
-        fetchAmbassadors(),
-        fetchRecentCodeUsages(),
-        fetchSystemStats()
-      ])
-    } catch (error) {
-      console.error('خطأ في تحميل البيانات:', error)
-      toast({
-        title: "خطأ",
-        description: "فشل في تحميل البيانات من قاعدة البيانات",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
+  // Validation result types
+  type CodeValidationType = 'not_found' | 'ambassador_inactive' | 'already_used' | 'expired' | 'valid' | 'error'
+  type CodeInfo = {
+    id: string
+    code: string
+    is_used: boolean
+    expires_at: string
+    created_at: string
+    ambassadors?: {
+      id: string
+      name: string
+      phone: string
+      is_active: boolean
+    } | null
   }
+  type CodeValidationResult = {
+    valid: boolean
+    message: string
+    type: CodeValidationType
+    codeInfo?: CodeInfo
+  }
+  const [codeValidationResult, setCodeValidationResult] = useState<CodeValidationResult | null>(null)
 
-  const fetchAmbassadors = async () => {
-    const { data: ambassadorsData, error: ambassadorsError } = await supabase
+  
+
+  const fetchAmbassadors = React.useCallback(async () => {
+  const { data: ambassadorsData, error: ambassadorsError } = await db
       .from('ambassadors')
       .select(`
         id,
@@ -145,14 +206,24 @@ export default function AdminCodesPage() {
       throw ambassadorsError
     }
 
-    const formattedAmbassadors = ambassadorsData?.map((ambassador: any) => ({
+    type AmbassadorSupabaseRow = {
+      id: string
+      name: string
+      phone: string
+      created_at: string
+      is_active: boolean
+      ambassador_codes?: Code[] | null
+      ambassador_stats?: AmbassadorStats[] | null
+    }
+
+    const formattedAmbassadors = (ambassadorsData as AmbassadorSupabaseRow[] | null)?.map((ambassador) => ({
       id: ambassador.id,
       name: ambassador.name,
       phone: ambassador.phone,
       created_at: ambassador.created_at,
       is_active: ambassador.is_active,
-      codes: ambassador.ambassador_codes || [],
-      stats: ambassador.ambassador_stats?.[0] || {
+      codes: ambassador.ambassador_codes ?? [],
+      stats: ambassador.ambassador_stats?.[0] ?? {
         total_codes_generated: 0,
         total_codes_used: 0,
         total_discount_given: 0,
@@ -162,10 +233,10 @@ export default function AdminCodesPage() {
     })) || []
 
     setAmbassadors(formattedAmbassadors)
-  }
+  }, [db])
 
-  const fetchRecentCodeUsages = async () => {
-    const { data, error } = await supabase
+  const fetchRecentCodeUsages = React.useCallback(async () => {
+  const { data, error } = await db
       .from('code_usages')
       .select(`
         id,
@@ -185,19 +256,29 @@ export default function AdminCodesPage() {
       throw error
     }
 
-    const formattedUsages = data?.map((usage: any) => ({
+    type CodeUsageSupabaseRow = {
+      id: string
+      used_at: string
+      customer_info?: string | null
+      ambassador_codes?: {
+        code?: string | null
+        ambassadors?: { name?: string | null } | null
+      } | null
+    }
+
+  const formattedUsages: CodeUsage[] = (data as CodeUsageSupabaseRow[] | null)?.map((usage): CodeUsage => ({
       id: usage.id,
       code: usage.ambassador_codes?.code || '',
       ambassador_name: usage.ambassador_codes?.ambassadors?.name || '',
       used_at: usage.used_at,
-      customer_info: usage.customer_info
+      customer_info: usage.customer_info ?? null
     })) || []
 
     setCodeUsages(formattedUsages)
-  }
+  }, [db])
 
-  const fetchSystemStats = async () => {
-    const { data, error } = await supabase
+  const fetchSystemStats = React.useCallback(async () => {
+  const { data, error } = await db
       .rpc('get_ambassador_system_stats')
 
     if (error) {
@@ -213,7 +294,33 @@ export default function AdminCodesPage() {
       total_discount_given: 0,
       codes_usage_rate: 0
     })
-  }
+  }, [db])
+
+  // Load all data (depends on the three loaders above)
+  const fetchData = React.useCallback(async () => {
+    setLoading(true)
+    try {
+      await Promise.all([
+        fetchAmbassadors(),
+        fetchRecentCodeUsages(),
+        fetchSystemStats()
+      ])
+    } catch (error) {
+      console.error('خطأ في تحميل البيانات:', error)
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل البيانات من قاعدة البيانات",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchAmbassadors, fetchRecentCodeUsages, fetchSystemStats])
+
+  // تحميل البيانات من قاعدة البيانات
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
 
   // إنشاء سفير جديد
   const createAmbassador = async () => {
@@ -228,7 +335,7 @@ export default function AdminCodesPage() {
 
     setLoading(true)
     try {
-      const { data, error } = await supabase
+  const { error } = await db
         .rpc('create_ambassador_with_codes', {
           p_name: newAmbassador.name.trim(),
           p_phone: newAmbassador.phone.trim()
@@ -245,11 +352,12 @@ export default function AdminCodesPage() {
         title: "تم إنشاء السفير بنجاح! 🎉",
         description: `تم إنشاء 3 أكواد للسفير ${newAmbassador.name}`
       })
-    } catch (error: any) {
-      console.error('خطأ في إنشاء السفير:', error)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('خطأ في إنشاء السفير:', message)
       toast({
         title: "خطأ",
-        description: error.message === "duplicate key value violates unique constraint \"ambassadors_phone_key\"" 
+        description: message === "duplicate key value violates unique constraint \"ambassadors_phone_key\"" 
           ? "رقم الهاتف مسجل من قبل"
           : "فشل في إنشاء السفير",
         variant: "destructive"
@@ -317,7 +425,7 @@ export default function AdminCodesPage() {
 
     try {
       // البحث عن الكود في قاعدة البيانات
-      const { data: codeData, error } = await supabase
+  const { data: codeDataRaw, error } = await db
         .from('ambassador_codes')
         .select(`
           id,
@@ -335,7 +443,7 @@ export default function AdminCodesPage() {
         .eq('code', codeToValidate.trim())
         .single()
 
-      if (error || !codeData) {
+      if (error || !codeDataRaw) {
         setCodeValidationResult({
           valid: false,
           message: "كود غير موجود",
@@ -344,11 +452,14 @@ export default function AdminCodesPage() {
         return
       }
 
+  // Normalize the shape to our local CodeInfo type
+  const codeData = codeDataRaw as unknown as CodeInfo
+
       // التحقق من انتهاء الصلاحية
       const isExpired = new Date(codeData.expires_at) < new Date()
       
-      // التحقق من حالة السفير
-      const ambassadorActive = codeData.ambassadors?.[0]?.is_active
+  // التحقق من حالة السفير
+  const ambassadorActive = codeData.ambassadors?.is_active === true
 
       if (!ambassadorActive) {
         setCodeValidationResult({
@@ -387,8 +498,9 @@ export default function AdminCodesPage() {
         codeInfo: codeData
       })
 
-    } catch (error) {
-      console.error('خطأ في التحقق من الكود:', error)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('خطأ في التحقق من الكود:', message)
       setCodeValidationResult({
         valid: false,
         message: "خطأ في التحقق من الكود",
@@ -401,7 +513,7 @@ export default function AdminCodesPage() {
   const markCodeAsUsed = async (codeId: string, ambassadorName: string) => {
     setLoading(true)
     try {
-      const { error } = await supabase
+  const { error } = await db
         .from('ambassador_codes')
         .update({ is_used: true })
         .eq('id', codeId)
@@ -411,7 +523,7 @@ export default function AdminCodesPage() {
       }
 
       // إضافة سجل في code_usages
-      const { error: usageError } = await supabase
+  const { error: usageError } = await db
         .from('code_usages')
         .insert({
           code_id: codeId,
@@ -430,8 +542,9 @@ export default function AdminCodesPage() {
         title: "تم تمييز الكود كمستخدم! ✅",
         description: `كود السفير ${ambassadorName} تم تمييزه كمستخدم`
       })
-    } catch (error: any) {
-      console.error('خطأ في تمييز الكود:', error)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('خطأ في تمييز الكود:', message)
       toast({
         title: "خطأ",
         description: "فشل في تمييز الكود كمستخدم",
@@ -442,7 +555,6 @@ export default function AdminCodesPage() {
     }
   }
 
-  // استخدام كود
   // استخدام كود
   const useCode = async () => {
     if (!searchCode.trim()) {
@@ -457,20 +569,14 @@ export default function AdminCodesPage() {
     // التحقق من صحة الكود أولاً
     await validateCode(searchCode.trim())
     
-    // التحقق من نتيجة التحقق
-    const tempResult = await new Promise(resolve => {
-      setTimeout(() => {
-        resolve(codeValidationResult)
-      }, 100)
-    })
-
-    if (!codeValidationResult?.valid) {
+  // التحقق من نتيجة التحقق
+  if (!codeValidationResult?.valid) {
       return // الخطأ سيظهر من دالة التحقق
     }
 
     setLoading(true)
     try {
-      const { data, error } = await supabase
+  const { data, error } = await db
         .rpc('use_ambassador_code', {
           p_code: searchCode.trim(),
           p_customer_info: customerInfo.trim() || null
@@ -480,10 +586,10 @@ export default function AdminCodesPage() {
         throw error
       }
 
-      if (!data.success) {
+    if (!data?.success) {
         toast({
           title: "كود غير صحيح ❌",
-          description: data.message || "الكود غير موجود أو تم استخدامه من قبل أو منتهي الصلاحية",
+      description: data?.message || "الكود غير موجود أو تم استخدامه من قبل أو منتهي الصلاحية",
           variant: "destructive"
         })
         return
@@ -498,8 +604,9 @@ export default function AdminCodesPage() {
         title: "تم تسجيل استخدام الكود! ✅",
         description: `الكود ${searchCode.trim()} تم استخدامه بنجاح`
       })
-    } catch (error: any) {
-      console.error('خطأ في استخدام الكود:', error)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('خطأ في استخدام الكود:', message)
       toast({
         title: "خطأ",
         description: "فشل في تسجيل استخدام الكود",
@@ -514,7 +621,7 @@ export default function AdminCodesPage() {
   const deleteAmbassador = async (ambassadorId: string) => {
     setLoading(true)
     try {
-      const { error } = await supabase
+  const { error } = await db
         .from('ambassadors')
         .update({ is_active: false })
         .eq('id', ambassadorId)
@@ -529,8 +636,9 @@ export default function AdminCodesPage() {
         title: "تم إلغاء تفعيل السفير",
         description: "تم إلغاء تفعيل السفير بنجاح"
       })
-    } catch (error: any) {
-      console.error('خطأ في حذف السفير:', error)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('خطأ في حذف السفير:', message)
       toast({
         title: "خطأ",
         description: "فشل في حذف السفير",
@@ -725,18 +833,18 @@ export default function AdminCodesPage() {
                       <span className="font-medium">{codeValidationResult.message}</span>
                     </div>
                     
-                    {codeValidationResult.codeInfo && (
+          {codeValidationResult.codeInfo && (
                       <div className="mt-2 text-sm">
-                        <p><strong>السفير:</strong> {codeValidationResult.codeInfo.ambassadors?.[0]?.name}</p>
-                        <p><strong>هاتف:</strong> {codeValidationResult.codeInfo.ambassadors?.[0]?.phone}</p>
+            <p><strong>السفير:</strong> {codeValidationResult.codeInfo?.ambassadors?.name}</p>
+            <p><strong>هاتف:</strong> {codeValidationResult.codeInfo?.ambassadors?.phone}</p>
                         <p><strong>تاريخ الانتهاء:</strong> {new Date(codeValidationResult.codeInfo.expires_at).toLocaleDateString('ar-EG')}</p>
                         
                         {/* زر تمييز كمستخدم يدوياً */}
-                        {codeValidationResult.type === 'valid' && (
+            {codeValidationResult.type === 'valid' && codeValidationResult.codeInfo && (
                           <Button
                             onClick={() => markCodeAsUsed(
-                              codeValidationResult.codeInfo.id,
-                              codeValidationResult.codeInfo.ambassadors?.[0]?.name
+                codeValidationResult.codeInfo!.id,
+                codeValidationResult.codeInfo!.ambassadors?.name || ''
                             )}
                             disabled={loading}
                             size="sm"
@@ -834,7 +942,7 @@ export default function AdminCodesPage() {
                 <div className="text-center py-8 text-gray-800 font-medium">
                   {searchAmbassador.trim() ? (
                     <div>
-                      <p>لا توجد نتائج للبحث عن: "{searchAmbassador}"</p>
+                      <p>لا توجد نتائج للبحث عن: {searchAmbassador}</p>
                       <Button 
                         onClick={() => setSearchAmbassador('')}
                         variant="outline"

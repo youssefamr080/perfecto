@@ -1,4 +1,6 @@
+/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
 "use client"
+import Image from "next/image"
 import { Swiper, SwiperSlide } from "swiper/react"
 import { Pagination, Autoplay, EffectFade } from "swiper/modules"
 import "swiper/css/effect-fade"
@@ -26,11 +28,13 @@ export function HeroCarousel() {
       {/* ألبان ومنتجات */}
       <SwiperSlide>
         <div className="relative w-full h-[220px] sm:h-56 md:h-80">
-          <img
+          <Image
             src="/banner-dairy.jpg"
             alt="منتجات الألبان"
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            priority={false}
+            sizes="100vw"
+            className="object-cover"
           />
           {/* Neutral dark gradient overlay for readability (no color tint) */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent text-white flex flex-col justify-center items-start p-4 md:p-8">
@@ -60,11 +64,13 @@ export function HeroCarousel() {
       {/* لحوم ومصنعات */}
       <SwiperSlide>
         <div className="relative w-full h-[220px] sm:h-56 md:h-80">
-          <img
+          <Image
             src="/banner-meat.jpg"
             alt="لحوم ومصنعات"
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            priority={false}
+            sizes="100vw"
+            className="object-cover"
           />
           {/* Neutral dark gradient overlay for readability (no color tint) */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent text-white flex flex-col justify-center items-start p-4 md:p-8">
@@ -94,11 +100,13 @@ export function HeroCarousel() {
       {/* منتجات متنوعة */}
       <SwiperSlide>
         <div className="relative w-full h-[220px] sm:h-56 md:h-80">
-          <img
+          <Image
             src="/banner-other.jpg"
             alt="منتجات متنوعة"
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            priority={false}
+            sizes="100vw"
+            className="object-cover"
           />
           {/* Neutral dark gradient overlay for readability (no color tint) */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent text-white flex flex-col justify-center items-start p-4 md:p-8">
@@ -117,7 +125,7 @@ export function HeroCarousel() {
               </p>
               <Link href="/category/e035e289-e068-42ba-89ed-1d1cbc409c75">
                 <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold text-sm md:text-lg px-5 md:px-7 py-2.5 md:py-3.5 rounded-full shadow-2xl hover:scale-[1.04] transition-all duration-300 border-2 border-white/30 hover:border-white/50 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]">
-                  🛍️ تسوق الآن
+                  🛍️ تسوق 
                 </Button>
               </Link>
             </div>
@@ -128,11 +136,13 @@ export function HeroCarousel() {
       {/* توصيل مجاني */}
       <SwiperSlide>
         <div className="relative w-full h-[220px] sm:h-56 md:h-80">
-          <img
+          <Image
             src="/banner-delivery.jpg"
             alt="توصيل مجاني"
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            priority={false}
+            sizes="100vw"
+            className="object-cover"
           />
           {/* Neutral dark gradient overlay for readability (no color tint) */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent text-white flex flex-col justify-center items-start p-4 md:p-8">
@@ -162,11 +172,13 @@ export function HeroCarousel() {
       {/* خصومات وعروض */}
       <SwiperSlide>
         <div className="relative w-full h-[220px] sm:h-56 md:h-80">
-          <img
+          <Image
             src="/banner-offers.jpg"
             alt="خصومات وعروض"
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            priority={false}
+            sizes="100vw"
+            className="object-cover"
           />
           {/* Neutral dark gradient overlay for readability (no color tint) */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent text-white flex flex-col justify-center items-start p-4 md:p-8">

@@ -4,6 +4,9 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
+const db = supabase as unknown as SupabaseClient<Database>
 
 export interface LoyaltyTransaction {
   id: string
@@ -46,13 +49,16 @@ export async function addLoyaltyTransaction(
   try {
     console.log(`🔐 Adding loyalty transaction: ${transactionType} ${pointsAmount} points for user ${userId}`)
     
-    const { data, error } = await supabase.rpc('add_loyalty_transaction', {
+  const { error } = await (db.rpc as unknown as <T extends string, A extends object>(fn: T, args: A) => Promise<{ data: unknown; error: { message: string } | null }>)(
+    'add_loyalty_transaction',
+    {
       p_user_id: userId,
       p_order_id: orderId || null,
       p_transaction_type: transactionType,
       p_points_amount: pointsAmount,
       p_description: description || null
-    })
+    }
+  )
 
     if (error) {
       console.error('❌ Error adding loyalty transaction:', error)
@@ -77,17 +83,15 @@ export async function validateUserPoints(userId: string): Promise<PointsValidati
   try {
     console.log(`🔍 Validating points for user ${userId}`)
     
-    const { data, error } = await supabase.rpc('validate_user_points', {
-      user_uuid: userId
-    })
+  const { data: validationData, error } = await (db.rpc as unknown as <T extends string, A extends object>(fn: T, args: A) => Promise<{ data: unknown; error: { message: string } | null }>)('validate_user_points', { user_uuid: userId })
 
     if (error) {
       console.error('❌ Error validating user points:', error)
       return null
     }
 
-    if (data && data.length > 0) {
-      const validation = data[0] as PointsValidation
+    if (Array.isArray(validationData) && (validationData as unknown[]).length > 0) {
+      const validation = (validationData as unknown[])[0] as PointsValidation
       console.log(`📊 Points validation result:`, validation)
       
       if (!validation.is_valid) {
@@ -142,9 +146,7 @@ export async function handleOrderCancellation(orderId: string): Promise<Cancella
   try {
     console.log(`🚫 Processing order cancellation: ${orderId}`)
     
-    const { data, error } = await supabase.rpc('handle_order_cancellation', {
-      p_order_id: orderId
-    })
+  const { data, error } = await (db.rpc as unknown as <T extends string, A extends object>(fn: T, args: A) => Promise<{ data: unknown; error: { message: string } | null }>)('handle_order_cancellation', { p_order_id: orderId })
 
     if (error) {
       console.error('❌ Error cancelling order:', error)
@@ -156,8 +158,8 @@ export async function handleOrderCancellation(orderId: string): Promise<Cancella
       }
     }
 
-    if (data && data.length > 0) {
-      const result = data[0] as CancellationResult
+    if (Array.isArray(data) && (data as unknown[]).length > 0) {
+      const result = (data as unknown[])[0] as CancellationResult
       console.log(`✅ Order cancellation processed:`, result)
       return result
     }
@@ -197,7 +199,7 @@ export async function auditAllUserPoints(): Promise<{
     console.log('🔍 Starting comprehensive points audit...')
     
     // جلب جميع المستخدمين الذين لديهم نقاط
-    const { data: users, error: usersError } = await supabase
+    const { data: users, error: usersError } = await db
       .from('users')
       .select('id, loyalty_points')
       .gt('loyalty_points', 0)
@@ -224,7 +226,7 @@ export async function auditAllUserPoints(): Promise<{
     }
 
     // التحقق من كل مستخدم
-    for (const user of users) {
+  for (const user of users as Array<{ id: string; loyalty_points: number }>) {
       const validation = await validateUserPoints(user.id)
       
       if (validation) {
@@ -278,9 +280,9 @@ export async function fixUserPoints(userId: string): Promise<{
     }
 
     // تحديث النقاط للقيمة الصحيحة
-    const { error } = await supabase
+    const { error } = await db
       .from('users')
-      .update({ loyalty_points: validation.calculated_points })
+      .update({ loyalty_points: validation.calculated_points } as Database['public']['Tables']['users']['Update'])
       .eq('id', userId)
 
     if (error) {

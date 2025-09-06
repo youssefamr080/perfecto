@@ -16,27 +16,26 @@ import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { LoginModal } from "@/components/auth/login-modal"
-import { Gift, Truck, CreditCard, MapPin, Phone, User, Coins } from "lucide-react"
+import { Gift, Truck, CreditCard, MapPin, User, Coins } from "lucide-react"
 import { 
   calculateLoyaltyPoints, 
   LOYALTY_CONFIG, 
   getMaxUsablePoints, 
   convertPointsToEGP, 
-  canUseShippingPoints 
+  canUseShippingPoints, 
+  calculatePointsNeededForDiscount 
 } from "@/lib/utils/loyaltySystem"
 import { 
   processOrderPoints,
-  validateUserPoints,
-  addLoyaltyTransaction 
+  validateUserPoints
 } from "@/lib/utils/loyaltyProtection"
 import { FreeShippingProgress } from "@/components/ui/free-shipping-progress"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
 const { 
   SHIPPING_FEE, 
   FREE_SHIPPING_THRESHOLD, 
-  POINTS_PER_EGP, 
-  POINTS_TO_EGP_RATIO, 
-  DISCOUNT_PER_RATIO, 
   SHIPPING_POINTS_COST, 
   MIN_POINTS_USE 
 } = LOYALTY_CONFIG
@@ -53,6 +52,8 @@ export default function CheckoutPage() {
   const [saveType, setSaveType] = useState<"permanent"|"temporary">("temporary")
   const router = useRouter()
   const { toast } = useToast()
+  // Locally typed Supabase client to enable safe inserts/updates only in this module
+  const db = supabase as unknown as SupabaseClient<Database>
 
   const [mounted, setMounted] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -80,8 +81,7 @@ export default function CheckoutPage() {
     pointsEarned,
     totalPointsUsed,
     isValid: isLoyaltyValid,
-    error: loyaltyError,
-    breakdown
+  error: loyaltyError
   } = loyaltyResult
 
   // حساب أقصى نقاط يمكن استخدامها
@@ -158,7 +158,7 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!isLoyaltyValid) {
+  if (!isLoyaltyValid) {
       toast({
         title: "خطأ في النقاط",
         description: loyaltyError || "حدث خطأ في حساب نقاط الولاء",
@@ -185,11 +185,23 @@ export default function CheckoutPage() {
       return
     }
 
+    // تأكيد تواجد المستخدم لتجنّب استخدام تأكيدات non-null
+    if (!user?.id) {
+      toast({
+        title: "مشكلة في الحساب",
+        description: "تعذر تحديد هوية المستخدم. يرجى إعادة تسجيل الدخول",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const userId = user.id
+
     setLoading(true)
     try {
       // التحقق من صحة نقاط المستخدم قبل إنشاء الطلب
       console.log("🔍 Validating user points before order creation...")
-      const pointsValidation = await validateUserPoints(user?.id!)
+      const pointsValidation = await validateUserPoints(userId)
       
       if (pointsValidation && !pointsValidation.is_valid) {
         console.warn("⚠️ User points validation failed:", pointsValidation)
@@ -204,27 +216,31 @@ export default function CheckoutPage() {
       // إنشاء الطلب
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
       
-      const orderData = {
-        user_id: user?.id,
+  const orderData: Database['public']['Tables']['orders']['Insert'] = {
+        user_id: userId,
         order_number: orderNumber,
         delivery_address: userData.address || user?.address || "العنوان غير محدد",
         subtotal: subtotal,
-  points_used: totalPointsUsed || 0,
-  points_discount: parseFloat(pointsDiscount.toFixed(2)),
-  shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
-  final_amount: parseFloat(finalAmount.toFixed(2)),
-  points_earned: pointsEarned || 0,
+        // Supabase schema uses discount_amount (not points_discount)
+        points_used: totalPointsUsed || 0,
+        discount_amount: parseFloat(pointsDiscount.toFixed(2)),
+        shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
+        final_amount: parseFloat(finalAmount.toFixed(2)),
+        points_earned: pointsEarned || 0,
         delivery_notes: deliveryNotes || null,
-        status: "PENDING"
+        status: 'PENDING' as const
       }
 
       console.log("🔄 محاولة إنشاء طلب مع البيانات:", orderData)
       
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert([orderData])
-        .select("*")
-        .single()
+  type OrderRow = Database['public']['Tables']['orders']['Row']
+  const insertResult = await db
+    .from("orders")
+    .insert(orderData)
+    .select("*")
+    .single()
+  const order = insertResult.data as OrderRow | null
+  const orderError = insertResult.error
 
       if (orderError) {
         console.error("❌ خطأ في إنشاء الطلب:", orderError)
@@ -232,19 +248,23 @@ export default function CheckoutPage() {
         throw new Error(`فشل في إنشاء الطلب: ${orderError.message || 'خطأ غير معروف'}`)
       }
 
-      console.log("✅ تم إنشاء الطلب بنجاح:", order)
+  console.log("✅ تم إنشاء الطلب بنجاح:", order)
+
+  if (!order) {
+        throw new Error("لم يتم استرجاع بيانات الطلب من الخادم")
+      }
 
       // إنشاء عناصر الطلب
-      const orderItems = items.map(item => ({
+  const orderItems: import("@/lib/database.types").Database['public']['Tables']['order_items']['Insert'][] = items.map(item => ({
         order_id: order.id,
         product_id: item.product.id,
         product_name: item.product.name,
         product_price: item.product.price,
         quantity: item.quantity,
         total_price: item.product.price * item.quantity,
-      }))
+  }))
 
-      const { error: itemsError } = await supabase
+  const { error: itemsError } = await db
         .from("order_items")
         .insert(orderItems)
 
@@ -256,7 +276,7 @@ export default function CheckoutPage() {
       // معالجة نقاط الولاء باستخدام النظام المحمي
       console.log("💳 Processing loyalty points with protection system...")
       const pointsResult = await processOrderPoints(
-        user?.id!,
+        userId,
         order.id,
         totalPointsUsed || 0,
         pointsEarned || 0,
@@ -268,14 +288,14 @@ export default function CheckoutPage() {
         console.error("❌ فشل في معالجة نقاط الولاء:", pointsResult.error)
         
         // محاولة حذف الطلب في حالة فشل معالجة النقاط
-        await supabase.from("orders").delete().eq("id", order.id)
-        await supabase.from("order_items").delete().eq("order_id", order.id)
+  await db.from("orders").delete().eq("id", order.id)
+  await db.from("order_items").delete().eq("order_id", order.id)
         
         throw new Error(`فشل في معالجة نقاط الولاء: ${pointsResult.error}`)
       }
 
       // تحديث بيانات المستخدم (بدون تحديث النقاط لأنها تم تحديثها في النظام المحمي)
-      const updateData: any = {}
+  const updateData: Database['public']['Tables']['users']['Update'] = {}
 
       if (saveType === "permanent") {
         updateData.name = userData.name
@@ -283,10 +303,10 @@ export default function CheckoutPage() {
       }
 
       if (Object.keys(updateData).length > 0) {
-        const { error: userUpdateError } = await supabase
+  const { error: userUpdateError } = await db
           .from("users")
           .update(updateData)
-          .eq("id", user?.id)
+          .eq("id", userId)
 
         if (userUpdateError) {
           console.error("خطأ في تحديث بيانات المستخدم:", userUpdateError)
@@ -295,7 +315,7 @@ export default function CheckoutPage() {
       }
 
       // التحقق النهائي من صحة النقاط بعد المعالجة
-      const finalValidation = await validateUserPoints(user?.id!)
+  const finalValidation = await validateUserPoints(userId)
       if (finalValidation && !finalValidation.is_valid) {
         console.error("❌ Points validation failed after order processing:", finalValidation)
         // نسجل الخطأ لكن لا نوقف العملية لأن الطلب تم إنشاؤه بنجاح
@@ -525,6 +545,70 @@ export default function CheckoutPage() {
                       <Label htmlFor="pointsToUse" className="text-sm font-medium text-gray-700">
                         💎 استخدام النقاط للخصم
                       </Label>
+                      {/* اقتراحات ذكية */}
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs flex flex-col gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          {/* أقصى خصم ممكن */}
+                          <button
+                            type="button"
+                            onClick={() => setPointsToUse(maxUsablePoints)}
+                            disabled={maxUsablePoints === 0}
+                            className={`px-3 py-1 rounded-md font-medium ${maxUsablePoints > 0 ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                          >
+                            أقصى خصم: {convertPointsToEGP(maxUsablePoints)} ج.م
+                          </button>
+                          {/* خصم يغطي الشحن */}
+                          {baseShippingFee > 0 && (
+                            (() => {
+                              const pts = Math.min(
+                                maxUsablePoints,
+                                calculatePointsNeededForDiscount(baseShippingFee)
+                              )
+                              const enabled = pts > 0 && pts <= (user.loyalty_points || 0)
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => enabled && setPointsToUse(pts)}
+                                  disabled={!enabled}
+                                  className={`px-3 py-1 rounded-md font-medium ${enabled ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                >
+                                  غطّي الشحن: {convertPointsToEGP(pts)} ج.م
+                                </button>
+                              )
+                            })()
+                          )}
+                          {/* اقتراح متوازن 50% من الحد */}
+                          {maxUsablePoints > 0 && (
+                            (() => {
+                              const half = Math.floor(maxUsablePoints / (2 * MIN_POINTS_USE)) * MIN_POINTS_USE
+                              const enabled = half > 0
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => enabled && setPointsToUse(half)}
+                                  disabled={!enabled}
+                                  className={`px-3 py-1 rounded-md font-medium ${enabled ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                >
+                                  خيار ذكي: {half} نقطة (خصم {convertPointsToEGP(half)} ج.م)
+                                </button>
+                              )
+                            })()
+                          )}
+                        </div>
+                        <div className="text-[11px] text-gray-600">
+                          نصيحة: يمكنك تعديل النقاط بالسلايدر أو الحقول بالأسفل. الحد الأدنى {MIN_POINTS_USE} نقطة.
+                        </div>
+                      </div>
+                      {/* سلايدر النقاط */}
+                      <input
+                        type="range"
+                        min={0}
+                        max={maxUsablePoints}
+                        step={MIN_POINTS_USE}
+                        value={Math.min(pointsToUse, maxUsablePoints)}
+                        onChange={(e) => handlePointsChange(e.target.value)}
+                        className="w-full accent-yellow-500"
+                      />
                       
                       {/* أزرار سريعة للنقاط */}
                       <div className="flex flex-wrap gap-2 mb-3">
@@ -815,7 +899,7 @@ export default function CheckoutPage() {
                 </Button>
 
                 <p className="text-xs text-gray-500 text-center leading-relaxed">
-                  بالنقر على "تأكيد الطلب" فإنك توافق على 
+                  بالنقر على &quot;تأكيد الطلب&quot; فإنك توافق على 
                   <span className="text-blue-600 hover:underline cursor-pointer"> شروط وأحكام الموقع</span>
                 </p>
               </CardContent>

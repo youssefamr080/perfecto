@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Star, MessageSquare, Eye, Check, X, AlertCircle, TrendingUp, Users, Clock, Reply } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { Star, MessageSquare, Eye, Check, X, TrendingUp, Clock, Reply } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Review {
@@ -38,11 +38,7 @@ export function ReviewsManagement() {
   const [submittingReply, setSubmittingReply] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchReviews('all')
-  }, [])
-
-  const fetchReviews = async (status: 'all' | 'pending' | 'approved' = 'all') => {
+  const fetchReviews = useCallback(async (status: 'all' | 'pending' | 'approved' = 'all') => {
     try {
       const authStorage = (typeof window !== 'undefined' && localStorage.getItem('auth-storage')) ? (() => {
         try { 
@@ -52,8 +48,8 @@ export function ReviewsManagement() {
           return {} 
         }
       })() : {}
-      const adminId = (authStorage as any)?.user?.id || ''
-      const token = (authStorage as any)?.session?.access_token || ''
+  const adminId = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.user?.id || ''
+  const token = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.session?.access_token || ''
 
       if (!adminId) {
         toast({ 
@@ -93,17 +89,21 @@ export function ReviewsManagement() {
       setReviews(json.reviews || [])
       setStats(json.stats || { total: 0, pending: 0, approved: 0, averageRating: 0, totalProducts: 0 })
       
-    } catch (error: any) {
+  } catch (error: unknown) {
       console.error('Error fetching reviews:', error)
       toast({ 
         title: 'خطأ', 
-        description: error.message || 'فشل في تحميل المراجعات', 
+    description: typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message) : 'فشل في تحميل المراجعات', 
         variant: 'destructive' 
       })
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchReviews('all')
+  }, [fetchReviews])
 
   const approveReview = async (reviewId: string, approved: boolean) => {
     try {
@@ -115,8 +115,8 @@ export function ReviewsManagement() {
           return {} 
         }
       })() : {}
-      const adminId = (authStorage as any)?.user?.id || ''
-      const token = (authStorage as any)?.session?.access_token || ''
+  const adminId = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.user?.id || ''
+  const token = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.session?.access_token || ''
 
       if (!adminId) {
         toast({ 
@@ -177,11 +177,11 @@ export function ReviewsManagement() {
       // Refresh stats from server
       fetchReviews(filter)
       
-    } catch (error: any) {
+  } catch (error: unknown) {
       console.error('Error updating review:', error)
       toast({ 
         title: 'خطأ', 
-        description: error.message || 'فشل في تحديث المراجعة', 
+    description: typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message) : 'فشل في تحديث المراجعة', 
         variant: 'destructive' 
       })
     }
@@ -197,8 +197,8 @@ export function ReviewsManagement() {
           return {} 
         }
       })() : {}
-      const adminId = (authStorage as any)?.user?.id || ''
-      const token = (authStorage as any)?.session?.access_token || ''
+  const adminId = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.user?.id || ''
+  const token = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.session?.access_token || ''
 
       if (!adminId) {
         toast({ 
@@ -257,11 +257,11 @@ export function ReviewsManagement() {
       // Refresh stats from server
       fetchReviews(filter)
       
-    } catch (error: any) {
+  } catch (error: unknown) {
       console.error('Error deleting review:', error)
       toast({ 
         title: 'خطأ', 
-        description: error.message || 'فشل في حذف المراجعة', 
+    description: typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message) : 'فشل في حذف المراجعة', 
         variant: 'destructive' 
       })
     }
@@ -297,8 +297,8 @@ export function ReviewsManagement() {
           return {} 
         }
       })() : {}
-      const adminId = (authStorage as any)?.user?.id || ''
-      const token = (authStorage as any)?.session?.access_token || ''
+  const adminId = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.user?.id || ''
+  const token = (authStorage as { user?: { id?: string }, session?: { access_token?: string } })?.session?.access_token || ''
 
       if (!adminId) {
         toast({ 
@@ -471,7 +471,7 @@ export function ReviewsManagement() {
       </div>
 
       {/* Filter Tabs */}
-  <Tabs value={filter} onValueChange={(value: any) => { setFilter(value); fetchReviews(value) }}>
+  <Tabs value={filter} onValueChange={(value: string) => { const v = value as 'all' | 'pending' | 'approved'; setFilter(v); fetchReviews(v) }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all">الكل ({reviews.length})</TabsTrigger>
           <TabsTrigger value="pending">في الانتظار ({stats.pending})</TabsTrigger>
@@ -495,9 +495,11 @@ export function ReviewsManagement() {
                       <div className="flex-1">
                         <div className="flex items-center gap-4 mb-3">
                           {/* Product Image */}
-                          <img
+                          <Image
                             src={review.product.images[0] || '/placeholder.jpg'}
                             alt={review.product.name}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 rounded-lg object-cover"
                           />
                           <div>
@@ -519,7 +521,7 @@ export function ReviewsManagement() {
                         {review.store_reply && (
                           <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-3 rounded">
                             <div className="flex items-center gap-2 mb-2">
-                              <img src="/logo.png" alt="المتجر" className="w-6 h-6 rounded-full" />
+                              <Image src="/logo.png" alt="المتجر" width={24} height={24} className="w-6 h-6 rounded-full" />
                               <span className="text-sm font-semibold text-blue-800">رد المتجر</span>
                               <span className="text-xs text-blue-600">
                                 {review.store_reply_at && new Date(review.store_reply_at).toLocaleString('ar-EG')}
@@ -603,9 +605,11 @@ export function ReviewsManagement() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <img
+                <Image
                   src={selectedReview.product.images[0] || '/placeholder.jpg'}
                   alt={selectedReview.product.name}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-lg object-cover"
                 />
                 <div>
@@ -647,7 +651,7 @@ export function ReviewsManagement() {
                 {selectedReview.store_reply ? (
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                     <div className="flex items-center gap-2 mb-2">
-                      <img src="/logo.png" alt="المتجر" className="w-6 h-6 rounded-full" />
+                      <Image src="/logo.png" alt="المتجر" width={24} height={24} className="w-6 h-6 rounded-full" />
                       <span className="text-sm font-semibold text-blue-800">رد المتجر</span>
                       <span className="text-xs text-blue-600">
                         {selectedReview.store_reply_at && new Date(selectedReview.store_reply_at).toLocaleString('ar-EG')}

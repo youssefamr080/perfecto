@@ -20,15 +20,15 @@ import { useToast } from "@/hooks/use-toast"
 import { initializeSound, requestNotificationPermission, testSound, enableAudioByUserGesture, safePlayNotificationSound } from "@/lib/notification-sound"
 import { 
   Package, Users, ShoppingBag, TrendingUp, Clock, CheckCircle, XCircle, 
-  Truck, Shield, Lock, DollarSign, Eye, Edit, Trash2, Plus, Download, 
-  Filter, Search, Calendar, BarChart3, PieChart, Activity, RefreshCw, Volume2,
-  Gift, Users2
+  Shield, Lock, DollarSign, Eye, Trash2, Download, 
+  BarChart3, Activity, RefreshCw, Volume2,
+  Gift
 } from "lucide-react"
 import { formatDistance } from "date-fns"
 import { ar } from "date-fns/locale"
 
-// رقم الهاتف الخاص بالأدمن
-const ADMIN_PHONE = "01234567890"
+// رقم الهاتف الخاص بالأدمن (غير مستخدم حالياً)
+// const ADMIN_PHONE = "01234567890"
 
 // مفاتيح الأمان الإضافية
 const ADMIN_SECURITY_KEYS = [
@@ -48,14 +48,25 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [products, setProducts] = useState<Product[]>([])
-  const [stats, setStats] = useState({
+  type TopProductStat = { quantity: number; revenue: number; product: { name: string } }
+  type AdminStats = {
+    totalOrders: number
+    totalUsers: number
+    totalRevenue: number
+    pendingOrders: number
+    todayOrders: number
+    monthlyRevenue: number
+    topProducts: TopProductStat[]
+    recentUsers: number
+  }
+  const [stats, setStats] = useState<AdminStats>({
     totalOrders: 0,
     totalUsers: 0,
     totalRevenue: 0,
     pendingOrders: 0,
     todayOrders: 0,
     monthlyRevenue: 0,
-    topProducts: [] as any[],
+    topProducts: [],
     recentUsers: 0
   })
   const [loading, setLoading] = useState(true)
@@ -265,9 +276,18 @@ export default function AdminPage() {
     ).length
     
     // أكثر المنتجات مبيعاً
-    const productSales = new Map()
+    const productSales = new Map<string, TopProductStat>()
+    type OrderItemRow = {
+      product_id: string
+      product_name?: string | null
+      product_price?: number | null
+      price?: number | null
+      quantity?: number | null
+      total_price?: number | null
+      product?: { name?: string | null }
+    }
     ordersData.forEach(order => {
-      order.order_items?.forEach((item: any) => {
+      order.order_items?.forEach((item: OrderItemRow) => {
         const productId = item.product_id
         const productName = item.product_name || item.product?.name || 'منتج محذوف'
         const currentSales = productSales.get(productId) || { 
@@ -304,7 +324,7 @@ export default function AdminPage() {
       console.log('Updating order status:', { orderId, newStatus })
       
       // Use a direct update with minimal RLS interaction
-      const { data, error } = await supabase
+  const { data, error } = await (supabase as unknown as any)
         .from("orders")
         .update({ 
           status: newStatus
@@ -316,7 +336,7 @@ export default function AdminPage() {
         console.error('Supabase error:', error)
         
         // Try alternative approach with upsert
-        const { data: upsertData, error: upsertError } = await supabase
+  const { data: upsertData, error: upsertError } = await (supabase as unknown as any)
           .from("orders")
           .upsert({ 
             id: orderId,
@@ -346,7 +366,7 @@ export default function AdminPage() {
         title: "✅ تم التحديث",
         description: `تم تحديث حالة الطلب إلى: ${getStatusLabel(newStatus)}`,
       })
-    } catch (error: any) {
+  } catch (error: unknown) {
       console.error('Error updating order status:', error)
       toast({
         title: "❌ خطأ",
@@ -358,7 +378,7 @@ export default function AdminPage() {
 
   const toggleProductStatus = async (productId: string, isAvailable: boolean) => {
     try {
-      const { error } = await supabase
+  const { error } = await (supabase as unknown as any)
         .from("products")
         .update({ is_available: !isAvailable })
         .eq("id", productId)
@@ -388,7 +408,7 @@ export default function AdminPage() {
     }
 
     try {
-      const { error } = await supabase
+  const { error } = await (supabase as unknown as any)
         .from("users")
         .delete()
         .eq("id", userId)
@@ -413,7 +433,7 @@ export default function AdminPage() {
   }
 
   const exportData = (type: 'orders' | 'users' | 'products') => {
-    let data: any[] = []
+  let data: Array<Record<string, string | number>> = []
     let filename = ""
     
     switch (type) {
@@ -846,13 +866,13 @@ export default function AdminPage() {
                                     <div>
                                       <p className="font-semibold text-gray-900 mb-2">📦 المنتجات المطلوبة:</p>
                                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                                        {order.order_items?.map((item: any, index: number) => (
+                                        {order.order_items?.map((item: { product?: { images?: string[] | null; name?: string | null; unit_description?: string | null }; product_name?: string | null; product_price?: number | null; price?: number | null; quantity?: number | null; total_price?: number | null }, index: number) => (
                                           <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded border">
                                             <div className="flex items-center gap-3">
                                               {item.product?.images?.[0] && (
                                                 <img 
                                                   src={item.product.images[0]} 
-                                                  alt={item.product_name || item.product.name}
+                                                  alt={item.product_name || item.product?.name || 'منتج'}
                                                   className="w-10 h-10 rounded object-cover"
                                                 />
                                               )}

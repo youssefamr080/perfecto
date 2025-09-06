@@ -32,7 +32,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
     sortBy: "name",
   })
 
-  const handleFilterChange = (key: keyof FilterOptions, value: any) => {
+  const handleFilterChange = <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => {
     const newFilters = { ...filters, [key]: value }
     setFilters(newFilters)
     onFiltersChange(newFilters)
@@ -149,7 +149,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
               <Checkbox
                 id="inStock"
                 checked={filters.inStock}
-                onCheckedChange={(checked) => handleFilterChange("inStock", checked)}
+                onCheckedChange={(checked) => handleFilterChange("inStock", checked === true)}
                 className="border-red-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
               />
               <label
@@ -165,7 +165,7 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
               <Checkbox
                 id="featured"
                 checked={filters.featured}
-                onCheckedChange={(checked) => handleFilterChange("featured", checked)}
+                onCheckedChange={(checked) => handleFilterChange("featured", checked === true)}
                 className="border-red-300 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
               />
               <label
@@ -180,8 +180,9 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
             <div>
               <h3 className="font-bold mb-3 text-gray-800 text-base">ترتيب حسب</h3>
               <select
+                id="sortBy"
                 value={filters.sortBy}
-                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFilterChange("sortBy", e.target.value as FilterOptions['sortBy'])}
                 className="w-full p-3 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-gray-700 font-medium"
               >
                 <option value="name">الاسم</option>
@@ -190,8 +191,6 @@ export function AdvancedFilters({ onFiltersChange, availableCategories, isOpen, 
                 <option value="popular">الأكثر شعبية</option>
               </select>
             </div>
-
-            {/* Action Buttons */}
             <div className="flex gap-2 pt-4 border-t">
               <Button variant="outline" onClick={clearFilters} className="flex-1 bg-white hover:bg-gray-50 border-red-200 text-red-600">
                 مسح الكل

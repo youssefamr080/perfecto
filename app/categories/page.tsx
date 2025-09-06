@@ -2,11 +2,15 @@ import { supabase } from "@/lib/supabase"
 import type { Category, SubCategory } from "@/lib/types"
 import Link from "next/link"
 import Breadcrumbs from "@/components/navigation/Breadcrumbs"
+import Image from "next/image"
 
 // Update the getCategoriesWithSubcategories function to use separate queries
 async function getCategoriesWithSubcategories(): Promise<(Category & { subcategories: SubCategory[] })[]> {
   // Get all categories
-  const { data: categories, error: categoriesError } = await supabase.from("categories").select("*").order("name")
+  const { data: categories, error: categoriesError } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name") as unknown as { data: Category[] | null; error: unknown }
 
   if (categoriesError) {
     console.error("Error fetching categories:", categoriesError)
@@ -14,7 +18,9 @@ async function getCategoriesWithSubcategories(): Promise<(Category & { subcatego
   }
 
   // Get all subcategories
-  const { data: subcategories, error: subcategoriesError } = await supabase.from("subcategories").select("*")
+  const { data: subcategories, error: subcategoriesError } = await supabase
+    .from("subcategories")
+    .select("*") as unknown as { data: SubCategory[] | null; error: unknown }
 
   if (subcategoriesError) {
     console.error("Error fetching subcategories:", subcategoriesError)
@@ -22,11 +28,17 @@ async function getCategoriesWithSubcategories(): Promise<(Category & { subcatego
   }
 
   // Group subcategories by category
-  const categoriesWithSubs =
-    categories?.map((category) => ({
-      ...category,
-      subcategories: subcategories?.filter((sub) => sub.category_id === category.id) || [],
-    })) || []
+  const categoriesWithSubs: (Category & { subcategories: SubCategory[] })[] = (categories || []).map((category) => ({
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    image_url: category.image_url,
+    is_active: category.is_active,
+    sort_order: category.sort_order,
+    created_at: category.created_at,
+    updated_at: category.updated_at,
+    subcategories: (subcategories || []).filter((sub) => sub.category_id === category.id),
+  }))
 
   return categoriesWithSubs
 }
@@ -65,12 +77,13 @@ export default async function CategoriesPage() {
                     href={`/subcategory/${sub.id}`}
                     className="group block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md border border-gray-100 transition-transform transform hover:-translate-y-1"
                   >
-                    <div className="w-full h-28 bg-gray-100 overflow-hidden">
-                      <img
+                    <div className="w-full h-28 bg-gray-100 overflow-hidden relative">
+                      <Image
                         src={sub.image_url || '/placeholder.jpg'}
                         alt={sub.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        fill
+                        sizes="200px"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                     <div className="p-3">

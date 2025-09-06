@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
 import { ProductCard } from "@/components/product-card"
@@ -52,9 +51,7 @@ export default function OffersPage() {
     }
   }
 
-  // خصم ثابت لجميع المنتجات
-  const FIXED_DISCOUNT = 20
-  const calculateDiscount = () => FIXED_DISCOUNT
+  // خصم ثابت لجميع المنتجات (غير مستخدم حالياً)
 
   if (loading) {
     return (

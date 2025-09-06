@@ -5,6 +5,7 @@ import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
 import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 // Update the getSubcategoryWithProducts function to use separate queries
@@ -16,7 +17,7 @@ async function getSubcategoryWithProducts(
     .from("subcategories")
     .select("*")
     .eq("id", id)
-    .single()
+    .single() as unknown as { data: SubCategory | null; error: unknown }
 
   if (subcategoryError) {
     console.error("Error fetching subcategory:", subcategoryError)
@@ -27,8 +28,8 @@ async function getSubcategoryWithProducts(
   const { data: category, error: categoryError } = await supabase
     .from("categories")
     .select("*")
-    .eq("id", subcategory.category_id)
-    .single()
+    .eq("id", (subcategory as SubCategory).category_id)
+    .single() as unknown as { data: Category | null; error: unknown }
 
   if (categoryError) {
     console.error("Error fetching category:", categoryError)
@@ -38,11 +39,21 @@ async function getSubcategoryWithProducts(
   const allProducts = await getCachedProducts()
   const products = allProducts.filter(p => p.subcategory_id === id)
 
-  return {
-    ...subcategory,
-    products: products,
-    category: category || undefined,
-  }
+  return subcategory
+    ? {
+        id: subcategory.id,
+        name: subcategory.name,
+        description: subcategory.description,
+        image_url: subcategory.image_url,
+        category_id: subcategory.category_id,
+        is_active: subcategory.is_active,
+        sort_order: subcategory.sort_order,
+        created_at: subcategory.created_at,
+        updated_at: subcategory.updated_at,
+        products,
+        category: category || undefined,
+      }
+    : null
 }
 
 // Get other subcategories (excluding current one)
@@ -51,14 +62,14 @@ async function getOtherSubcategories(currentSubcategoryId: string): Promise<SubC
     .from("subcategories")
     .select("*")
     .neq("id", currentSubcategoryId)
-    .limit(12)
+    .limit(12) as unknown as { data: SubCategory[] | null; error: unknown }
 
   if (error) {
     console.error("Error fetching other subcategories:", error)
     return []
   }
 
-  return subcategories || []
+  return (subcategories || []) as SubCategory[]
 }
 
 export default async function SubcategoryPage({ params }: { params: { id: string } }) {
@@ -117,11 +128,13 @@ export default async function SubcategoryPage({ params }: { params: { id: string
                 <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden group-hover:scale-105">
                   <div className="aspect-square bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-2 overflow-hidden">
                     {sub.image_url ? (
-                      <img src={sub.image_url} alt={sub.name} className="object-contain w-full h-full rounded-xl" loading="lazy" />
+                      <Image src={sub.image_url} alt={sub.name} width={200} height={200} className="object-contain w-full h-full rounded-xl" />
                     ) : (
-                      <img
+                      <Image
                         src="/placeholder.svg?height=120&width=120&text=فئة"
                         alt="فئة فرعية"
+                        width={120}
+                        height={120}
                         className="object-contain w-full h-full rounded-xl opacity-60"
                       />
                     )}

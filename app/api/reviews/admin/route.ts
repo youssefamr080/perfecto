@@ -7,7 +7,7 @@ const adminCache = new Map<string, { isAdmin: boolean; expiresAt: number }>()
 const ADMIN_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Enhanced admin verification with caching
-async function verifyAdmin(userId: string, supabase: any): Promise<boolean> {
+async function verifyAdmin(userId: string, supabase: ReturnType<typeof getServiceSupabase>): Promise<boolean> {
   if (!userId) return false
   
   const cached = adminCache.get(userId)
@@ -83,9 +83,14 @@ export async function POST(req: NextRequest) {
       }, { status: 429 })
     }
 
-    let body: any
+    type ApproveBody = { action: 'approve'; reviewId: string; approved?: boolean }
+    type DeleteBody = { action: 'delete'; reviewId: string }
+    type ReplyBody = { action: 'reply'; reviewId: string; replyText?: string }
+    type AdminActionBody = ApproveBody | DeleteBody | ReplyBody
+
+    let body: AdminActionBody
     try {
-      body = await req.json()
+      body = await req.json() as AdminActionBody
     } catch {
       return NextResponse.json({ 
         success: false, 
@@ -93,12 +98,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    const { action, reviewId, approved, replyText } = body as {
-      action: 'approve' | 'delete' | 'reply'
-      reviewId: string
-      approved?: boolean
-      replyText?: string
-    }
+  const { action, reviewId } = body
+  const approved = 'approved' in body ? body.approved : undefined
+  const replyText = 'replyText' in body ? body.replyText : undefined
 
     if (!action || !reviewId) {
       return NextResponse.json({ 
@@ -203,10 +205,11 @@ export async function POST(req: NextRequest) {
       error: 'Invalid action. Must be approve, delete, or reply' 
     }, { status: 400 })
     
-  } catch (e: any) {
+  } catch (e: unknown) {
     const duration = Date.now() - startTime
+    const err = e as { message?: unknown }
     console.error('Admin review POST error:', { 
-      error: e?.message, 
+      error: err?.message, 
       duration 
     })
     return NextResponse.json({ 
@@ -267,9 +270,10 @@ export async function GET(req: NextRequest) {
     const productIds = Array.from(new Set(reviews.map(r => r.product_id).filter(Boolean)))
 
     // Batch fetch users and products
+    const emptyOk = { data: [] as unknown[], error: null as unknown }
     const [{ data: users, error: usersErr }, { data: products, error: productsErr }] = await Promise.all([
-      userIds.length ? supabase.from('users').select('id, name, phone').in('id', userIds) : Promise.resolve({ data: [], error: null } as any),
-      productIds.length ? supabase.from('products').select('id, name, images').in('id', productIds) : Promise.resolve({ data: [], error: null } as any)
+      userIds.length ? supabase.from('users').select('id, name, phone').in('id', userIds) : Promise.resolve(emptyOk),
+      productIds.length ? supabase.from('products').select('id, name, images').in('id', productIds) : Promise.resolve(emptyOk)
     ])
     if (usersErr || productsErr) return NextResponse.json({ success: false, error: 'Failed to load references' }, { status: 500 })
 
@@ -312,7 +316,8 @@ export async function GET(req: NextRequest) {
         totalProducts: productCount || 0
       }
     })
-  } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || 'Server error' }, { status: 500 })
+  } catch (e: unknown) {
+    const message = typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message) : 'Server error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

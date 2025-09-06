@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -59,14 +59,7 @@ export default function LoyaltyHistoryPage() {
   const [pointsValid, setPointsValid] = useState<boolean | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadTransactions()
-      validatePoints()
-    }
-  }, [isAuthenticated, user])
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     if (!user?.id) return
     
     setLoading(true)
@@ -83,9 +76,9 @@ export default function LoyaltyHistoryPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id, toast])
 
-  const validatePoints = async () => {
+  const validatePoints = useCallback(async () => {
     if (!user?.id) return
     
     try {
@@ -102,7 +95,14 @@ export default function LoyaltyHistoryPage() {
     } catch (error) {
       console.error('Error validating points:', error)
     }
-  }
+  }, [user?.id, toast])
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadTransactions()
+      validatePoints()
+    }
+  }, [isAuthenticated, user, loadTransactions, validatePoints])
 
   const groupTransactionsByDate = (transactions: LoyaltyTransaction[]) => {
     const groups: { [key: string]: LoyaltyTransaction[] } = {}

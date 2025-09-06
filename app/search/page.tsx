@@ -30,7 +30,6 @@ function SearchContent() {
     results, 
     isLoading, 
     hasSearched, 
-    search, 
     searchWithFilters, 
     categories, 
     loadCategories, 
@@ -109,7 +108,7 @@ function SearchContent() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    {query ? `نتائج البحث عن: "${query}"` : "نتائج البحث"}
+                    {query ? `نتائج البحث عن: ${query}` : "نتائج البحث"}
                   </h1>
                   <p className="text-gray-600 mt-1">
                     تم العثور على {sortedResults.length} منتج
@@ -204,7 +203,7 @@ function SearchContent() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">لم يتم العثور على نتائج</h2>
                 <p className="text-gray-700 mb-8 max-w-md mx-auto">
-                  لم نتمكن من العثور على منتجات تطابق بحثك "{query}". جرب البحث بكلمات مختلفة أو تصفح الأقسام.
+                  لم نتمكن من العثور على منتجات تطابق بحثك {query}. جرب البحث بكلمات مختلفة أو تصفح الأقسام.
                 </p>
 
                 {/* اقتراحات */}

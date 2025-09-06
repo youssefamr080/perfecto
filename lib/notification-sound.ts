@@ -16,7 +16,9 @@ export const initializeSound = async (): Promise<boolean> => {
         console.info('🔊 تهيئة الصوت تحتاج تفاعل مستخدم أولاً')
       }
       // إنشاء AudioContext للتأكد من عمل الصوت
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  type WindowWithWebkit = Window & { webkitAudioContext?: typeof AudioContext }
+  const Ctx = (window.AudioContext || (window as WindowWithWebkit).webkitAudioContext) as typeof AudioContext
+  audioContext = new Ctx();
       
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
@@ -102,9 +104,9 @@ export const playNotificationSound = async () => {
     // تجربة تشغيل الصوت الأساسي
     if (notificationSound && isAudioEnabled) {
       try {
-        const playPromise = notificationSound.play();
+        notificationSound.play();
         // Success logging only in development
-      } catch (playError) {
+      } catch {
         if (process.env.NODE_ENV === 'development') {
           console.warn('⚠️ فشل تشغيل الصوت الأساسي، استخدام البديل');
         }

@@ -23,7 +23,6 @@ import { cacheManager } from "@/lib/utils/cache-manager"
 
 export function Header() {
   const router = useRouter()
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
@@ -87,7 +86,6 @@ export function Header() {
 
   // حاول تعيين كوكي الأدمن تلقائياً عندما يكون المستخدم أدمن
   useEffect(() => {
-    let cancelled = false
     const setAdminCookie = async () => {
       try {
         if (isAuthenticated && isAdmin && user?.id) {
@@ -96,7 +94,7 @@ export function Header() {
       } catch {}
     }
     setAdminCookie()
-    return () => { cancelled = true }
+    return () => {}
   }, [isAuthenticated, isAdmin, user?.id])
 
   const handleGoAdmin = async () => {

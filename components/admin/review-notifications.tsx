@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, Star, Eye, CheckCircle, XCircle, MessageSquare } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -39,11 +40,15 @@ export function ReviewNotifications() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'review_notifications' },
-        () => fetchNotifications()
+        async () => {
+          await fetchNotifications()
+          playNotificationSound()
+          toast({ title: 'تنبيه جديد', description: 'وُجد إشعار مراجعة جديد.' })
+        }
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, [toast])
 
   const fetchNotifications = async () => {
     try {
@@ -56,7 +61,20 @@ export function ReviewNotifications() {
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to fetch notifications')
       const rows = json.data
-      const mapped: ReviewNotification[] = (rows || []).map((row: any) => ({
+      const mapped: ReviewNotification[] = (rows || []).map((row: {
+        id: string
+        type: ReviewNotification['type']
+        read: boolean
+        created_at: string
+        review?: {
+          id: string
+          rating: number
+          comment: string
+          created_at: string
+          users?: { name?: string | null } | null
+          products?: { name?: string; images?: string[] } | null
+        }
+      }) => ({
         id: row.id,
         type: row.type,
         read: row.read,
@@ -77,26 +95,7 @@ export function ReviewNotifications() {
     }
   }
 
-  const handleNewReview = async (_payload?: any) => {
-    await fetchNotifications()
-    toast({ title: 'تنبيه جديد', description: 'تم تحديث إشعارات المراجعات.' })
-    playNotificationSound()
-  }
-
-  const handleReviewUpdate = (payload: any) => {
-    // التعامل مع تحديثات المراجعات (الموافقة، الرفض، إلخ)
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.review.id === payload.new.id 
-          ? { ...notif, read: payload.new.is_approved }
-          : notif
-      )
-    )
-    
-    if (payload.new.is_approved && !payload.old.is_approved) {
-      setUnreadCount(prev => Math.max(0, prev - 1))
-    }
-  }
+  // يتم التعامل مع التحديثات عبر fetchNotifications والقناة فقط؛ لا حاجة لدوال إضافية هنا
 
   const playNotificationSound = () => {
     try {
@@ -105,7 +104,7 @@ export function ReviewNotifications() {
       audio.play().catch(() => {
         // تجاهل أخطاء تشغيل الصوت
       })
-    } catch (error) {
+    } catch {
       // تجاهل أخطاء الصوت
     }
   }
@@ -124,7 +123,7 @@ export function ReviewNotifications() {
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n))
       setUnreadCount(prev => Math.max(0, prev - 1))
-    } catch (e) {
+  } catch {
       // ignore update error for now
     }
   }
@@ -256,11 +255,10 @@ export function ReviewNotifications() {
                         </div>
                         
                         <div className="flex items-center gap-2 mb-2">
-                          <img
+                          <Image
                             src={notification.review.product.images[0]}
                             alt={notification.review.product.name}
                             className="w-8 h-8 rounded object-cover"
-                            loading="lazy"
                             width={32}
                             height={32}
                           />
@@ -306,11 +304,10 @@ export function ReviewNotifications() {
             
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <img
+                <Image
                   src={selectedNotification.review.product.images[0]}
                   alt={selectedNotification.review.product.name}
                   className="w-16 h-16 rounded-lg object-cover"
-                  loading="lazy"
                   width={64}
                   height={64}
                 />

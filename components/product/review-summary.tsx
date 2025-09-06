@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Star } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -22,11 +22,7 @@ export function ReviewSummary({ productId }: ReviewSummaryProps) {
   })
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchStats()
-  }, [productId])
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -38,13 +34,15 @@ export function ReviewSummary({ productId }: ReviewSummaryProps) {
 
       if (error) throw error
 
-      const total = reviews.length
-      const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
+      type ReviewRow = { rating: number; is_approved: boolean }
+      const list = (reviews || []) as ReviewRow[]
+      const total = list.length
+      const sum = list.reduce((acc, review) => acc + review.rating, 0)
       const avgRating = total > 0 ? sum / total : 0
 
       // Calculate rating distribution
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-      reviews.forEach(review => {
+      list.forEach(review => {
         distribution[review.rating as keyof typeof distribution]++
       })
 
@@ -58,7 +56,11 @@ export function ReviewSummary({ productId }: ReviewSummaryProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [productId])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
 
   const renderStars = (rating: number, showNumber = true) => (
     <div className="flex items-center gap-1">

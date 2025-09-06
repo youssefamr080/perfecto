@@ -8,7 +8,8 @@ export async function GET() {
     const { data, error } = await supabase.from('products').select('id').limit(1)
     if (error) throw error
     return NextResponse.json({ ok: true, products_seen: data?.length ?? 0 })
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: (e as any)?.message || 'db error' }, { status: 500 })
+  } catch (e: unknown) {
+    const message = typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message) : 'db error'
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

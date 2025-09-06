@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     const subject = `طلب جديد: ${order.order_number || 'Unknown'}`
 
     // بناء جدول المنتجات بالتنسيق السابق المحسن  
-    const buildItemsTable = (items: any[]) => {
+  type Item = { product_name?: string; product_price?: number; price?: number; quantity?: number; total_price?: number; product?: { name?: string } }
+  const buildItemsTable = (items: Item[]) => {
       if (!items || !Array.isArray(items) || items.length === 0) return '<p><em>لا توجد عناصر</em></p>'
       
       const rows = items.map(item => {
@@ -242,7 +243,7 @@ export async function POST(req: Request) {
           user: GMAIL_EMAIL,
           pass: GMAIL_APP_PASSWORD,
         },
-      } as any)
+  })
     } else {
       console.warn('send-order-email: missing email configuration')
       return NextResponse.json({ ok: false, error: 'missing email configuration' }, { status: 500 })
@@ -258,8 +259,9 @@ export async function POST(req: Request) {
     console.log('send-order-email: mail sent info=', { messageId: info?.messageId, accepted: info?.accepted })
 
     return NextResponse.json({ ok: true, info })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = typeof err === 'object' && err && 'message' in err ? String((err as { message?: unknown }).message) : String(err)
     console.error('send-order-email error', err)
-    return NextResponse.json({ ok: false, error: err?.message || String(err) }, { status: 500 })
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }
