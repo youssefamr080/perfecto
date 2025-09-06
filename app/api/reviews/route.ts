@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    const { productId, rating, comment } = validation
+    const { productId, rating, comment } = validation as { productId: string; rating: number; comment: string }
     const authHeader = req.headers.get('authorization') || ''
     const xUserId = req.headers.get('x-user-id') || ''
 
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
       }, { status: 404 })
     }
 
-    if (!product.is_available) {
+  if (!product.is_available) {
       return NextResponse.json({ 
         success: false, 
         error: 'Cannot review unavailable product' 
@@ -176,16 +176,14 @@ export async function POST(req: NextRequest) {
     // Upsert review with transaction-like behavior
     const { data: upserted, error } = await admin
       .from('product_reviews')
-      .upsert([
-        {
-          user_id: effectiveUserId,
-          product_id: productId,
-          rating: rating,
-          comment: comment,
-          is_approved: false,
-          updated_at: new Date().toISOString()
-        }
-      ], { onConflict: 'user_id,product_id' })
+      .upsert({
+        user_id: effectiveUserId,
+        product_id: productId,
+        rating,
+        comment,
+        is_approved: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,product_id' })
       .select('id, rating, comment, created_at, updated_at')
 
     if (error) {

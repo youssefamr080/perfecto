@@ -1,17 +1,21 @@
 import { createClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // Ensure a single browser client instance (avoids multiple GoTrueClient warnings)
 // HMR in Next.js can evaluate modules multiple times; cache on globalThis
-type SBClient = ReturnType<typeof createClient>
+type SBClient = ReturnType<typeof createTypedClient>
 declare const globalThis: {
   __SB?: SBClient
 } & typeof global
 
+function createTypedClient() {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey)
+}
 function createBrowserClient(): SBClient {
-  return createClient(supabaseUrl, supabaseAnonKey)
+  return createTypedClient()
 }
 
 let browserClient: SBClient
@@ -35,7 +39,7 @@ export const getServiceSupabase = () => {
     return supabase
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false

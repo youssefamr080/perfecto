@@ -75,10 +75,13 @@ export function RecentlyOrderedProducts({ userId, isLoggedIn }: RecentlyOrderedP
       if (orderItems) {
         // استخراج المنتجات الفريدة
         const uniqueProducts = new Map<string, Product>()
-        
-        type OrderItemRow = { product_id: string; product: Product | null }
-        ;(orderItems as OrderItemRow[]).forEach((item) => {
-          if (item.product && !uniqueProducts.has(item.product_id)) {
+        const rows = (orderItems as unknown as Array<{ product_id?: unknown; product?: unknown }>).
+          map((it) => ({
+            product_id: typeof it.product_id === 'string' ? it.product_id : String(it.product_id ?? ''),
+            product: (it.product && typeof it.product === 'object') ? (it.product as Product) : null,
+          }))
+        rows.forEach((item) => {
+          if (item.product && item.product_id && !uniqueProducts.has(item.product_id)) {
             uniqueProducts.set(item.product_id, item.product)
           }
         })

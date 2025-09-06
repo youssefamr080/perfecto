@@ -6,6 +6,7 @@ import Image from "next/image"
 import { ProductCard } from "@/components/product-card"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
+import Head from "next/head"
 
 // جلب جميع الأقسام
 async function getAllCategories(): Promise<Category[]> {
@@ -84,6 +85,36 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "الرئيسية", item: "/" },
+                { "@type": "ListItem", position: 2, name: "المنتجات", item: "/categories" },
+                { "@type": "ListItem", position: 3, name: category.name, item: `/category/${category.id}` },
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "CategoryCodeSet",
+              name: category.name,
+              description: category.description || undefined,
+              url: `/category/${category.id}`,
+            }),
+          }}
+        />
+      </Head>
       {/* Category Hero Section with Banner Image */}
       <div className="relative text-white">
         {/* اختر صورة البانر حسب اسم الفئة */}

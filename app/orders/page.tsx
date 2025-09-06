@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import type { Order } from "@/lib/types"
+import { mapDbOrderToOrder } from "@/lib/mappers"
 import { Package, Clock, CheckCircle, XCircle, Truck } from "lucide-react"
 import Link from "next/link"
 
@@ -44,7 +45,8 @@ const OrdersPage = () => {
 
       if (error) throw error
 
-      setOrders(ordersData || [])
+  const normalized = ((ordersData ?? []) as unknown[]).map((r) => mapDbOrderToOrder(r))
+  setOrders(normalized)
     } catch (error) {
       console.error("Error fetching orders:", error)
     } finally {

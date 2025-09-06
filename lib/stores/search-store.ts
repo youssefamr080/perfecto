@@ -189,7 +189,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   // Popular products: fetch top 5 featured products
   loadPopularProducts: async () => {
     try {
-      const { data: products, error } = await supabase
+  const { data: products, error } = await supabase
         .from("products")
         .select("*")
         .eq("is_featured", true)
@@ -197,7 +197,8 @@ export const useSearchStore = create<SearchState>((set, get) => ({
         .order("name")
         .limit(5)
       if (error) throw error
-      set({ popularProducts: products || [] })
+  const rows = (products ?? []) as unknown as Product[]
+  set({ popularProducts: rows })
     } catch (error) {
       console.error("Popular products loading error:", error)
       set({ popularProducts: [] })

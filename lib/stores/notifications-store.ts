@@ -1,5 +1,7 @@
 import { create } from "zustand"
 import { supabase } from "@/lib/supabase"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
 import type { Notification } from "@/lib/types"
 
 interface NotificationsState {
@@ -15,13 +17,14 @@ export const useNotificationsStore = create<NotificationsState>((set) => ({
 
   fetchNotifications: async (userId: string) => {
     if (!userId) return
-    const { data, error } = await supabase
+    const db = supabase as unknown as SupabaseClient<Database>
+    const { data, error } = await db
       .from("notifications")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
     if (!error && data) {
-      const rows: Notification[] = data as Notification[]
+      const rows: Notification[] = data as unknown as Notification[]
       set({
         notifications: rows,
         unreadCount: rows.filter((n) => !n.is_read).length,
@@ -31,15 +34,10 @@ export const useNotificationsStore = create<NotificationsState>((set) => ({
 
   markAllAsRead: async (userId: string) => {
     if (!userId) return
-    // database.types doesn't include notifications table; use loose typed helper
-    // Minimal fluent interface typings to avoid explicit any
-    interface EqBuilder { eq: (col: string, val: string | boolean) => EqBuilder }
-    interface UpdateBuilder { update: (vals: { is_read: boolean }) => EqBuilder }
-    interface FromBuilder { from: (table: string) => UpdateBuilder }
-    const typed = supabase as unknown as FromBuilder
-    typed
+    const db = supabase as unknown as SupabaseClient<Database>
+    await db
       .from("notifications")
-      .update({ is_read: true })
+      .update({ is_read: true } as Database['public']['Tables']['notifications']['Update'])
       .eq("user_id", userId)
       .eq("is_read", false)
     set((state) => ({

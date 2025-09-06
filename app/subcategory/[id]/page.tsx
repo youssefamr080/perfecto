@@ -7,6 +7,7 @@ import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import Head from "next/head"
 
 // Update the getSubcategoryWithProducts function to use separate queries
 async function getSubcategoryWithProducts(
@@ -82,6 +83,24 @@ export default async function SubcategoryPage({ params }: { params: { id: string
 
   return (
     <div className="container mx-auto px-4 py-8 bg-white">
+      <Head>
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "الرئيسية", item: "/" },
+                { "@type": "ListItem", position: 2, name: "المنتجات", item: "/categories" },
+                ...(subcategory.category ? [{ "@type": "ListItem", position: 3, name: subcategory.category.name, item: `/category/${subcategory.category.id}` }] : []),
+                { "@type": "ListItem", position: subcategory.category ? 4 : 3, name: subcategory.name, item: `/subcategory/${subcategory.id}` },
+              ],
+            }),
+          }}
+        />
+      </Head>
       <div className="mb-8">
         <div className="overflow-hidden">
           <div className="max-w-full truncate">

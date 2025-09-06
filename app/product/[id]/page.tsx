@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ReviewSummary } from "@/components/product/review-summary"
 import { EnhancedReviewDisplay } from "@/components/product/enhanced-review-display"
 import { EnhancedReviewForm } from "@/components/product/enhanced-review-form"
+import Head from "next/head"
 
 export default function ProductPage() {
   const params = useParams()
@@ -232,7 +233,8 @@ export default function ProductPage() {
       if (error) throw error
 
       // Transform data to match component expectations
-      const transformedReviews: DisplayReview[] = (data || []).map((review: ReviewRow) => ({
+  const rows: ReviewRow[] = ((data ?? []) as unknown as ReviewRow[])
+  const transformedReviews: DisplayReview[] = rows.map((review: ReviewRow) => ({
         ...review,
         user: {
           name: review.users?.name || 'مستخدم',
@@ -352,6 +354,30 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <Head>
+        <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://perfecto.example.com"}/product/${product.id}`} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: product.name,
+              description: product.description,
+              image: productImages,
+              sku: product.id,
+              brand: { '@type': 'Brand', name: 'Perfecto' },
+              offers: {
+                '@type': 'Offer',
+                priceCurrency: 'EGP',
+                price: product.price,
+                availability: `https://schema.org/${product.is_available ? 'InStock' : 'OutOfStock'}`,
+                url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://perfecto.example.com'}/product/${product.id}`,
+              },
+            }),
+          }}
+        />
+      </Head>
       {/* Breadcrumb - reusable component */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3 overflow-hidden">

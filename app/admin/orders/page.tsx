@@ -21,7 +21,7 @@ interface Order {
   final_amount: number
   points_used: number
   points_earned: number
-  points_discount: number
+  points_discount?: number
   created_at: string
   delivery_address: string
   delivery_notes?: string
@@ -100,7 +100,35 @@ export default function OrderManagementPage() {
         .limit(100)
 
       if (error) throw error
-      setOrders(data || [])
+      const mapped = (data ?? []).map((row: any): Order => ({
+        id: String(row.id),
+        order_number: String(row.order_number),
+        user_id: String(row.user_id ?? ''),
+        status: String(row.status ?? 'PENDING'),
+        final_amount: Number(row.final_amount ?? 0),
+        points_used: Number(row.points_used ?? 0),
+        points_earned: Number(row.points_earned ?? 0),
+        points_discount: Number(row.points_discount ?? 0),
+        created_at: String(row.created_at ?? new Date().toISOString()),
+        delivery_address: String(row.delivery_address ?? ''),
+        delivery_notes: row.delivery_notes ?? undefined,
+        users: row.users
+          ? {
+              name: String(row.users.name ?? ''),
+              phone: String(row.users.phone ?? ''),
+              loyalty_points: Number(row.users.loyalty_points ?? 0),
+            }
+          : undefined,
+        order_items: Array.isArray(row.order_items)
+          ? row.order_items.map((it: any) => ({
+              product_name: String(it.product_name ?? ''),
+              quantity: Number(it.quantity ?? 0),
+              product_price: Number(it.product_price ?? 0),
+              total_price: Number(it.total_price ?? (Number(it.product_price ?? 0) * Number(it.quantity ?? 0))),
+            }))
+          : [],
+      }))
+      setOrders(mapped)
     } catch (error) {
       console.error('Error loading orders:', error)
       toast({

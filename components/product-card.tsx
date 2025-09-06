@@ -16,9 +16,28 @@ import { getProductRating, type ProductRating } from "@/lib/utils/product-utils"
 interface ProductCardProps {
   product: Product
   showQuickActions?: boolean
+  highlight?: string
 }
 
-function ProductCardComponent({ product }: ProductCardProps) {
+function highlightText(text: string, query?: string) {
+  if (!query) return text
+  try {
+    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`(${safe})`, 'gi')
+    const parts = text.split(re)
+    return (
+      <>
+        {parts.map((part, i) =>
+          re.test(part) ? <mark key={i} className="bg-yellow-200 rounded px-0.5">{part}</mark> : part
+        )}
+      </>
+    )
+  } catch {
+    return text
+  }
+}
+
+function ProductCardComponent({ product, highlight }: ProductCardProps) {
   const { addItem } = useCartStore()
   const { toast } = useToast()
   // hover state removed to avoid unused variable warning; UI keeps subtle transitions
@@ -120,10 +139,10 @@ function ProductCardComponent({ product }: ProductCardProps) {
         <div className="mb-3">
           <Link href={`/product/${product.id}`} prefetch={false} className="focus:outline-none focus-visible:ring-2 focus-visible:ring-red-200 rounded">
             <h3 itemProp="name" className="font-extrabold text-base md:text-lg mb-1 hover:text-red-600 transition-colors line-clamp-2 leading-tight">
-              {product.name}
+              {highlightText(product.name, highlight)}
             </h3>
           </Link>
-          <p itemProp="description" className="text-gray-600 text-xs md:text-sm line-clamp-2 mb-2 leading-relaxed font-semibold">{product.description}</p>
+          <p itemProp="description" className="text-gray-600 text-xs md:text-sm line-clamp-2 mb-2 leading-relaxed font-semibold">{highlightText(product.description, highlight)}</p>
 
           {/* Star Rating - always visible for layout stability */}
           <div className="flex items-center gap-1 mb-2">

@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware"
 import { supabase } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
 import { cacheManager } from "@/lib/utils/cache-manager"
+import { mapDbProductToProduct } from "@/lib/mappers"
 
 interface ProductsStore {
   // البيانات
@@ -74,7 +75,7 @@ export const useProductsStore = create<ProductsStore>()(
 
           if (error) throw error
 
-          const products = data || []
+          const products = ((data ?? []) as unknown[]).map(mapDbProductToProduct)
           
           // حفظ في الكاش المحسن
           cacheManager.set(cacheKey, products, CACHE_DURATION)
@@ -86,9 +87,9 @@ export const useProductsStore = create<ProductsStore>()(
               isLoading: false
             })
           } else {
-            set(state => ({
+            set((state) => ({
               products: [...state.products, ...products],
-              isLoading: false
+              isLoading: false,
             }))
           }
 
@@ -136,7 +137,7 @@ export const useProductsStore = create<ProductsStore>()(
 
           if (error) throw error
 
-          const featuredProducts = data || []
+          const featuredProducts = ((data ?? []) as unknown[]).map(mapDbProductToProduct)
           
           // حفظ في الكاش المحسن
           cacheManager.set('featured_products', featuredProducts, CACHE_DURATION)

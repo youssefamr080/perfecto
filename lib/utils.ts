@@ -1,6 +1,7 @@
 // جلب المنتجات مع كاش لمدة 30 دقيقة
 import { supabase } from "./supabase"
 import type { Product } from "./types"
+import { mapDbProductToProduct } from "./mappers"
 import { cacheManager } from "./utils/cache-manager"
 
 export async function getCachedProducts(): Promise<Product[]> {
@@ -21,7 +22,7 @@ export async function getCachedProducts(): Promise<Product[]> {
     
   if (error) throw error
   
-  const products = data || []
+  const products = ((data ?? []) as unknown[]).map(mapDbProductToProduct)
   
   // حفظ في الكاش لمدة 30 دقيقة
   cacheManager.set(cacheKey, products, 30 * 60 * 1000)

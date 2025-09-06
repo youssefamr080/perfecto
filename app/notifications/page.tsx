@@ -40,7 +40,7 @@ export default function NotificationsPage() {
 
       if (error) throw error
 
-      setNotifications(data || [])
+      setNotifications((data as Notification[]) || [])
     } catch (error) {
       console.error("Error fetching notifications:", error)
     } finally {
@@ -51,14 +51,10 @@ export default function NotificationsPage() {
   const markAsRead = async (notificationId: string) => {
     try {
   const db = supabase as unknown as SupabaseClient<Database>
-  interface EqBuilder { eq: (c: string, v: string | boolean) => EqBuilder & { error?: unknown } }
-  interface UpdateBuilder { update: (v: { is_read: boolean }) => EqBuilder }
-  interface FromFn { from: (t: string) => UpdateBuilder }
-  const res = await (db as unknown as FromFn)
+  const { error } = await db
     .from("notifications")
-    .update({ is_read: true })
+    .update({ is_read: true } as Database['public']['Tables']['notifications']['Update'])
     .eq("id", notificationId)
-  const error = (res as { error?: unknown }).error
 
       if (error) throw error
 
@@ -88,17 +84,13 @@ export default function NotificationsPage() {
 
     try {
       const db = supabase as unknown as SupabaseClient<Database>
-      interface EqBuilder2 { eq: (c: string, v: string | boolean) => EqBuilder2 & { error?: unknown } }
-      interface UpdateBuilder2 { update: (v: { is_read: boolean }) => EqBuilder2 }
-      interface FromFn2 { from: (t: string) => UpdateBuilder2 }
-      const res2 = await (db as unknown as FromFn2)
+      const { error } = await db
         .from("notifications")
-        .update({ is_read: true })
+        .update({ is_read: true } as Database['public']['Tables']['notifications']['Update'])
         .eq("user_id", user.id)
         .eq("is_read", false)
-  const bulkError = (res2 as { error?: unknown }).error
 
-  if (bulkError) throw bulkError
+      if (error) throw error
 
       setNotifications((prev) => prev.map((notif) => ({ ...notif, is_read: true })))
     } catch (error) {
@@ -188,13 +180,14 @@ export default function NotificationsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {!notification.is_read && (
-                      <Button size="sm" variant="ghost" onClick={() => markAsRead(notification.id)}>
+                      <Button aria-label="تحديد كمقروء" size="sm" variant="ghost" onClick={() => markAsRead(notification.id)}>
                         <Check className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
                       size="sm"
                       variant="ghost"
+                      aria-label="حذف الإشعار"
                       onClick={() => deleteNotification(notification.id)}
                       className="text-red-600 hover:text-red-700"
                     >

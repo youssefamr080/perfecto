@@ -3,14 +3,25 @@ import type { Category, SubCategory } from "@/lib/types"
 import Link from "next/link"
 import Breadcrumbs from "@/components/navigation/Breadcrumbs"
 import Image from "next/image"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/lib/database.types"
+
+export const metadata = {
+  title: "جميع الأقسام - بيرفكتو",
+  description: "تصفح الفئات والفئات الفرعية لمنتجات بيرفكتو بسهولة.",
+}
+
+// إعادة توليد الصفحة كل 15 دقيقة
+export const revalidate = 900
 
 // Update the getCategoriesWithSubcategories function to use separate queries
 async function getCategoriesWithSubcategories(): Promise<(Category & { subcategories: SubCategory[] })[]> {
   // Get all categories
-  const { data: categories, error: categoriesError } = await supabase
+  const db = supabase as unknown as SupabaseClient<Database>
+  const { data: categories, error: categoriesError } = await db
     .from("categories")
     .select("*")
-    .order("name") as unknown as { data: Category[] | null; error: unknown }
+    .order("name")
 
   if (categoriesError) {
     console.error("Error fetching categories:", categoriesError)
@@ -18,17 +29,27 @@ async function getCategoriesWithSubcategories(): Promise<(Category & { subcatego
   }
 
   // Get all subcategories
-  const { data: subcategories, error: subcategoriesError } = await supabase
+  const { data: subcategories, error: subcategoriesError } = await db
     .from("subcategories")
-    .select("*") as unknown as { data: SubCategory[] | null; error: unknown }
+    .select("*")
 
   if (subcategoriesError) {
     console.error("Error fetching subcategories:", subcategoriesError)
-    return categories?.map((cat) => ({ ...cat, subcategories: [] })) || []
+    return (categories as unknown as Category[] | null)?.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      description: cat.description,
+      image_url: cat.image_url,
+      is_active: cat.is_active,
+      sort_order: cat.sort_order,
+      created_at: cat.created_at,
+      updated_at: cat.updated_at,
+      subcategories: [] as SubCategory[],
+    })) || []
   }
 
   // Group subcategories by category
-  const categoriesWithSubs: (Category & { subcategories: SubCategory[] })[] = (categories || []).map((category) => ({
+  const categoriesWithSubs: (Category & { subcategories: SubCategory[] })[] = (categories as unknown as Category[] | null || []).map((category) => ({
     id: category.id,
     name: category.name,
     description: category.description,
@@ -37,7 +58,7 @@ async function getCategoriesWithSubcategories(): Promise<(Category & { subcatego
     sort_order: category.sort_order,
     created_at: category.created_at,
     updated_at: category.updated_at,
-    subcategories: (subcategories || []).filter((sub) => sub.category_id === category.id),
+    subcategories: ((subcategories as unknown as SubCategory[] | null) || []).filter((sub) => sub.category_id === category.id),
   }))
 
   return categoriesWithSubs

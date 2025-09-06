@@ -40,6 +40,9 @@ const {
   MIN_POINTS_USE 
 } = LOYALTY_CONFIG
 
+// رابط الدفع عبر إنستا باي
+const INSTAPAY_URL = "https://ipn.eg/S/youssefamr080/instapay/7NO0WM"
+
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCartStore()
   const { user, isAuthenticated } = useAuthStore()
@@ -61,6 +64,10 @@ export default function CheckoutPage() {
   const [usePointsForShipping, setUsePointsForShipping] = useState(false)
   const [deliveryNotes, setDeliveryNotes] = useState("")
   const [loading, setLoading] = useState(false)
+  // حالة الدفع
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "INSTAPAY">("COD")
+  const [instaPayRef, setInstaPayRef] = useState("")
+  const [instaPayConfirmed, setInstaPayConfirmed] = useState(false)
 
   const subtotal = total
   const baseShippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
@@ -185,6 +192,16 @@ export default function CheckoutPage() {
       return
     }
 
+    // تحقق خاص بإنستا باي
+    if (paymentMethod === "INSTAPAY" && !instaPayConfirmed) {
+      toast({
+        title: "تأكيد الدفع عبر إنستا باي",
+        description: "اضغط على زر الدفع ثم أكد أنك قمت بالتحويل قبل تأكيد الطلب",
+        variant: "destructive",
+      })
+      return
+    }
+
     // تأكيد تواجد المستخدم لتجنّب استخدام تأكيدات non-null
     if (!user?.id) {
       toast({
@@ -216,6 +233,12 @@ export default function CheckoutPage() {
       // إنشاء الطلب
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
       
+  // دمج الملاحظات مع مرجع إنستا باي (اختياري)
+  const mergedNotes = [
+    deliveryNotes?.trim() ? deliveryNotes.trim() : null,
+    paymentMethod === "INSTAPAY" ? `InstaPay Ref: ${instaPayRef?.trim() || "N/A"}` : null,
+  ].filter(Boolean).join(" | ") || null
+
   const orderData: Database['public']['Tables']['orders']['Insert'] = {
         user_id: userId,
         order_number: orderNumber,
@@ -227,7 +250,9 @@ export default function CheckoutPage() {
         shipping_fee: parseFloat(finalShippingFee.toFixed(2)),
         final_amount: parseFloat(finalAmount.toFixed(2)),
         points_earned: pointsEarned || 0,
-        delivery_notes: deliveryNotes || null,
+        delivery_notes: mergedNotes,
+        payment_method: paymentMethod === "INSTAPAY" ? "INSTAPAY" : "CASH_ON_DELIVERY",
+        payment_status: "PENDING",
         status: 'PENDING' as const
       }
 
@@ -728,6 +753,136 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             )}
+                <Card className="shadow-md border border-gray-200 bg-white rounded-2xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-100 rounded-t-2xl">
+                  <CardTitle className="flex items-center gap-3 text-gray-900">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-purple-600" />
+                  </div>
+                  طريقة الدفع
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-4 sm:p-6 space-y-4">
+                  {/* خيارات الدفع كـ بطاقات كبيرة لسهولة التفاعل في الموبايل */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-shadow cursor-pointer ${
+                    paymentMethod === "COD"
+                      ? "border-red-600 bg-red-50 shadow-sm"
+                      : "border-gray-200 bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "COD"}
+                    onChange={() => setPaymentMethod("COD")}
+                    className="h-4 w-4 text-red-600"
+                    aria-label="الدفع عند الاستلام"
+                    />
+                    <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">الدفع عند الاستلام</div>
+                    <div className="text-xs text-gray-500 mt-1">مريح وآمن، ادفع عند الاستلام</div>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-shadow cursor-pointer ${
+                    paymentMethod === "INSTAPAY"
+                      ? "border-purple-600 bg-purple-50 shadow-sm"
+                      : "border-gray-200 bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <input
+                    type="radio"
+                    name="paymentMethod"
+                    checked={paymentMethod === "INSTAPAY"}
+                    onChange={() => {
+                      setPaymentMethod("INSTAPAY")
+                      setInstaPayConfirmed(false)
+                    }}
+                    className="h-4 w-4 text-red-600"
+                    aria-label="الدفع عبر إنستا باي"
+                    />
+                    <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">الدفع عبر إنستا باي</div>
+                    <div className="text-xs text-gray-500 mt-1">ادفع إلكترونياً بسرعة وسهولة</div>
+                    </div>
+                  </label>
+                  </div>
+
+                  {paymentMethod === "INSTAPAY" && (
+                  <div className="mt-2 rounded-lg border p-4 bg-gray-50 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-gray-700">المبلغ المطلوب دفعه</p>
+                      <div className="mt-1 text-2xl font-extrabold text-gray-900">
+                      {finalAmount.toFixed(2)} ج.م
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                      type="button"
+                      onClick={() => {
+                        const text = finalAmount.toFixed(2)
+                        navigator.clipboard?.writeText(text).then(
+                        () =>
+                          toast({
+                          title: "تم النسخ",
+                          description: `تم نسخ ${text} ج.م إلى الحافظة`,
+                          variant: "default",
+                          }),
+                        () =>
+                          toast({
+                          title: "فشل النسخ",
+                          description: "يتعذر الوصول إلى الحافظة",
+                          variant: "destructive",
+                          })
+                        )
+                      }}
+                      className="w-full sm:w-auto px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium shadow-sm text-sm"
+                      aria-label="نسخ المبلغ"
+                      >
+                      نسخ المبلغ
+                      </button>
+                    </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <button
+                      type="button"
+                      className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg shadow-lg text-sm"
+                      onClick={() => window.open(INSTAPAY_URL, "_blank", "noopener")}
+                      aria-label="ادفع الآن عبر إنستا باي"
+                    >ادفع الآن</button>
+                    </div>
+
+                    <div className="w-full sm:w-auto flex-1 grid grid-cols-1 gap-3">
+                      <div>
+                        <Label htmlFor="instaRef" className="text-sm text-gray-700">مرجع التحويل (اختياري)</Label>
+                        <Input
+                          id="instaRef"
+                          value={instaPayRef}
+                          onChange={(e) => setInstaPayRef(e.target.value)}
+                          placeholder="أدخل المرجع إن وجد"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={instaPayConfirmed}
+                          onChange={(e) => setInstaPayConfirmed(e.target.checked)}
+                          className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                        أؤكد أنني قمت بالدفع عبر إنستا باي
+                      </label>
+                    </div>
+                  </div>
+                  )}
+                </CardContent>
+              </Card>
 
             {/* ملاحظات التسليم */}
             <Card className="shadow-sm border border-gray-200 bg-white rounded-xl">
@@ -906,11 +1061,11 @@ export default function CheckoutPage() {
             </Card>
           </div>
         </div>
-      </div>
-        </div>
-      </div>
+  </div>
+  </div>
+  </div>
 
-      <LoginModal 
+  <LoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />

@@ -5,6 +5,7 @@ import { supabase } from './supabase'
 import { safePlayNotificationSound, requestNotificationPermission, initializeSound } from './notification-sound'
 import { useToast } from '@/hooks/use-toast'
 import { Order } from './types'
+import { mapDbOrderToOrder } from './mappers'
 
 interface RealtimeContextType {
   newOrders: Order[]
@@ -52,17 +53,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (latestOrder && (latestOrder as Order).id !== lastOrderId) {
-        setLastOrderId((latestOrder as Order).id)
+      if (latestOrder) {
+        const normalized = mapDbOrderToOrder(latestOrder)
+        if (normalized.id !== lastOrderId) {
+          setLastOrderId(normalized.id)
         
         // إذا لم يكن هذا أول تحميل
         if (lastOrderId !== null) {
           if (process.env.NODE_ENV === 'development') {
-            console.log('🎯 تم اكتشاف طلب جديد:', (latestOrder as Order).id)
+            console.log('🎯 تم اكتشاف طلب جديد:', normalized.id)
           }
           
           // إضافة الطلب الجديد
-          setNewOrders(prev => [(latestOrder as Order), ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
+          setNewOrders(prev => [normalized, ...prev.slice(0, 9)]) // احتفظ بآخر 10 طلبات فقط
           setHasUnreadOrders(true)
           
           // تشغيل الصوت والإشعار فوراً
@@ -97,9 +100,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           
           toast({
             title: "🛒 طلب جديد وصل!",
-            description: `من ${(latestOrder as Order).user?.name || 'عميل'} - بقيمة ${(latestOrder as Order).final_amount} ج.م`,
+            description: `من ${normalized.user?.name || 'عميل'} - بقيمة ${normalized.final_amount} ج.م`,
             variant: "default",
           })
+        }
         }
       }
     } catch (error) {

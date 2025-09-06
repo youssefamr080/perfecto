@@ -41,11 +41,12 @@ export async function PATCH(req: NextRequest) {
   const isAdmin = await assertAdmin(req, supabase)
   if (!isAdmin) return forbid()
 
-  const { id, read } = await req.json()
+  const body = (await req.json()) as { id?: string; read?: boolean }
+  const { id, read } = body
   if (!id) return NextResponse.json({ success: false, error: 'Missing id' }, { status: 400 })
   const { error } = await supabase
     .from('review_notifications')
-    .update({ read: read ?? true })
+    .update({ read: typeof read === 'boolean' ? read : true })
     .eq('id', id)
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

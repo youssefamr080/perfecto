@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'approve') {
-      const { error } = await supabase
+  const { error } = await supabase
         .from('product_reviews')
         .update({ 
           is_approved: !!approved,
@@ -176,11 +176,11 @@ export async function POST(req: NextRequest) {
         }, { status: 400 })
       }
       
-      const { error } = await supabase
+    const { error } = await supabase
         .from('product_reviews')
         .update({
           store_reply: text,
-          store_reply_at: new Date().toISOString(),
+      store_reply_at: new Date().toISOString(),
           replied_by_admin: true,
           updated_at: new Date().toISOString()
         })
@@ -254,7 +254,7 @@ export async function GET(req: NextRequest) {
     if (adminErr || !adminUser) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
     // Fetch base reviews
-    let query = supabase
+  let query = supabase
       .from('product_reviews')
       .select('id, rating, comment, is_approved, created_at, store_reply, store_reply_at, replied_by_admin, user_id, product_id')
       .order('created_at', { ascending: false })
@@ -266,8 +266,20 @@ export async function GET(req: NextRequest) {
     if (reviewsErr) return NextResponse.json({ success: false, error: reviewsErr.message }, { status: 500 })
 
     const reviews = baseReviews || []
-    const userIds = Array.from(new Set(reviews.map(r => r.user_id).filter(Boolean)))
-    const productIds = Array.from(new Set(reviews.map(r => r.product_id).filter(Boolean)))
+    const userIds: string[] = Array.from(
+      new Set(
+        reviews
+          .map((r) => r.user_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      )
+    )
+    const productIds: string[] = Array.from(
+      new Set(
+        reviews
+          .map((r) => r.product_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      )
+    )
 
     // Batch fetch users and products
     const emptyOk = { data: [] as unknown[], error: null as unknown }
@@ -291,8 +303,8 @@ export async function GET(req: NextRequest) {
       store_reply: r.store_reply,
       store_reply_at: r.store_reply_at,
       replied_by_admin: r.replied_by_admin,
-      user: userMap.get(r.user_id) || { name: 'غير معروف', phone: '' },
-      product: productMap.get(r.product_id) || { name: 'منتج محذوف', images: ['/placeholder.jpg'] }
+      user: userMap.get(r.user_id || '') || { name: 'غير معروف', phone: '' },
+      product: productMap.get(r.product_id || '') || { name: 'منتج محذوف', images: ['/placeholder.jpg'] }
     }))
 
     // Stats

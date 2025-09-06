@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { formatDistance } from "date-fns"
 import { ar } from "date-fns/locale"
+import { mapDbOrderToOrder, mapDbProductToProduct, mapDbUserToUser } from "@/lib/mappers"
 
 // رقم الهاتف الخاص بالأدمن (غير مستخدم حالياً)
 // const ADMIN_PHONE = "01234567890"
@@ -232,12 +233,16 @@ export default function AdminPage() {
 
       if (productsError) throw productsError
 
-      setOrders(ordersData || [])
-      setUsers(usersData || [])
-      setProducts(productsData || [])
+  setOrders(((ordersData ?? []) as unknown[]).map((r) => mapDbOrderToOrder(r)))
+  setUsers(((usersData ?? []) as unknown[]).map((r) => mapDbUserToUser(r)))
+  setProducts(((productsData ?? []) as unknown[]).map((r) => mapDbProductToProduct(r)))
 
       // حساب الإحصائيات المتقدمة
-      calculateAdvancedStats(ordersData || [], usersData || [], productsData || [])
+      calculateAdvancedStats(
+        ((ordersData ?? []) as unknown[]).map((r) => mapDbOrderToOrder(r)),
+        ((usersData ?? []) as unknown[]).map((r) => mapDbUserToUser(r)),
+        ((productsData ?? []) as unknown[]).map((r) => mapDbProductToProduct(r))
+      )
 
       // تحديث وقت آخر تحديث
       setLastUpdated(new Date())

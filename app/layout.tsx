@@ -48,5 +48,31 @@ export default function RootLayout({
 }
 
 export const metadata = {
-      generator: 'youssef amr'
-    };
+  title: {
+    default: 'بيرفكتو - منتجات طبيعية وجودة عالية',
+    template: '%s | بيرفكتو',
+  },
+  description: 'تسوق منتجات طبيعية عالية الجودة مع توصيل سريع ونقاط ولاء.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://perfecto.example.com'),
+  applicationName: 'Perfecto',
+  generator: 'youssef amr',
+  referrer: 'origin-when-cross-origin',
+  keywords: ['بيرفكتو', 'منتجات طبيعية', 'لانشون', 'جبنة', 'عسل', 'توصيل'],
+  openGraph: {
+    type: 'website',
+    locale: 'ar_EG',
+    siteName: 'بيرفكتو',
+    title: 'بيرفكتو - منتجات طبيعية وجودة عالية',
+    description: 'تسوق منتجات طبيعية عالية الجودة مع توصيل سريع ونقاط ولاء.',
+    images: [{ url: '/icon-512.png', width: 512, height: 512, alt: 'بيرفكتو' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'بيرفكتو - منتجات طبيعية وجودة عالية',
+    description: 'تسوق منتجات طبيعية عالية الجودة مع توصيل سريع ونقاط ولاء.',
+    images: ['/icon-512.png'],
+  },
+  alternates: {
+    canonical: '/',
+  },
+}

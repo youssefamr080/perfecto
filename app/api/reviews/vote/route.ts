@@ -20,9 +20,12 @@ function rateLimit(key: string): boolean {
   return false
 }
 
+type VoteType = 'helpful' | 'not_helpful'
 export async function POST(request: NextRequest) {
   try {
-    const { reviewId, voteType } = await request.json()
+  const body = (await request.json()) as { reviewId?: string; voteType?: VoteType }
+  const reviewId = body.reviewId
+  const voteType = body.voteType
     const userId = request.headers.get('x-user-id') || ''
     const ip = request.headers.get('x-forwarded-for') || request.ip || 'unknown'
     const authHeader = request.headers.get('authorization') || ''
@@ -158,7 +161,7 @@ export async function POST(request: NextRequest) {
   const dbClient = actor === 'service' ? adminClient : (userScopedClient as ReturnType<typeof createClient>)
     const { data: existingVote, error: fetchError } = await dbClient
       .from('review_votes')
-      .select('*')
+      .select('id, vote_type')
       .eq('user_id', effectiveUserId)
       .eq('review_id', reviewId)
       .single()
@@ -171,14 +174,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let result
+  let result: { action: 'removed' | 'updated' | 'added'; voteType: VoteType | null }
 
     if (existingVote) {
       if (existingVote.vote_type === voteType) {
         // Remove vote if same type
-        const { error: deleteError } = await dbClient.rpc('delete_review_vote', {
-          p_vote_id: existingVote.id
-        })
+        const { error: deleteError } = await (dbClient as ReturnType<typeof getServiceSupabase>).
+          rpc('delete_review_vote', {
+            p_vote_id: existingVote.id as unknown as string
+          })
 
         // Fallback to direct delete if RPC fails
         if (deleteError) {
@@ -199,16 +203,17 @@ export async function POST(request: NextRequest) {
         result = { action: 'removed', voteType: null }
       } else {
         // Update vote type
-        const { error: updateError } = await dbClient.rpc('update_review_vote', {
-          p_vote_id: existingVote.id,
-          p_vote_type: voteType
-        })
+        const { error: updateError } = await (dbClient as ReturnType<typeof getServiceSupabase>).
+          rpc('update_review_vote', {
+            p_vote_id: existingVote.id as unknown as string,
+            p_vote_type: voteType as VoteType
+          })
 
         // Fallback to direct update if RPC fails
         if (updateError) {
           const { error: directUpdateError } = await adminClient
             .from('review_votes')
-            .update({ vote_type: voteType })
+            .update({ vote_type: voteType as VoteType })
             .eq('id', existingVote.id)
 
           if (directUpdateError) {
@@ -224,20 +229,21 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Insert new vote
-      const { error: insertError } = await dbClient.rpc('insert_review_vote', {
-        p_user_id: effectiveUserId,
-        p_review_id: reviewId,
-        p_vote_type: voteType
-      })
+      const { error: insertError } = await (dbClient as ReturnType<typeof getServiceSupabase>).
+        rpc('insert_review_vote', {
+          p_user_id: effectiveUserId,
+          p_review_id: reviewId as string,
+          p_vote_type: voteType as VoteType
+        })
 
       // Fallback to direct insert if RPC fails
       if (insertError) {
-        const { error: directInsertError } = await adminClient
+    const { error: directInsertError } = await adminClient
           .from('review_votes')
           .insert([{
-            user_id: effectiveUserId,
-            review_id: reviewId,
-            vote_type: voteType
+      user_id: effectiveUserId,
+      review_id: reviewId as string,
+      vote_type: voteType as VoteType
           }])
 
         if (directInsertError) {
@@ -260,7 +266,10 @@ export async function POST(request: NextRequest) {
         .select('helpful_count, not_helpful_count')
         .eq('id', reviewId)
         .single()
-      updatedReview = data
+      updatedReview = data ? {
+        helpful_count: data.helpful_count ?? 0,
+        not_helpful_count: data.not_helpful_count ?? 0
+      } : null
     } else {
       // Calculate stats from votes table to avoid RLS issues
       const { count: helpfulCount } = await dbClient
