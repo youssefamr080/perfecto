@@ -471,7 +471,7 @@ export default function CheckoutPage() {
                         onClick={() => setEditUser(!editUser)}
                         className={editUser ? "bg-blue-600 hover:bg-blue-700" : "border-gray-800 text-gray-900 hover:bg-gray-100"}
                       >
-                        {editUser ? "حفظ التغييرات" : "تعديل البيانات"}
+                        {editUser ? "حفظ التغييرات" : "تعديل العنوان"}
                       </Button>
                       
                       {editUser && (
@@ -486,7 +486,7 @@ export default function CheckoutPage() {
                               onChange={(e) => setSaveType(e.target.value as "temporary")}
                               className="text-blue-600"
                             />
-                            <Label htmlFor="temporary" className="text-sm text-gray-600">حفظ مؤقت</Label>
+                            <Label htmlFor="temporary" className="text-sm text-gray-600"> هذا الطلب فقط</Label>
                           </div>
                           
                           <div className="flex items-center gap-2">
