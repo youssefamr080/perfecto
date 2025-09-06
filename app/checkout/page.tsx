@@ -859,26 +859,6 @@ export default function CheckoutPage() {
                     >ادفع الآن</button>
                     </div>
 
-                    <div className="w-full sm:w-auto flex-1 grid grid-cols-1 gap-3">
-                      <div>
-                        <Label htmlFor="instaRef" className="text-sm text-gray-700">مرجع التحويل (اختياري)</Label>
-                        <Input
-                          id="instaRef"
-                          value={instaPayRef}
-                          onChange={(e) => setInstaPayRef(e.target.value)}
-                          placeholder="أدخل المرجع إن وجد"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={instaPayConfirmed}
-                          onChange={(e) => setInstaPayConfirmed(e.target.checked)}
-                          className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-                        />
-                        أؤكد أنني قمت بالدفع عبر إنستا باي
-                      </label>
-                    </div>
                   </div>
                   )}
                 </CardContent>
